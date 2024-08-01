@@ -10,7 +10,7 @@ mouse = Controller()
 def fetch_offsets():
     try:
         offset = get("https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/offsets.json").json()
-        client = get("https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/client.dll.json").json()
+        client = get("https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/client_dll.json").json()
         return offset, client
     except Exception as e:
         logging.error(f"Failed to fetch offsets: {e}")
