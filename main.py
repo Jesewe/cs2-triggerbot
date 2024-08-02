@@ -4,8 +4,10 @@ from win32gui import GetWindowText, GetForegroundWindow
 from random import uniform
 import logging
 from requests import get
+from packaging import version
 
 mouse = Controller()
+VERSION = "v1.0.3"
 
 def fetch_offsets():
     try:
@@ -15,6 +17,18 @@ def fetch_offsets():
     except Exception as e:
         logging.error(f"Failed to fetch offsets: {e}")
         return None, None
+
+def check_for_updates():
+    try:
+        response = get("https://api.github.com/repos/Jesewe/cs2-triggerbot/tags")
+        response.raise_for_status()
+        latest_version = response.json()[0]["name"]
+        if version.parse(latest_version) > version.parse(VERSION):
+            logging.info(f"New version available: {latest_version}. Please update for the latest fixes and features.")
+        else:
+            logging.info("You are using the latest version.")
+    except Exception as e:
+        logging.error(f"Error checking for updates: {e}")
 
 def initialize_pymem():
     try:
@@ -48,7 +62,8 @@ def should_trigger(entity_team, player_team, entity_health):
 
 def main():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    logging.info(f"TriggerBot started. Trigger key: {triggerKey.upper()}")
+    check_for_updates()
+    logging.info("Fetching offsets and client data...")
 
     offsets, client_data = fetch_offsets()
     if offsets is None or client_data is None:
@@ -61,6 +76,7 @@ def main():
     m_iTeamNum = client_data["client.dll"]["classes"]["C_BaseEntity"]["fields"]["m_iTeamNum"]
     m_iIDEntIndex = client_data["client.dll"]["classes"]["C_CSPlayerPawnBase"]["fields"]["m_iIDEntIndex"]
 
+    logging.info("Searching for cs2.exe process...")
     pm = initialize_pymem()
     if pm is None:
         return
@@ -68,6 +84,8 @@ def main():
     client_base = get_client_module(pm)
     if client_base is None:
         return
+
+    logging.info(f"TriggerBot started. Trigger key: {triggerKey.upper()}")
 
     while True:
         try:

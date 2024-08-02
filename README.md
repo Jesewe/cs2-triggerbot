@@ -17,6 +17,7 @@ This is a simple TriggerBot for Counter-Strike 2. The TriggerBot automatically f
 - `pynput`
 - `requests`
 - `pywin32`
+- `packaging`
 
 ## Installation
 
@@ -30,7 +31,7 @@ This is a simple TriggerBot for Counter-Strike 2. The TriggerBot automatically f
 2. Install the required Python libraries.
 
    ```sh
-   pip install pymem keyboard pynput requests pywin32
+   pip install pymem keyboard pynput requests pywin32 packaging
    ```
 
 3. Run the script.
