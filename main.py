@@ -1,13 +1,24 @@
-import pymem, pymem.process, keyboard, time
+import pymem
+import pymem.process
+import keyboard
+import time
 from pynput.mouse import Controller, Button
 from win32gui import GetWindowText, GetForegroundWindow
 from random import uniform
 import logging
 from requests import get
 from packaging import version
+from colorama import init, Fore, Style
+import ctypes
+
+init(autoreset=True)
 
 mouse = Controller()
-VERSION = "v1.0.3"
+VERSION = "v1.0.4"
+TRIGGER_KEY = 'X'
+
+def set_console_title(title):
+    ctypes.windll.kernel32.SetConsoleTitleW(title)
 
 def fetch_offsets():
     try:
@@ -15,7 +26,8 @@ def fetch_offsets():
         client = get("https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/client_dll.json").json()
         return offset, client
     except Exception as e:
-        logging.error(f"Failed to fetch offsets: {e}")
+        logging.error(f"{Fore.RED}Failed to fetch offsets: {e}")
+        logging.error(f"{Fore.RED}Please report this issue on the GitHub repository: https://github.com/Jesewe/cs2-triggerbot/issues")
         return None, None
 
 def check_for_updates():
@@ -24,24 +36,24 @@ def check_for_updates():
         response.raise_for_status()
         latest_version = response.json()[0]["name"]
         if version.parse(latest_version) > version.parse(VERSION):
-            logging.info(f"New version available: {latest_version}. Please update for the latest fixes and features.")
+            logging.info(f"{Fore.YELLOW}New version available: {latest_version}. Please update for the latest fixes and features.")
         else:
-            logging.info("You are using the latest version.")
+            logging.info(f"{Fore.GREEN}You are using the latest version.")
     except Exception as e:
-        logging.error(f"Error checking for updates: {e}")
+        logging.error(f"{Fore.RED}Error checking for updates: {e}")
 
 def initialize_pymem():
     try:
         pm = pymem.Pymem("cs2.exe")
         return pm
     except pymem.exception.PymemError as e:
-        logging.error(f"Could not open cs2.exe: {e}")
+        logging.error(f"{Fore.RED}Could not open cs2.exe: {e}")
         return None
 
 def get_client_module(pm):
     client_module = pymem.process.module_from_name(pm.process_handle, "client.dll")
     if not client_module:
-        logging.error("Could not find client.dll module.")
+        logging.error(f"{Fore.RED}Could not find client.dll module.")
         return None
     return client_module.lpBaseOfDll
 
@@ -51,22 +63,24 @@ def get_entity(pm, base_address, index):
         ent_entry = pm.read_longlong(ent_list + 0x8 * (index >> 9) + 0x10)
         return pm.read_longlong(ent_entry + 120 * (index & 0x1FF))
     except Exception as e:
-        logging.error(f"Error reading entity: {e}")
+        logging.error(f"{Fore.RED}Error reading entity: {e}")
         return None
 
 def is_game_active():
-    return GetWindowText(GetForegroundWindow()) == application_name
+    return GetWindowText(GetForegroundWindow()) == "Counter-Strike 2"
 
 def should_trigger(entity_team, player_team, entity_health):
     return entity_team != player_team and entity_health > 0
 
 def main():
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    set_console_title(f"CS2 TriggerBot {VERSION}")
+    logging.basicConfig(level=logging.INFO, format=f'%(levelname)s - {Fore.CYAN}%(message)s{Style.RESET_ALL}')
     check_for_updates()
-    logging.info("Fetching offsets and client data...")
+    logging.info(f"{Fore.CYAN}Fetching offsets and client data...")
 
     offsets, client_data = fetch_offsets()
     if offsets is None or client_data is None:
+        input(f"{Fore.RED}Press Enter to exit...")
         return
 
     global dwEntityList, dwLocalPlayerPawn, m_iHealth, m_iTeamNum, m_iIDEntIndex
@@ -76,16 +90,18 @@ def main():
     m_iTeamNum = client_data["client.dll"]["classes"]["C_BaseEntity"]["fields"]["m_iTeamNum"]
     m_iIDEntIndex = client_data["client.dll"]["classes"]["C_CSPlayerPawnBase"]["fields"]["m_iIDEntIndex"]
 
-    logging.info("Searching for cs2.exe process...")
+    logging.info(f"{Fore.CYAN}Searching for cs2.exe process...")
     pm = initialize_pymem()
     if pm is None:
+        input(f"{Fore.RED}Press Enter to exit...")
         return
 
     client_base = get_client_module(pm)
     if client_base is None:
+        input(f"{Fore.RED}Press Enter to exit...")
         return
 
-    logging.info(f"TriggerBot started. Trigger key: {triggerKey.upper()}")
+    logging.info(f"{Fore.CYAN}TriggerBot started. Trigger key: {TRIGGER_KEY}")
 
     while True:
         try:
@@ -93,7 +109,7 @@ def main():
                 time.sleep(0.1)
                 continue
 
-            if keyboard.is_pressed(triggerKey):
+            if keyboard.is_pressed(TRIGGER_KEY):
                 player = pm.read_longlong(client_base + dwLocalPlayerPawn)
                 entity_id = pm.read_int(player + m_iIDEntIndex)
                 
@@ -114,12 +130,12 @@ def main():
             else:
                 time.sleep(0.1)
         except KeyboardInterrupt:
-            logging.info("TriggerBot stopped by user.")
+            logging.info(f"{Fore.YELLOW}TriggerBot stopped by user.")
             break
         except Exception as e:
-            logging.error(f"Unexpected error: {e}")
+            logging.error(f"{Fore.RED}Unexpected error: {e}")
+            logging.error(f"{Fore.RED}Please report this issue on the GitHub repository: https://github.com/Jesewe/cs2-triggerbot/issues")
+            input(f"{Fore.RED}Press Enter to exit...")
 
 if __name__ == '__main__':
-    application_name = "Counter-Strike 2"
-    triggerKey = "X"
     main()
