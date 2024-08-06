@@ -40,7 +40,10 @@ By default, the TriggerBot uses the 'X' key to trigger. You can change the trigg
 - Automatically detects enemies and triggers mouse clicks.
 - Fetches the latest offsets from an online source.
 - Checks for script updates and notifies the user if a new version is available.
-- Logs all actions and errors.
+- Logs all actions and errors to a specified log file and displays logs on the console.
+
+## Logging
+The TriggerBot logs all actions and errors in a log file located at `%LOCALAPPDATA%\Requests\ItsJesewe\crashes\logs.log`. The log file and directory are created automatically if they do not exist. 
 
 ## Contributing
 Contributions are welcome! Please submit a pull request or open an issue to discuss your ideas.

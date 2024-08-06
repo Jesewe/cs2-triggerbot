@@ -1,7 +1,6 @@
 import pymem
 import pymem.process
-import keyboard
-import time
+import time, keyboard, os, ctypes
 from pynput.mouse import Controller, Button
 from win32gui import GetWindowText, GetForegroundWindow
 from random import uniform
@@ -9,13 +8,29 @@ import logging
 from requests import get
 from packaging import version
 from colorama import init, Fore, Style
-import ctypes
 
 init(autoreset=True)
 
 mouse = Controller()
-VERSION = "v1.0.4"
+VERSION = "v1.0.5"
 TRIGGER_KEY = 'X'
+
+LOG_DIRECTORY = os.path.expandvars(r'%LOCALAPPDATA%\Requests\ItsJesewe\crashes')
+LOG_FILE = os.path.join(LOG_DIRECTORY, 'logs.log')
+
+if not os.path.exists(LOG_DIRECTORY):
+    os.makedirs(LOG_DIRECTORY)
+
+with open(LOG_FILE, 'w') as f:
+    pass
+
+file_handler = logging.FileHandler(LOG_FILE)
+file_handler.setFormatter(logging.Formatter(f'%(levelname)s: %(message)s'))
+
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(logging.Formatter(f'%(levelname)s: {Fore.CYAN}%(message)s{Style.RESET_ALL}'))
+
+logging.basicConfig(level=logging.INFO, handlers=[file_handler, console_handler])
 
 def set_console_title(title):
     ctypes.windll.kernel32.SetConsoleTitleW(title)
@@ -74,7 +89,6 @@ def should_trigger(entity_team, player_team, entity_health):
 
 def main():
     set_console_title(f"CS2 TriggerBot {VERSION}")
-    logging.basicConfig(level=logging.INFO, format=f'%(levelname)s - {Fore.CYAN}%(message)s{Style.RESET_ALL}')
     check_for_updates()
     logging.info(f"{Fore.CYAN}Fetching offsets and client data...")
 
@@ -101,7 +115,7 @@ def main():
         input(f"{Fore.RED}Press Enter to exit...")
         return
 
-    logging.info(f"{Fore.CYAN}TriggerBot started. Trigger key: {TRIGGER_KEY}")
+    logging.info(f"{Fore.GREEN}TriggerBot started, trigger key: {TRIGGER_KEY}")
 
     while True:
         try:
