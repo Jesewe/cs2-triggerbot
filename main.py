@@ -1,6 +1,9 @@
 import pymem
 import pymem.process
-import time, keyboard, os, ctypes
+import time
+import keyboard
+import os
+import ctypes
 from pynput.mouse import Controller, Button
 from win32gui import GetWindowText, GetForegroundWindow
 from random import uniform
@@ -12,7 +15,7 @@ from colorama import init, Fore, Style
 init(autoreset=True)
 
 mouse = Controller()
-VERSION = "v1.0.5"
+VERSION = "v1.0.6"
 TRIGGER_KEY = 'X'
 
 LOG_DIRECTORY = os.path.expandvars(r'%LOCALAPPDATA%\Requests\ItsJesewe\crashes')
@@ -120,7 +123,7 @@ def main():
     while True:
         try:
             if not is_game_active():
-                time.sleep(0.1)
+                time.sleep(0.05)
                 continue
 
             if keyboard.is_pressed(TRIGGER_KEY):
@@ -135,14 +138,14 @@ def main():
                         entity_health = pm.read_int(entity + m_iHealth)
                         
                         if should_trigger(entity_team, player_team, entity_health):
-                            time.sleep(uniform(0.01, 0.03))
+                            time.sleep(uniform(0.01, 0.02))
                             mouse.press(Button.left)
-                            time.sleep(uniform(0.01, 0.05))
+                            time.sleep(uniform(0.01, 0.03))
                             mouse.release(Button.left)
 
-                time.sleep(0.03)
+                time.sleep(0.01)
             else:
-                time.sleep(0.1)
+                time.sleep(0.05)
         except KeyboardInterrupt:
             logging.info(f"{Fore.YELLOW}TriggerBot stopped by user.")
             break
