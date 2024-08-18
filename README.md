@@ -1,52 +1,60 @@
 # CS2 TriggerBot
-This is a simple TriggerBot for Counter-Strike 2. The TriggerBot automatically fires when the crosshair is on an enemy player.
+CS2 TriggerBot is an automated tool designed for Counter-Strike 2 that assists with precise aiming by automatically triggering a mouse click when an enemy is detected in the player's crosshairs.
+
+## Features
+- **Automated Shooting:** Automatically triggers a mouse click when an enemy is detected.
+- **Process Attachment:** Attaches to the `cs2.exe` process and reads memory values to make real-time decisions.
+- **Customizable Trigger Key:** Allows users to define their own trigger key for activation.
+- **Update Checker:** Automatically checks for the latest version and notifies the user if an update is available.
+- **Error Logging:** Logs errors and important events to a log file for debugging purposes.
 
 ## Requirements
-To run this project, you need to install the following Python modules:
-- `pymem`
-- `keyboard`
-- `pywin32`
-- `pynput`
-- `requests`
-- `packaging`
-- `colorama`
+- Python 3.x
+- The following Python packages:
+  - `pymem`
+  - `pynput`
+  - `requests`
+  - `packaging`
+  - `keyboard`
+  - `colorama`
+  - `pywin32`
 
-## Installation
-1. Clone the repository:
-```bash
-git clone https://github.com/Jesewe/cs2-triggerbot.git
-```
+You can install the required packages using the following command:
 
-2. Navigate to the project directory:
-```bash
-cd cs2-triggerbot
-```
-
-3. Install the required modules:
 ```bash
 pip install -r requirements.txt
 ```
 
+## Installation
+1. **Clone the Repository:**
+   ```bash
+   git clone https://github.com/Jesewe/cs2-triggerbot.git
+   cd cs2-triggerbot
+   ```
+
+2. **Run the Script:**
+   ```bash
+   python main.py
+   ```
+
 ## Usage
-To start the TriggerBot, run the script:
-```bash
-python main.py
-```
+1. Ensure that Counter-Strike 2 is running.
+2. Execute the script using the command above.
+3. The script will automatically check for updates and fetch the necessary offsets from the provided sources.
+4. Once the script is running, press the configured trigger key (default: `X`) to activate the TriggerBot.
+5. The tool will automatically simulate mouse clicks when an enemy is detected in the crosshairs.
 
-## Configuration
-By default, the TriggerBot uses the 'X' key to trigger. You can change the trigger key by modifying the `TRIGGER_KEY` variable in the script.
+## Customization
+- **Trigger Key:** You can change the trigger key by modifying the `TRIGGER_KEY` variable in the script.
+- **Log Directory:** The log files are saved in the `%LOCALAPPDATA%\Requests\ItsJesewe\crashes` directory by default. You can change this by modifying the `LOG_DIRECTORY` variable.
 
-## Features
-- Automatically detects enemies and triggers mouse clicks.
-- Fetches the latest offsets from an online source.
-- Checks for script updates and notifies the user if a new version is available.
-- Logs all actions and errors to a specified log file and displays logs on the console.
-
-## Logging
-The TriggerBot logs all actions and errors in a log file located at `%LOCALAPPDATA%\Requests\ItsJesewe\crashes\logs.log`. The log file and directory are created automatically if they do not exist. 
+## Troubleshooting
+- **Failed to Fetch Offsets:** Ensure you have an active internet connection and that the source URLs are accessible.
+- **Could Not Open `cs2.exe`:** Make sure the game is running and that you have the necessary permissions.
+- **Unexpected Errors:** Check the log file located in the log directory for more details.
 
 ## Contributing
-Contributions are welcome! Please submit a pull request or open an issue to discuss your ideas.
+Contributions are welcome! Please open an issue or submit a pull request on the [GitHub repository](https://github.com/Jesewe/cs2-triggerbot).
 
 ## Disclaimer
 This script is for educational purposes only. Using cheats or hacks in online games is against the terms of service of most games and can result in bans or other penalties. Use this script at your own risk.
