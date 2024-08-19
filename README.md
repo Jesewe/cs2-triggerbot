@@ -1,12 +1,12 @@
 <div align="center">
     <h1>🎯 CS2 TriggerBot 🎯</h1>
     <p>Your ultimate aiming assistant for Counter-Strike 2</p>
-    <a href="#features"><strong>Features</strong></a> •
-    <a href="#installation"><strong>Installation</strong></a> •
-    <a href="#usage"><strong>Usage</strong></a> •
-    <a href="#customization"><strong>Customization</strong></a> •
-    <a href="#troubleshooting"><strong>Troubleshooting</strong></a> •
-    <a href="#contributing"><strong>Contributing</strong></a>
+    <a href="#-features"><strong>Features</strong></a> •
+    <a href="#-installation"><strong>Installation</strong></a> •
+    <a href="#-usage"><strong>Usage</strong></a> •
+    <a href="#-customization"><strong>Customization</strong></a> •
+    <a href="#-troubleshooting"><strong>Troubleshooting</strong></a> •
+    <a href="#-contributing"><strong>Contributing</strong></a>
 </div>
 
 ---
