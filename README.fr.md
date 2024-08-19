@@ -8,6 +8,12 @@
    <a href="#personnalisation"><strong>Personnalisation</strong></a> •
    <a href="#dépannage"><strong>Dépannage</strong></a> •
    <a href="#contribution"><strong>Contribution</strong></a>
+   <p><strong>🌍 Traductions:</strong></p>
+   <a href="README.ru.md"><img src="https://img.shields.io/badge/lang-Russian-purple?style=for-the-badge&logo=googletranslate"></a>
+   <a href="README.fr.md"><img src="https://img.shields.io/badge/lang-French-purple?style=for-the-badge&logo=googletranslate"></a>
+   <a href="README.es.md"><img src="https://img.shields.io/badge/lang-Spanish-purple?style=for-the-badge&logo=googletranslate"></a>
+   <a href="README.uk-UA.md"><img src="https://img.shields.io/badge/lang-Ukrainian-purple?style=for-the-badge&logo=googletranslate"></a>
+   <a href="README.pl.md"><img src="https://img.shields.io/badge/lang-Polish-purple?style=for-the-badge&logo=googletranslate"></a>
 </div>
 
 ---
