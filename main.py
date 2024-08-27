@@ -1,16 +1,18 @@
 import pymem
 import pymem.process
 import time
-import keyboard
 import os
 import ctypes
-from pynput.mouse import Controller, Button
+from pynput.mouse import Controller, Button, Listener
+from pynput import keyboard
 from win32gui import GetWindowText, GetForegroundWindow
 from random import uniform
 import logging
 from requests import get
 from packaging import version
 from colorama import init, Fore
+import json
+import configparser
 
 # Initialize colorama for colored console output
 init(autoreset=True)
@@ -22,7 +24,7 @@ class Logger:
     """Handles logging setup for the application."""
     
     LOG_DIRECTORY = os.path.expandvars(r'%LOCALAPPDATA%\Requests\ItsJesewe\crashes')
-    LOG_FILE = os.path.join(LOG_DIRECTORY, 'logs.log')
+    LOG_FILE = os.path.join(LOG_DIRECTORY, 'tb_logs.log')
 
     @staticmethod
     def setup_logging():
@@ -39,6 +41,9 @@ class Logger:
 class Utility:
     """Contains utility functions for the application."""
 
+    CACHE_DIRECTORY = os.path.expandvars(r'%LOCALAPPDATA%\Requests\ItsJesewe')
+    CACHE_FILE = os.path.join(CACHE_DIRECTORY, 'offsets_cache.json')
+    
     @staticmethod
     def set_console_title(title):
         """Sets the console window title."""
@@ -46,10 +51,34 @@ class Utility:
 
     @staticmethod
     def fetch_offsets():
-        """Fetches offsets and client data from remote sources."""
+        """Fetches offsets and client data from remote sources or local cache."""
         try:
-            offset = get("https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/offsets.json").json()
-            client = get("https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/client_dll.json").json()
+            response_offset = get("https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/offsets.json")
+            response_client = get("https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/client_dll.json")
+            
+            if response_offset.status_code != 200 or response_client.status_code != 200:
+                logging.error(f"{Fore.RED}Failed to fetch offsets from server.")
+                return None, None
+
+            offset = response_offset.json()
+            client = response_client.json()
+
+            if os.path.exists(Utility.CACHE_FILE):
+                with open(Utility.CACHE_FILE, 'r') as f:
+                    cached_data = json.load(f)
+                
+                if cached_data.get('offsets') != offset or cached_data.get('client') != client:
+                    logging.info(f"{Fore.YELLOW}Offsets have changed, updating cache...")
+                    with open(Utility.CACHE_FILE, 'w') as f:
+                        json.dump({'offsets': offset, 'client': client}, f)
+                else:
+                    logging.info(f"{Fore.CYAN}Using cached offsets.")
+                    return cached_data['offsets'], cached_data['client']
+            else:
+                os.makedirs(Utility.CACHE_DIRECTORY, exist_ok=True)
+                with open(Utility.CACHE_FILE, 'w') as f:
+                    json.dump({'offsets': offset, 'client': client}, f)
+
             return offset, client
         except Exception as e:
             logging.error(f"{Fore.RED}Failed to fetch offsets: {e}")
@@ -64,7 +93,7 @@ class Utility:
             response.raise_for_status()
             latest_version = response.json()[0]["name"]
             if version.parse(latest_version) > version.parse(current_version):
-                logging.info(f"{Fore.YELLOW}New version available: {latest_version}. Please update for the latest fixes and features.")
+                logging.warning(f"{Fore.YELLOW}New version available: {latest_version}. Please update for the latest fixes and features.")
             else:
                 logging.info(f"{Fore.GREEN}You are using the latest version.")
         except Exception as e:
@@ -73,8 +102,7 @@ class Utility:
 class CS2TriggerBot:
     """Main class for the CS2 TriggerBot functionality."""
     
-    VERSION = "v1.0.8"
-    TRIGGER_KEY = 'X'
+    VERSION = "v1.0.9"
 
     def __init__(self):
         """Initializes the TriggerBot with necessary attributes."""
@@ -85,6 +113,25 @@ class CS2TriggerBot:
         self.m_iHealth = None
         self.m_iTeamNum = None
         self.m_iIDEntIndex = None
+        self.is_running = False
+        self.trigger_active = False  # Tracks the state of the trigger key
+        self.trigger_key = None  # Stores the key that activates the trigger
+        self.load_config()  # Load trigger key from config.ini
+
+    def load_config(self):
+        """Loads the trigger key configuration from config.ini."""
+        config = configparser.ConfigParser()
+        config_file = os.path.join(Utility.CACHE_DIRECTORY, 'config.ini')
+
+        if not os.path.exists(config_file):
+            logging.info(f"{Fore.YELLOW}config.ini not found. Creating a default config.ini...")
+            config['Settings'] = {'TriggerKey': 'x2'}  # Default to MOUSE 5
+            os.makedirs(Utility.CACHE_DIRECTORY, exist_ok=True)
+            with open(config_file, 'w') as f:
+                config.write(f)
+
+        config.read(config_file)
+        self.trigger_key = config['Settings']['TriggerKey']
 
     def initialize_pymem(self):
         """Initializes Pymem and attaches to the game process."""
@@ -123,6 +170,28 @@ class CS2TriggerBot:
         """Determines if the trigger bot should activate based on team and health status."""
         return entity_team != player_team and entity_health > 0
 
+    def on_mouse_press(self, x, y, button, pressed):
+        """Mouse press event handler."""
+        if self.trigger_key in ["x2", "x1"]:
+            if button == Button[self.trigger_key]:  # Handle mouse buttons
+                self.trigger_active = pressed
+
+    def on_key_press(self, key):
+        """Keyboard press event handler."""
+        try:
+            if hasattr(key, 'char') and key.char == self.trigger_key:
+                self.trigger_active = True
+        except AttributeError:
+            pass
+
+    def on_key_release(self, key):
+        """Keyboard release event handler."""
+        try:
+            if hasattr(key, 'char') and key.char == self.trigger_key:
+                self.trigger_active = False
+        except AttributeError:
+            pass
+
     def start(self):
         """Starts the main loop of the TriggerBot."""
         Utility.set_console_title(f"CS2 TriggerBot {self.VERSION}")
@@ -150,16 +219,24 @@ class CS2TriggerBot:
             input(f"{Fore.RED}Press Enter to exit...")
             return
 
-        logging.info(f"{Fore.GREEN}TriggerBot started, trigger key: {self.TRIGGER_KEY}")
+        logging.info(f"{Fore.GREEN}TriggerBot started, trigger key: {self.trigger_key.upper()}")
+        self.is_running = True
 
-        # Main loop
-        while True:
+        # Start the mouse listener and keyboard listener
+        with Listener(on_click=self.on_mouse_press) as mouse_listener, keyboard.Listener(on_press=self.on_key_press, on_release=self.on_key_release) as key_listener:
+            self.run_trigger_loop()
+            mouse_listener.join()
+            key_listener.join()
+
+    def run_trigger_loop(self):
+        """Runs the main trigger loop."""
+        while self.is_running:
             try:
                 if not self.is_game_active():
                     time.sleep(0.05)
                     continue
 
-                if keyboard.is_pressed(self.TRIGGER_KEY):
+                if self.trigger_active:
                     player = self.pm.read_longlong(self.client_base + self.dwLocalPlayerPawn)
                     entity_id = self.pm.read_int(player + self.m_iIDEntIndex)
                     
@@ -181,7 +258,7 @@ class CS2TriggerBot:
                     time.sleep(0.05)
             except KeyboardInterrupt:
                 logging.info(f"{Fore.YELLOW}TriggerBot stopped by user.")
-                break
+                self.is_running = False
             except Exception as e:
                 logging.error(f"{Fore.RED}Unexpected error: {e}")
                 logging.error(f"{Fore.RED}Please report this issue on the GitHub repository: https://github.com/Jesewe/cs2-triggerbot/issues")

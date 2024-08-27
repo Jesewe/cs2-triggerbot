@@ -8,13 +8,6 @@
    <a href="#customization"><strong>Customization</strong></a> •
    <a href="#troubleshooting"><strong>Troubleshooting</strong></a> •
    <a href="#contributing"><strong>Contributing</strong></a>
-   <br><br>
-   <p><strong>🌍 Translations:</strong></p>
-   <a href="README.ru.md"><img src="https://img.shields.io/badge/lang-Russian-purple?style=for-the-badge&logo=googletranslate"></a>
-   <a href="README.fr.md"><img src="https://img.shields.io/badge/lang-French-purple?style=for-the-badge&logo=googletranslate"></a>
-   <a href="README.es.md"><img src="https://img.shields.io/badge/lang-Spanish-purple?style=for-the-badge&logo=googletranslate"></a>
-   <a href="README.uk-UA.md"><img src="https://img.shields.io/badge/lang-Ukrainian-purple?style=for-the-badge&logo=googletranslate"></a>
-   <a href="README.pl.md"><img src="https://img.shields.io/badge/lang-Polish-purple?style=for-the-badge&logo=googletranslate"></a>
 </div>
 
 ---
@@ -23,11 +16,11 @@
 CS2 TriggerBot is an automated tool designed for Counter-Strike 2 that assists with precise aiming by automatically triggering a mouse click when an enemy is detected in the player's crosshairs.
 
 ## Features
-- **Automated Shooting:** Automatically triggers a mouse click when an enemy is detected.
-- **Process Attachment:** Attaches to the `cs2.exe` process and reads memory values to make real-time decisions.
-- **Customizable Trigger Key:** Allows users to define their own trigger key for activation.
-- **Update Checker:** Automatically checks for the latest version and notifies the user if an update is available.
-- **Error Logging:** Logs errors and important events to a log file for debugging purposes.
+- **Automatic Trigger**: Fires your weapon when an enemy is detected under your crosshair.
+- **Configurable Trigger Key**: You can configure the trigger key through the `config.ini` file. By default, the side mouse button (MOUSE 5) is used.
+- **Offsets and Client Data**: Fetches the latest offsets and client data automatically from remote sources.
+- **Logging**: Detailed logs are saved in `%LOCALAPPDATA%\Requests\ItsJesewe\crashes\tb_logs.log`.
+- **Update Checker**: Automatically checks for updates from the GitHub repository.
 
 ## Installation
 1. **Clone the Repository:**
@@ -46,16 +39,19 @@ CS2 TriggerBot is an automated tool designed for Counter-Strike 2 that assists w
    python main.py
    ```
 
-## Usage
-1. Ensure that Counter-Strike 2 is running.
-2. Execute the script using the command above.
-3. The script will automatically check for updates and fetch the necessary offsets from the provided sources.
-4. Once the script is running, press the configured trigger key (default: `X`) to activate the TriggerBot.
-5. The tool will automatically simulate mouse clicks when an enemy is detected in the crosshairs.
+## Configuration
+The `config.ini` file is automatically generated in the directory `%LOCALAPPDATA%\Requests\ItsJesewe\` on the first run. You can modify the `TriggerKey` in this file to change the key that activates the bot. The default key is set to `x2` (MOUSE 5).
 
-## Customization
-- **Trigger Key:** You can change the trigger key by modifying the `TRIGGER_KEY` variable in the script.
-- **Log Directory:** The log files are saved in the `%LOCALAPPDATA%\Requests\ItsJesewe\crashes` directory by default. You can change this by modifying the `LOG_DIRECTORY` variable.
+Example `config.ini`:
+```ini
+[Settings]
+TriggerKey = x2
+```
+
+## Usage
+- Launch Counter-Strike 2.
+- Run the TriggerBot using the command mentioned above.
+- The bot will automatically start functioning when the game is active.
 
 ## Troubleshooting
 - **Failed to Fetch Offsets:** Ensure you have an active internet connection and that the source URLs are accessible.
