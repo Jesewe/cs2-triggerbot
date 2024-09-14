@@ -3,7 +3,8 @@ import pymem.process
 import time
 import os
 import ctypes
-from pynput.mouse import Controller, Button, Listener
+from pynput.mouse import Controller, Button
+from pynput.mouse import Listener as MouseListener
 from pynput import keyboard
 from win32gui import GetWindowText, GetForegroundWindow
 from random import uniform
@@ -27,13 +28,24 @@ class Logger:
     LOG_FILE = os.path.join(LOG_DIRECTORY, 'tb_logs.log')
 
     @staticmethod
-    def setup_logging():
-        """Set up the logging configuration."""
+    def setup_logging(log_level):
+        """Set up the logging configuration with the specified log level."""
         os.makedirs(Logger.LOG_DIRECTORY, exist_ok=True)
         with open(Logger.LOG_FILE, 'w') as f:
             pass
+        
+        # Convert log level string to logging module constant
+        log_levels = {
+            'DEBUG': logging.DEBUG,
+            'INFO': logging.INFO,
+            'WARNING': logging.WARNING,
+            'ERROR': logging.ERROR,
+            'CRITICAL': logging.CRITICAL
+        }
+        level = log_levels.get(log_level.upper(), logging.INFO)  # Default to INFO if invalid
+        
         logging.basicConfig(
-            level=logging.INFO,
+            level=level,
             format='%(levelname)s: %(message)s',
             handlers=[logging.FileHandler(Logger.LOG_FILE), logging.StreamHandler()]
         )
@@ -102,7 +114,7 @@ class Utility:
 class CS2TriggerBot:
     """Main class for the CS2 TriggerBot functionality."""
     
-    VERSION = "v1.0.9"
+    VERSION = "v1.1.0"
 
     def __init__(self):
         """Initializes the TriggerBot with necessary attributes."""
@@ -119,26 +131,54 @@ class CS2TriggerBot:
         self.load_config()  # Load trigger key from config.ini
 
     def load_config(self):
-        """Loads the trigger key configuration from config.ini."""
+        """Loads the configuration from config.ini, adding missing settings if necessary."""
         config = configparser.ConfigParser()
         config_file = os.path.join(Utility.CACHE_DIRECTORY, 'config.ini')
 
         if not os.path.exists(config_file):
             logging.info(f"{Fore.YELLOW}config.ini not found. Creating a default config.ini...")
-            config['Settings'] = {'TriggerKey': 'x2'}  # Default to MOUSE 5
+            config['Settings'] = {
+                'TriggerKey': 'x2',  # Default to MOUSE 5
+                'ShotDelayMin': '0.01',  # Default minimum delay
+                'ShotDelayMax': '0.03'   # Default maximum delay
+            }
+            config['Logger'] = {
+                'LogLevel': 'INFO'  # Default logging level
+            }
             os.makedirs(Utility.CACHE_DIRECTORY, exist_ok=True)
             with open(config_file, 'w') as f:
                 config.write(f)
+        else:
+            # Load the existing config file
+            config.read(config_file)
+            
+            # Check if the new settings are missing, and add them with default values if needed
+            if 'ShotDelayMin' not in config['Settings']:
+                config['Settings']['ShotDelayMin'] = '0.01'
+            if 'ShotDelayMax' not in config['Settings']:
+                config['Settings']['ShotDelayMax'] = '0.03'
+            
+            if 'Logger' not in config:
+                config['Logger'] = {'LogLevel': 'INFO'}  # Add Logger section if missing
+            elif 'LogLevel' not in config['Logger']:
+                config['Logger']['LogLevel'] = 'INFO'
 
-        config.read(config_file)
+            # Save updated config file with new settings if necessary
+            with open(config_file, 'w') as configfile:
+                config.write(configfile)
+
+        # Load settings
         self.trigger_key = config['Settings']['TriggerKey']
+        self.shot_delay_min = float(config['Settings'].get('ShotDelayMin', 0.01))
+        self.shot_delay_max = float(config['Settings'].get('ShotDelayMax', 0.03))
+        self.log_level = config['Logger']['LogLevel']
 
     def initialize_pymem(self):
         """Initializes Pymem and attaches to the game process."""
         try:
             self.pm = pymem.Pymem("cs2.exe")
         except pymem.exception.PymemError as e:
-            logging.error(f"{Fore.RED}Could not open cs2.exe: {e}")
+            logging.error(f"{Fore.RED}{e}")
             return False
         return True
 
@@ -172,25 +212,18 @@ class CS2TriggerBot:
 
     def on_mouse_press(self, x, y, button, pressed):
         """Mouse press event handler."""
-        if self.trigger_key in ["x2", "x1"]:
-            if button == Button[self.trigger_key]:  # Handle mouse buttons
-                self.trigger_active = pressed
+        if self.trigger_key in ["x2", "x1"] and button == Button[self.trigger_key]:
+            self.trigger_active = pressed
 
     def on_key_press(self, key):
         """Keyboard press event handler."""
-        try:
-            if hasattr(key, 'char') and key.char == self.trigger_key:
-                self.trigger_active = True
-        except AttributeError:
-            pass
+        if hasattr(key, 'char') and key.char == self.trigger_key:
+            self.trigger_active = True
 
     def on_key_release(self, key):
         """Keyboard release event handler."""
-        try:
-            if hasattr(key, 'char') and key.char == self.trigger_key:
-                self.trigger_active = False
-        except AttributeError:
-            pass
+        if hasattr(key, 'char') and key.char == self.trigger_key:
+            self.trigger_active = False
 
     def start(self):
         """Starts the main loop of the TriggerBot."""
@@ -222,11 +255,17 @@ class CS2TriggerBot:
         logging.info(f"{Fore.GREEN}TriggerBot started, trigger key: {self.trigger_key.upper()}")
         self.is_running = True
 
-        # Start the mouse listener and keyboard listener
-        with Listener(on_click=self.on_mouse_press) as mouse_listener, keyboard.Listener(on_press=self.on_key_press, on_release=self.on_key_release) as key_listener:
-            self.run_trigger_loop()
-            mouse_listener.join()
-            key_listener.join()
+        # Initialize listeners
+        self.mouse_listener = MouseListener(on_click=self.on_mouse_press)
+        self.key_listener = keyboard.Listener(on_press=self.on_key_press, on_release=self.on_key_release)
+        self.mouse_listener.start()
+        self.key_listener.start()
+
+        self.run_trigger_loop()
+
+        # Stop listeners on exit
+        self.mouse_listener.stop()
+        self.key_listener.stop()
 
     def run_trigger_loop(self):
         """Runs the main trigger loop."""
@@ -248,9 +287,10 @@ class CS2TriggerBot:
                             entity_health = self.pm.read_int(entity + self.m_iHealth)
                             
                             if self.should_trigger(entity_team, player_team, entity_health):
-                                time.sleep(uniform(0.01, 0.02))
+                                # Use random delays from the configuration
+                                time.sleep(uniform(self.shot_delay_min, self.shot_delay_max))
                                 mouse.press(Button.left)
-                                time.sleep(uniform(0.01, 0.03))
+                                time.sleep(uniform(self.shot_delay_min, self.shot_delay_max))
                                 mouse.release(Button.left)
 
                     time.sleep(0.01)
@@ -265,6 +305,6 @@ class CS2TriggerBot:
                 input(f"{Fore.RED}Press Enter to exit...")
 
 if __name__ == '__main__':
-    Logger.setup_logging()
     bot = CS2TriggerBot()
+    Logger.setup_logging(bot.log_level)
     bot.start()

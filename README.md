@@ -46,6 +46,11 @@ Example `config.ini`:
 ```ini
 [Settings]
 TriggerKey = x2
+ShotDelayMin = 0.01
+ShotDelayMax = 0.03
+
+[Logger]
+LogLevel = INFO
 ```
 
 ## Usage
