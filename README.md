@@ -39,6 +39,24 @@ CS2 TriggerBot is an automated tool designed for Counter-Strike 2 that assists w
    python main.py
    ```
 
+## Obfuscating and Compiling
+1. **Install Required Packages**
+   ```bash
+   pip install pyinstaller pyarmor
+   ```
+2. **Generate Obfuscated Files**
+   Navigate to the directory containing all scripts
+   ```bash
+   cd cs2-triggerbot
+   ```
+   and run:
+   
+   ```bash
+   pyarmor gen --pack onefile main.py
+   ```
+4. **Rename the Output File**
+   Rename the resulting ```dist/main.exe``` file and use it.
+
 ## Configuration
 The `config.ini` file is automatically generated in the directory `%LOCALAPPDATA%\Requests\ItsJesewe\` on the first run. You can modify the `TriggerKey` in this file to change the key that activates the bot. The default key is set to `x2` (MOUSE 5).
 
