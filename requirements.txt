@@ -4,5 +4,5 @@ pynput
 pywin32
 requests
 packaging
-configparser
 colorama
+configparser

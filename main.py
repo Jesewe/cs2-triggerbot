@@ -114,7 +114,7 @@ class Utility:
 class CS2TriggerBot:
     """Main class for the CS2 TriggerBot functionality."""
     
-    VERSION = "v1.1.0"
+    VERSION = "v1.1.1"
 
     def __init__(self):
         """Initializes the TriggerBot with necessary attributes."""
@@ -128,7 +128,8 @@ class CS2TriggerBot:
         self.is_running = False
         self.trigger_active = False  # Tracks the state of the trigger key
         self.trigger_key = None  # Stores the key that activates the trigger
-        self.load_config()  # Load trigger key from config.ini
+        self.attack_on_teammates = False  # New setting for attacking teammates
+        self.load_config()  # Load trigger key and other settings from config.ini
 
     def load_config(self):
         """Loads the configuration from config.ini, adding missing settings if necessary."""
@@ -140,7 +141,8 @@ class CS2TriggerBot:
             config['Settings'] = {
                 'TriggerKey': 'x2',  # Default to MOUSE 5
                 'ShotDelayMin': '0.01',  # Default minimum delay
-                'ShotDelayMax': '0.03'   # Default maximum delay
+                'ShotDelayMax': '0.03',  # Default maximum delay
+                'AttackOnTeammates': 'False'  # Default to not attacking teammates
             }
             config['Logger'] = {
                 'LogLevel': 'INFO'  # Default logging level
@@ -157,6 +159,8 @@ class CS2TriggerBot:
                 config['Settings']['ShotDelayMin'] = '0.01'
             if 'ShotDelayMax' not in config['Settings']:
                 config['Settings']['ShotDelayMax'] = '0.03'
+            if 'AttackOnTeammates' not in config['Settings']:
+                config['Settings']['AttackOnTeammates'] = 'False'
             
             if 'Logger' not in config:
                 config['Logger'] = {'LogLevel': 'INFO'}  # Add Logger section if missing
@@ -172,24 +176,37 @@ class CS2TriggerBot:
         self.shot_delay_min = float(config['Settings'].get('ShotDelayMin', 0.01))
         self.shot_delay_max = float(config['Settings'].get('ShotDelayMax', 0.03))
         self.log_level = config['Logger']['LogLevel']
+        self.attack_on_teammates = config['Settings'].getboolean('AttackOnTeammates', False)
 
     def initialize_pymem(self):
         """Initializes Pymem and attaches to the game process."""
         try:
             self.pm = pymem.Pymem("cs2.exe")
+            logging.info(f"{Fore.GREEN}Successfully attached to cs2.exe process.")
+        except pymem.exception.ProcessNotFound:
+            logging.error(f"{Fore.RED}Could not find cs2.exe process. Please make sure the game is running.")
         except pymem.exception.PymemError as e:
-            logging.error(f"{Fore.RED}{e}")
-            return False
-        return True
+            logging.error(f"{Fore.RED}Pymem encountered an error: {e}")
+        except Exception as e:
+            logging.error(f"{Fore.RED}Unexpected error during Pymem initialization: {e}")
+        return self.pm is not None
 
     def get_client_module(self):
         """Retrieves the client.dll module base address."""
-        client_module = pymem.process.module_from_name(self.pm.process_handle, "client.dll")
-        if not client_module:
-            logging.error(f"{Fore.RED}Could not find client.dll module.")
-            return False
-        self.client_base = client_module.lpBaseOfDll
-        return True
+        try:
+            if self.client_base is None:
+                client_module = pymem.process.module_from_name(self.pm.process_handle, "client.dll")
+                if not client_module:
+                    raise pymem.exception.ModuleNotFoundError("client.dll not found")
+                self.client_base = client_module.lpBaseOfDll
+                logging.info(f"{Fore.GREEN}client.dll module found at {hex(self.client_base)}.")
+        except pymem.exception.ModuleNotFoundError as e:
+            logging.error(f"{Fore.RED}Error: {e}. Ensure client.dll is loaded.")
+            self.handle_retry_or_exit("client.dll module not found")
+        except Exception as e:
+            logging.error(f"{Fore.RED}Unexpected error retrieving client module: {e}")
+            self.handle_retry_or_exit("Unexpected client module error")
+        return self.client_base is not None
 
     def get_entity(self, index):
         """Fetches an entity from the entity list."""
@@ -208,7 +225,11 @@ class CS2TriggerBot:
 
     def should_trigger(self, entity_team, player_team, entity_health):
         """Determines if the trigger bot should activate based on team and health status."""
-        return entity_team != player_team and entity_health > 0
+        # If AttackOnTeammates is True, ignore team checks and only fire based on health
+        if self.attack_on_teammates:
+            return entity_health > 0  # Fire at anyone alive
+        # If AttackOnTeammates is False, only fire at enemies
+        return entity_team != player_team and entity_health > 0  # Fire only at enemies
 
     def on_mouse_press(self, x, y, button, pressed):
         """Mouse press event handler."""
