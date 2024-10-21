@@ -4,8 +4,6 @@ import time
 import os
 import ctypes
 from pynput.mouse import Controller, Button
-from pynput.mouse import Listener as MouseListener
-from pynput import keyboard
 from win32gui import GetWindowText, GetForegroundWindow
 from random import uniform
 import logging
@@ -13,7 +11,7 @@ from requests import get
 from packaging import version
 from colorama import init, Fore
 import json
-import configparser
+import keyboard
 
 # Initialize colorama for colored console output
 init(autoreset=True)
@@ -23,42 +21,120 @@ mouse = Controller()
 
 class Logger:
     """Handles logging setup for the application."""
-    
+
     LOG_DIRECTORY = os.path.expandvars(r'%LOCALAPPDATA%\Requests\ItsJesewe\crashes')
     LOG_FILE = os.path.join(LOG_DIRECTORY, 'tb_logs.log')
 
     @staticmethod
-    def setup_logging(log_level):
-        """Set up the logging configuration with the specified log level."""
+    def setup_logging():
+        """Set up the logging configuration with the default log level INFO."""
         os.makedirs(Logger.LOG_DIRECTORY, exist_ok=True)
         with open(Logger.LOG_FILE, 'w') as f:
             pass
         
-        # Convert log level string to logging module constant
-        log_levels = {
-            'DEBUG': logging.DEBUG,
-            'INFO': logging.INFO,
-            'WARNING': logging.WARNING,
-            'ERROR': logging.ERROR,
-            'CRITICAL': logging.CRITICAL
-        }
-        level = log_levels.get(log_level.upper(), logging.INFO)  # Default to INFO if invalid
-        
         logging.basicConfig(
-            level=level,
+            level=logging.INFO,  # Default to INFO level logging
             format='%(levelname)s: %(message)s',
             handlers=[logging.FileHandler(Logger.LOG_FILE), logging.StreamHandler()]
         )
 
+class ConfigManager:
+    """Handles loading, saving, and validating configuration settings."""
+    
+    CONFIG_DIRECTORY = os.path.expandvars(r'%LOCALAPPDATA%\Requests\ItsJesewe')
+    CONFIG_FILE = os.path.join(CONFIG_DIRECTORY, 'config.json')
+    
+    DEFAULT_CONFIG = {
+        "Settings": {
+            "TriggerKey": "x",  # KEY x by default
+            "ShotDelayMin": 0.01,  # Minimum delay between shots
+            "ShotDelayMax": 0.03,  # Maximum delay between shots
+            "AttackOnTeammates": False  # Should the bot attack teammates?
+        }
+    }
+
+    @staticmethod
+    def load_config():
+        """Loads the configuration from a JSON file, creating defaults if needed."""
+        if not os.path.exists(ConfigManager.CONFIG_DIRECTORY):
+            os.makedirs(ConfigManager.CONFIG_DIRECTORY)
+
+        if not os.path.exists(ConfigManager.CONFIG_FILE):
+            logging.info(f"{Fore.YELLOW}config.json not found, creating a default configuration.")
+            ConfigManager.save_config(ConfigManager.DEFAULT_CONFIG)
+
+        # Load the configuration from file
+        try:
+            with open(ConfigManager.CONFIG_FILE, 'r') as config_file:
+                config = json.load(config_file)
+                logging.info(f"{Fore.CYAN}Loaded configuration.")
+        except (json.JSONDecodeError, IOError) as e:
+            logging.error(f"{Fore.RED}Failed to load configuration: {e}")
+            config = ConfigManager.DEFAULT_CONFIG
+
+        return config
+
+    @staticmethod
+    def save_config(config):
+        """Saves the given configuration to the config file."""
+        with open(ConfigManager.CONFIG_FILE, 'w') as config_file:
+            json.dump(config, config_file, indent=4)
+            logging.info(f"{Fore.CYAN}Saved configuration to {ConfigManager.CONFIG_FILE}")
+
+    @staticmethod
+    def validate_config(config):
+        """Validates and fixes invalid configuration values."""
+        valid = True
+
+        # Validate TriggerKey
+        if not isinstance(config['Settings'].get('TriggerKey'), str):
+            logging.error(f"{Fore.RED}Invalid TriggerKey in configuration. Resetting to default.")
+            config['Settings']['TriggerKey'] = ConfigManager.DEFAULT_CONFIG['Settings']['TriggerKey']
+            valid = False
+
+        # Validate ShotDelayMin
+        if not isinstance(config['Settings'].get('ShotDelayMin'), (int, float)) or config['Settings']['ShotDelayMin'] <= 0:
+            logging.error(f"{Fore.RED}Invalid ShotDelayMin in configuration. Resetting to default.")
+            config['Settings']['ShotDelayMin'] = ConfigManager.DEFAULT_CONFIG['Settings']['ShotDelayMin']
+            valid = False
+
+        # Validate ShotDelayMax
+        if not isinstance(config['Settings'].get('ShotDelayMax'), (int, float)) or config['Settings']['ShotDelayMax'] <= 0:
+            logging.error(f"{Fore.RED}Invalid ShotDelayMax in configuration. Resetting to default.")
+            config['Settings']['ShotDelayMax'] = ConfigManager.DEFAULT_CONFIG['Settings']['ShotDelayMax']
+            valid = False
+
+        # Validate AttackOnTeammates
+        if not isinstance(config['Settings'].get('AttackOnTeammates'), bool):
+            logging.error(f"{Fore.RED}Invalid AttackOnTeammates in configuration. Resetting to default.")
+            config['Settings']['AttackOnTeammates'] = ConfigManager.DEFAULT_CONFIG['Settings']['AttackOnTeammates']
+            valid = False
+
+        return valid
+
+    @staticmethod
+    def load_and_validate_config():
+        """Loads and validates configuration, applying defaults where necessary."""
+        config = ConfigManager.load_config()
+        if not ConfigManager.validate_config(config):
+            logging.info(f"{Fore.YELLOW}Configuration had invalid values. Updated with defaults.")
+            ConfigManager.save_config(config)
+        return config
+
+    @staticmethod
+    def reload_config():
+        """Reloads configuration during runtime."""
+        logging.info(f"{Fore.CYAN}Reloading configuration from file...")
+        return ConfigManager.load_and_validate_config()
+
 class Utility:
     """Contains utility functions for the application."""
-
-    CACHE_DIRECTORY = os.path.expandvars(r'%LOCALAPPDATA%\Requests\ItsJesewe')
+    
+    CACHE_DIRECTORY = ConfigManager.CONFIG_DIRECTORY
     CACHE_FILE = os.path.join(CACHE_DIRECTORY, 'offsets_cache.json')
     
     @staticmethod
     def set_console_title(title):
-        """Sets the console window title."""
         ctypes.windll.kernel32.SetConsoleTitleW(title)
 
     @staticmethod
@@ -94,7 +170,6 @@ class Utility:
             return offset, client
         except Exception as e:
             logging.error(f"{Fore.RED}Failed to fetch offsets: {e}")
-            logging.error(f"{Fore.RED}Please report this issue on the GitHub repository: https://github.com/Jesewe/cs2-triggerbot/issues")
             return None, None
 
     @staticmethod
@@ -113,11 +188,12 @@ class Utility:
 
 class CS2TriggerBot:
     """Main class for the CS2 TriggerBot functionality."""
-    
-    VERSION = "v1.1.1"
+
+    VERSION = "v1.1.2"
 
     def __init__(self):
         """Initializes the TriggerBot with necessary attributes."""
+        self.config = ConfigManager.load_and_validate_config()
         self.pm = None
         self.client_base = None
         self.dwEntityList = None
@@ -127,56 +203,10 @@ class CS2TriggerBot:
         self.m_iIDEntIndex = None
         self.is_running = False
         self.trigger_active = False  # Tracks the state of the trigger key
-        self.trigger_key = None  # Stores the key that activates the trigger
-        self.attack_on_teammates = False  # New setting for attacking teammates
-        self.load_config()  # Load trigger key and other settings from config.ini
-
-    def load_config(self):
-        """Loads the configuration from config.ini, adding missing settings if necessary."""
-        config = configparser.ConfigParser()
-        config_file = os.path.join(Utility.CACHE_DIRECTORY, 'config.ini')
-
-        if not os.path.exists(config_file):
-            logging.info(f"{Fore.YELLOW}config.ini not found. Creating a default config.ini...")
-            config['Settings'] = {
-                'TriggerKey': 'x2',  # Default to MOUSE 5
-                'ShotDelayMin': '0.01',  # Default minimum delay
-                'ShotDelayMax': '0.03',  # Default maximum delay
-                'AttackOnTeammates': 'False'  # Default to not attacking teammates
-            }
-            config['Logger'] = {
-                'LogLevel': 'INFO'  # Default logging level
-            }
-            os.makedirs(Utility.CACHE_DIRECTORY, exist_ok=True)
-            with open(config_file, 'w') as f:
-                config.write(f)
-        else:
-            # Load the existing config file
-            config.read(config_file)
-            
-            # Check if the new settings are missing, and add them with default values if needed
-            if 'ShotDelayMin' not in config['Settings']:
-                config['Settings']['ShotDelayMin'] = '0.01'
-            if 'ShotDelayMax' not in config['Settings']:
-                config['Settings']['ShotDelayMax'] = '0.03'
-            if 'AttackOnTeammates' not in config['Settings']:
-                config['Settings']['AttackOnTeammates'] = 'False'
-            
-            if 'Logger' not in config:
-                config['Logger'] = {'LogLevel': 'INFO'}  # Add Logger section if missing
-            elif 'LogLevel' not in config['Logger']:
-                config['Logger']['LogLevel'] = 'INFO'
-
-            # Save updated config file with new settings if necessary
-            with open(config_file, 'w') as configfile:
-                config.write(configfile)
-
-        # Load settings
-        self.trigger_key = config['Settings']['TriggerKey']
-        self.shot_delay_min = float(config['Settings'].get('ShotDelayMin', 0.01))
-        self.shot_delay_max = float(config['Settings'].get('ShotDelayMax', 0.03))
-        self.log_level = config['Logger']['LogLevel']
-        self.attack_on_teammates = config['Settings'].getboolean('AttackOnTeammates', False)
+        self.trigger_key = self.config['Settings']['TriggerKey']  # Stores the key that activates the trigger
+        self.shot_delay_min = self.config['Settings']['ShotDelayMin']  
+        self.shot_delay_max = self.config['Settings']['ShotDelayMax']
+        self.attack_on_teammates = self.config['Settings']['AttackOnTeammates']
 
     def initialize_pymem(self):
         """Initializes Pymem and attaches to the game process."""
@@ -202,10 +232,8 @@ class CS2TriggerBot:
                 logging.info(f"{Fore.GREEN}client.dll module found at {hex(self.client_base)}.")
         except pymem.exception.ModuleNotFoundError as e:
             logging.error(f"{Fore.RED}Error: {e}. Ensure client.dll is loaded.")
-            self.handle_retry_or_exit("client.dll module not found")
         except Exception as e:
             logging.error(f"{Fore.RED}Unexpected error retrieving client module: {e}")
-            self.handle_retry_or_exit("Unexpected client module error")
         return self.client_base is not None
 
     def get_entity(self, index):
@@ -217,7 +245,7 @@ class CS2TriggerBot:
         except Exception as e:
             logging.error(f"{Fore.RED}Error reading entity: {e}")
             return None
-
+        
     @staticmethod
     def is_game_active():
         """Checks if the game window is active."""
@@ -225,33 +253,18 @@ class CS2TriggerBot:
 
     def should_trigger(self, entity_team, player_team, entity_health):
         """Determines if the trigger bot should activate based on team and health status."""
-        # If AttackOnTeammates is True, ignore team checks and only fire based on health
         if self.attack_on_teammates:
             return entity_health > 0  # Fire at anyone alive
-        # If AttackOnTeammates is False, only fire at enemies
         return entity_team != player_team and entity_health > 0  # Fire only at enemies
-
-    def on_mouse_press(self, x, y, button, pressed):
-        """Mouse press event handler."""
-        if self.trigger_key in ["x2", "x1"] and button == Button[self.trigger_key]:
-            self.trigger_active = pressed
-
-    def on_key_press(self, key):
-        """Keyboard press event handler."""
-        if hasattr(key, 'char') and key.char == self.trigger_key:
-            self.trigger_active = True
-
-    def on_key_release(self, key):
-        """Keyboard release event handler."""
-        if hasattr(key, 'char') and key.char == self.trigger_key:
-            self.trigger_active = False
 
     def start(self):
         """Starts the main loop of the TriggerBot."""
         Utility.set_console_title(f"CS2 TriggerBot {self.VERSION}")
-        Utility.check_for_updates(self.VERSION)
-        logging.info(f"{Fore.CYAN}Fetching offsets and client data...")
 
+        logging.info(f"{Fore.CYAN}Checking for updates...")
+        Utility.check_for_updates(self.VERSION)
+
+        logging.info(f"{Fore.CYAN}Fetching offsets and client data...")
         offsets, client_data = Utility.fetch_offsets()
         if offsets is None or client_data is None:
             input(f"{Fore.RED}Press Enter to exit...")
@@ -263,7 +276,7 @@ class CS2TriggerBot:
         self.m_iHealth = client_data["client.dll"]["classes"]["C_BaseEntity"]["fields"]["m_iHealth"]
         self.m_iTeamNum = client_data["client.dll"]["classes"]["C_BaseEntity"]["fields"]["m_iTeamNum"]
         self.m_iIDEntIndex = client_data["client.dll"]["classes"]["C_CSPlayerPawnBase"]["fields"]["m_iIDEntIndex"]
-
+        
         logging.info(f"{Fore.CYAN}Searching for cs2.exe process...")
         if not self.initialize_pymem():
             input(f"{Fore.RED}Press Enter to exit...")
@@ -276,17 +289,7 @@ class CS2TriggerBot:
         logging.info(f"{Fore.GREEN}TriggerBot started, trigger key: {self.trigger_key.upper()}")
         self.is_running = True
 
-        # Initialize listeners
-        self.mouse_listener = MouseListener(on_click=self.on_mouse_press)
-        self.key_listener = keyboard.Listener(on_press=self.on_key_press, on_release=self.on_key_release)
-        self.mouse_listener.start()
-        self.key_listener.start()
-
         self.run_trigger_loop()
-
-        # Stop listeners on exit
-        self.mouse_listener.stop()
-        self.key_listener.stop()
 
     def run_trigger_loop(self):
         """Runs the main trigger loop."""
@@ -296,7 +299,7 @@ class CS2TriggerBot:
                     time.sleep(0.05)
                     continue
 
-                if self.trigger_active:
+                if keyboard.is_pressed(self.trigger_key):
                     player = self.pm.read_longlong(self.client_base + self.dwLocalPlayerPawn)
                     entity_id = self.pm.read_int(player + self.m_iIDEntIndex)
                     
@@ -308,7 +311,6 @@ class CS2TriggerBot:
                             entity_health = self.pm.read_int(entity + self.m_iHealth)
                             
                             if self.should_trigger(entity_team, player_team, entity_health):
-                                # Use random delays from the configuration
                                 time.sleep(uniform(self.shot_delay_min, self.shot_delay_max))
                                 mouse.press(Button.left)
                                 time.sleep(uniform(self.shot_delay_min, self.shot_delay_max))
@@ -322,10 +324,9 @@ class CS2TriggerBot:
                 self.is_running = False
             except Exception as e:
                 logging.error(f"{Fore.RED}Unexpected error: {e}")
-                logging.error(f"{Fore.RED}Please report this issue on the GitHub repository: https://github.com/Jesewe/cs2-triggerbot/issues")
                 input(f"{Fore.RED}Press Enter to exit...")
 
 if __name__ == '__main__':
+    Logger.setup_logging()
     bot = CS2TriggerBot()
-    Logger.setup_logging(bot.log_level)
     bot.start()
