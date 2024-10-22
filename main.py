@@ -1,136 +1,42 @@
+import dearpygui.dearpygui as dpg
+import logging
 import pymem
 import pymem.process
 import time
 import os
 import ctypes
+import threading
 from pynput.mouse import Controller, Button
 from win32gui import GetWindowText, GetForegroundWindow
 from random import uniform
-import logging
+import json
+import keyboard
 from requests import get
 from packaging import version
 from colorama import init, Fore
-import json
-import keyboard
 
-# Initialize colorama for colored console output
 init(autoreset=True)
-
-# Initialize mouse controller for trigger actions
 mouse = Controller()
 
 class Logger:
-    """Handles logging setup for the application."""
-
     LOG_DIRECTORY = os.path.expandvars(r'%LOCALAPPDATA%\Requests\ItsJesewe\crashes')
     LOG_FILE = os.path.join(LOG_DIRECTORY, 'tb_logs.log')
 
     @staticmethod
     def setup_logging():
-        """Set up the logging configuration with the default log level INFO."""
         os.makedirs(Logger.LOG_DIRECTORY, exist_ok=True)
         with open(Logger.LOG_FILE, 'w') as f:
             pass
-        
         logging.basicConfig(
-            level=logging.INFO,  # Default to INFO level logging
+            level=logging.INFO,
             format='%(levelname)s: %(message)s',
             handlers=[logging.FileHandler(Logger.LOG_FILE), logging.StreamHandler()]
         )
 
-class ConfigManager:
-    """Handles loading, saving, and validating configuration settings."""
-    
-    CONFIG_DIRECTORY = os.path.expandvars(r'%LOCALAPPDATA%\Requests\ItsJesewe')
-    CONFIG_FILE = os.path.join(CONFIG_DIRECTORY, 'config.json')
-    
-    DEFAULT_CONFIG = {
-        "Settings": {
-            "TriggerKey": "x",  # KEY x by default
-            "ShotDelayMin": 0.01,  # Minimum delay between shots
-            "ShotDelayMax": 0.03,  # Maximum delay between shots
-            "AttackOnTeammates": False  # Should the bot attack teammates?
-        }
-    }
-
-    @staticmethod
-    def load_config():
-        """Loads the configuration from a JSON file, creating defaults if needed."""
-        if not os.path.exists(ConfigManager.CONFIG_DIRECTORY):
-            os.makedirs(ConfigManager.CONFIG_DIRECTORY)
-
-        if not os.path.exists(ConfigManager.CONFIG_FILE):
-            logging.info(f"{Fore.YELLOW}config.json not found, creating a default configuration.")
-            ConfigManager.save_config(ConfigManager.DEFAULT_CONFIG)
-
-        # Load the configuration from file
-        try:
-            with open(ConfigManager.CONFIG_FILE, 'r') as config_file:
-                config = json.load(config_file)
-                logging.info(f"{Fore.CYAN}Loaded configuration.")
-        except (json.JSONDecodeError, IOError) as e:
-            logging.error(f"{Fore.RED}Failed to load configuration: {e}")
-            config = ConfigManager.DEFAULT_CONFIG
-
-        return config
-
-    @staticmethod
-    def save_config(config):
-        """Saves the given configuration to the config file."""
-        with open(ConfigManager.CONFIG_FILE, 'w') as config_file:
-            json.dump(config, config_file, indent=4)
-            logging.info(f"{Fore.CYAN}Saved configuration to {ConfigManager.CONFIG_FILE}")
-
-    @staticmethod
-    def validate_config(config):
-        """Validates and fixes invalid configuration values."""
-        valid = True
-
-        # Validate TriggerKey
-        if not isinstance(config['Settings'].get('TriggerKey'), str):
-            logging.error(f"{Fore.RED}Invalid TriggerKey in configuration. Resetting to default.")
-            config['Settings']['TriggerKey'] = ConfigManager.DEFAULT_CONFIG['Settings']['TriggerKey']
-            valid = False
-
-        # Validate ShotDelayMin
-        if not isinstance(config['Settings'].get('ShotDelayMin'), (int, float)) or config['Settings']['ShotDelayMin'] <= 0:
-            logging.error(f"{Fore.RED}Invalid ShotDelayMin in configuration. Resetting to default.")
-            config['Settings']['ShotDelayMin'] = ConfigManager.DEFAULT_CONFIG['Settings']['ShotDelayMin']
-            valid = False
-
-        # Validate ShotDelayMax
-        if not isinstance(config['Settings'].get('ShotDelayMax'), (int, float)) or config['Settings']['ShotDelayMax'] <= 0:
-            logging.error(f"{Fore.RED}Invalid ShotDelayMax in configuration. Resetting to default.")
-            config['Settings']['ShotDelayMax'] = ConfigManager.DEFAULT_CONFIG['Settings']['ShotDelayMax']
-            valid = False
-
-        # Validate AttackOnTeammates
-        if not isinstance(config['Settings'].get('AttackOnTeammates'), bool):
-            logging.error(f"{Fore.RED}Invalid AttackOnTeammates in configuration. Resetting to default.")
-            config['Settings']['AttackOnTeammates'] = ConfigManager.DEFAULT_CONFIG['Settings']['AttackOnTeammates']
-            valid = False
-
-        return valid
-
-    @staticmethod
-    def load_and_validate_config():
-        """Loads and validates configuration, applying defaults where necessary."""
-        config = ConfigManager.load_config()
-        if not ConfigManager.validate_config(config):
-            logging.info(f"{Fore.YELLOW}Configuration had invalid values. Updated with defaults.")
-            ConfigManager.save_config(config)
-        return config
-
-    @staticmethod
-    def reload_config():
-        """Reloads configuration during runtime."""
-        logging.info(f"{Fore.CYAN}Reloading configuration from file...")
-        return ConfigManager.load_and_validate_config()
-
 class Utility:
     """Contains utility functions for the application."""
     
-    CACHE_DIRECTORY = ConfigManager.CONFIG_DIRECTORY
+    CACHE_DIRECTORY = r'C:\Users\w\AppData\Local\Temp\cs2_triggerbot'
     CACHE_FILE = os.path.join(CACHE_DIRECTORY, 'offsets_cache.json')
     
     @staticmethod
@@ -186,6 +92,60 @@ class Utility:
         except Exception as e:
             logging.error(f"{Fore.RED}Error checking for updates: {e}")
 
+class ConfigManager:
+    CONFIG_DIRECTORY = os.path.expandvars(r'%LOCALAPPDATA%\Requests\ItsJesewe')
+    CONFIG_FILE = os.path.join(CONFIG_DIRECTORY, 'config.json')
+    
+    DEFAULT_CONFIG = {
+        "Settings": {
+            "TriggerKey": "x",
+            "ShotDelayMin": 0.01,
+            "ShotDelayMax": 0.03,
+            "AttackOnTeammates": False
+        }
+    }
+
+    @staticmethod
+    def load_config():
+        if not os.path.exists(ConfigManager.CONFIG_DIRECTORY):
+            os.makedirs(ConfigManager.CONFIG_DIRECTORY)
+        if not os.path.exists(ConfigManager.CONFIG_FILE):
+            ConfigManager.save_config(ConfigManager.DEFAULT_CONFIG)
+        try:
+            with open(ConfigManager.CONFIG_FILE, 'r') as config_file:
+                return json.load(config_file)
+        except (json.JSONDecodeError, IOError):
+            return ConfigManager.DEFAULT_CONFIG
+
+    @staticmethod
+    def save_config(config):
+        with open(ConfigManager.CONFIG_FILE, 'w') as config_file:
+            json.dump(config, config_file, indent=4)
+
+    @staticmethod
+    def validate_config(config):
+        valid = True
+        if not isinstance(config['Settings'].get('TriggerKey'), str):
+            config['Settings']['TriggerKey'] = ConfigManager.DEFAULT_CONFIG['Settings']['TriggerKey']
+            valid = False
+        if not isinstance(config['Settings'].get('ShotDelayMin'), (int, float)) or config['Settings']['ShotDelayMin'] <= 0:
+            config['Settings']['ShotDelayMin'] = ConfigManager.DEFAULT_CONFIG['Settings']['ShotDelayMin']
+            valid = False
+        if not isinstance(config['Settings'].get('ShotDelayMax'), (int, float)) or config['Settings']['ShotDelayMax'] <= 0:
+            config['Settings']['ShotDelayMax'] = ConfigManager.DEFAULT_CONFIG['Settings']['ShotDelayMax']
+            valid = False
+        if not isinstance(config['Settings'].get('AttackOnTeammates'), bool):
+            config['Settings']['AttackOnTeammates'] = ConfigManager.DEFAULT_CONFIG['Settings']['AttackOnTeammates']
+            valid = False
+        return valid
+
+    @staticmethod
+    def load_and_validate_config():
+        config = ConfigManager.load_config()
+        if not ConfigManager.validate_config(config):
+            ConfigManager.save_config(config)
+        return config
+
 class CS2TriggerBot:
     """Main class for the CS2 TriggerBot functionality."""
 
@@ -202,8 +162,8 @@ class CS2TriggerBot:
         self.m_iTeamNum = None
         self.m_iIDEntIndex = None
         self.is_running = False
-        self.trigger_active = False  # Tracks the state of the trigger key
-        self.trigger_key = self.config['Settings']['TriggerKey']  # Stores the key that activates the trigger
+        self.trigger_active = False
+        self.trigger_key = self.config['Settings']['TriggerKey']
         self.shot_delay_min = self.config['Settings']['ShotDelayMin']  
         self.shot_delay_max = self.config['Settings']['ShotDelayMax']
         self.attack_on_teammates = self.config['Settings']['AttackOnTeammates']
@@ -254,8 +214,8 @@ class CS2TriggerBot:
     def should_trigger(self, entity_team, player_team, entity_health):
         """Determines if the trigger bot should activate based on team and health status."""
         if self.attack_on_teammates:
-            return entity_health > 0  # Fire at anyone alive
-        return entity_team != player_team and entity_health > 0  # Fire only at enemies
+            return entity_health > 0
+        return entity_team != player_team and entity_health > 0
 
     def start(self):
         """Starts the main loop of the TriggerBot."""
@@ -270,7 +230,6 @@ class CS2TriggerBot:
             input(f"{Fore.RED}Press Enter to exit...")
             return
 
-        # Set offsets and client data
         self.dwEntityList = offsets["client.dll"]["dwEntityList"]
         self.dwLocalPlayerPawn = offsets["client.dll"]["dwLocalPlayerPawn"]
         self.m_iHealth = client_data["client.dll"]["classes"]["C_BaseEntity"]["fields"]["m_iHealth"]
@@ -326,7 +285,80 @@ class CS2TriggerBot:
                 logging.error(f"{Fore.RED}Unexpected error: {e}")
                 input(f"{Fore.RED}Press Enter to exit...")
 
+    def update_config(self):
+        """Update the trigger bot configuration from the loaded config."""
+        self.trigger_key = self.config['Settings']['TriggerKey']
+        self.shot_delay_min = self.config['Settings']['ShotDelayMin']
+        self.shot_delay_max = self.config['Settings']['ShotDelayMax']
+        self.attack_on_teammates = self.config['Settings']['AttackOnTeammates']
+
+class TriggerBotGUI:
+    def __init__(self):
+        self.bot = CS2TriggerBot()
+        self.config = self.bot.config
+
+        dpg.create_context()
+        self.build_gui()
+        dpg.create_viewport(title="github.com/Jesewe/cs2-triggerbot", width=400, height=400)
+        dpg.setup_dearpygui()
+        dpg.show_viewport()
+
+    def on_press_trigger_key(self):
+        print("Press a key to assign...")
+        key = keyboard.read_key()
+        print(f"Assigned: {key}")
+        self.config['Settings']['TriggerKey'] = key
+        dpg.set_value("trigger_key", key)
+        self.bot.update_config()
+
+    def build_gui(self):
+        with dpg.window(tag="primary_window"):
+            dpg.set_primary_window("primary_window", True)
+            dpg.add_input_text(label="Trigger Key", default_value=self.config['Settings']['TriggerKey'], callback=self.update_trigger_key, tag="trigger_key")
+            dpg.add_button(label="Assign Trigger Key", callback=lambda: threading.Thread(target=self.on_press_trigger_key).start())
+            dpg.add_input_float(label="Shot Delay Min", default_value=self.config['Settings']['ShotDelayMin'], callback=self.update_shot_delay_min, tag="shot_delay_min")
+            dpg.add_input_float(label="Shot Delay Max", default_value=self.config['Settings']['ShotDelayMax'], callback=self.update_shot_delay_max, tag="shot_delay_max")
+            dpg.add_checkbox(label="Attack on Teammates", default_value=self.config['Settings']['AttackOnTeammates'], callback=self.update_attack_on_teammates, tag="attack_on_teammates")
+            dpg.add_button(label="Save Config", callback=self.save_config)
+            dpg.add_text("CS2 TriggerBot v1.1.3", pos=(110, 170))
+
+    def save_config(self):
+        """Saves the current configuration to the config file."""
+        ConfigManager.save_config(self.config)
+        logging.info("Configuration saved.")
+
+    def update_trigger_key(self, sender, app_data, user_data):
+        self.config['Settings']['TriggerKey'] = app_data
+        self.bot.update_config()
+
+    def update_shot_delay_min(self, sender, app_data, user_data):
+        self.config['Settings']['ShotDelayMin'] = app_data
+        self.bot.update_config()
+
+    def update_shot_delay_max(self, sender, app_data, user_data):
+        self.config['Settings']['ShotDelayMax'] = app_data
+        self.bot.update_config()
+
+    def update_attack_on_teammates(self, sender, app_data, user_data):
+        self.config['Settings']['AttackOnTeammates'] = app_data
+        self.bot.update_config()
+
+    def load_config(self):
+        self.config = ConfigManager.load_and_validate_config()
+        logging.info("Configuration loaded.")
+        dpg.set_value("trigger_key", self.config['Settings']['TriggerKey'])
+        dpg.set_value("shot_delay_min", self.config['Settings']['ShotDelayMin'])
+        dpg.set_value("shot_delay_max", self.config['Settings']['ShotDelayMax'])
+        dpg.set_value("attack_on_teammates", self.config['Settings']['AttackOnTeammates'])
+        self.bot.update_config()
+        
+    def run(self):
+        trigger_thread = threading.Thread(target=self.bot.start)
+        trigger_thread.daemon = True
+        trigger_thread.start()
+        dpg.start_dearpygui()
+
 if __name__ == '__main__':
     Logger.setup_logging()
-    bot = CS2TriggerBot()
-    bot.start()
+    gui = TriggerBotGUI()
+    gui.run()
