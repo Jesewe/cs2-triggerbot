@@ -3,5 +3,7 @@ pymem
 pynput
 pywin32
 requests
-colorama
 packaging
+psutil
+watchdog
+PyQt5
