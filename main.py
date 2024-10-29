@@ -8,10 +8,10 @@ import keyboard
 import time
 import threading
 import psutil
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox
-from PyQt5.QtGui import QIcon
+from PyQt6 import QtWidgets
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox
+from PyQt6.QtGui import QIcon
 from pynput.mouse import Controller, Button, Listener
 from requests import get
 from random import uniform
@@ -151,7 +151,7 @@ class Utility:
             return None, None
 
 class CS2TriggerBot:
-    VERSION = "v1.1.3"
+    VERSION = "v1.1.4"
 
     def __init__(self, offsets, client_data):
         self.config = ConfigManager.load_config()
@@ -287,7 +287,6 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(f"CS2 TriggerBot | github.com/Jesewe/cs2-triggerbot")
-        self.setGeometry(100, 100, 700, 500)
         self.setFixedSize(700, 500)
         self.setStyleSheet("background-color: #111111; color: #f0f0f0; font-family: Arial; font-size: 16px; font-weight: bold;")
 
@@ -514,4 +513,4 @@ if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     main_window = MainWindow()
     main_window.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

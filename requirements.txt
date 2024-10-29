@@ -6,4 +6,4 @@ requests
 packaging
 psutil
 watchdog
-PyQt5
+PyQt6
