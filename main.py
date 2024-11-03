@@ -155,21 +155,15 @@ class CS2TriggerBot:
 
     def __init__(self, offsets, client_data):
         self.config = ConfigManager.load_config()
-        self.offsets = offsets
-        self.client_data = client_data
-        self.pm = None
-        self.client_base = None
+        self.offsets, self.client_data = offsets, client_data
+        self.pm, self.client_base = None, None
+        self.is_running, self.stop_event = False, threading.Event()
         self.dwEntityList = None
         self.dwLocalPlayerPawn = None
         self.m_iHealth = None
         self.m_iTeamNum = None
         self.m_iIDEntIndex = None
-        self.is_running = False
-        self.stop_event = threading.Event()
-        self.trigger_key = self.config['Settings']['TriggerKey']
-        self.shot_delay_min = self.config['Settings']['ShotDelayMin']
-        self.shot_delay_max = self.config['Settings']['ShotDelayMax']
-        self.attack_on_teammates = self.config['Settings']['AttackOnTeammates']
+        self.update_config(self.config)
         self.initialize_offsets()
 
     def initialize_offsets(self):
@@ -192,35 +186,23 @@ class CS2TriggerBot:
     
     @staticmethod
     def is_game_running():
-        """Check if the cs2.exe process is running."""
-        for proc in psutil.process_iter(attrs=['pid', 'name']):
-            if proc.info['name'] == 'cs2.exe':
-                return True
-        return False
+        return any(proc.info['name'] == 'cs2.exe' for proc in psutil.process_iter(attrs=['name']))
 
     def initialize_pymem(self):
         try:
             self.pm = pymem.Pymem("cs2.exe")
             logging.info(f"Successfully attached to cs2.exe process.")
         except pymem.exception.ProcessNotFound:
-            logging.error(f"Could not find cs2.exe process. Please make sure the game is running.")
-        except pymem.exception.PymemError as e:
-            logging.error(f"Pymem encountered an error: {e}")
-        except Exception as e:
-            logging.error(f"Unexpected error during Pymem initialization: {e}")
+            logging.error("cs2.exe process not found. Ensure the game is running.")
         return self.pm is not None
 
     def get_client_module(self):
-        try:
-            if self.client_base is None:
+        if not self.client_base:
+            try:
                 client_module = pymem.process.module_from_name(self.pm.process_handle, "client.dll")
-                if not client_module:
-                    raise pymem.exception.ModuleNotFoundError("client.dll not found")
                 self.client_base = client_module.lpBaseOfDll
-        except pymem.exception.ModuleNotFoundError as e:
-            logging.error(f"Error: {e}. Ensure client.dll is loaded.")
-        except Exception as e:
-            logging.error(f"Unexpected error retrieving client module: {e}")
+            except pymem.exception.ModuleNotFoundError:
+                logging.error("client.dll not found. Ensure it is loaded.")
         return self.client_base is not None
 
     def get_entity(self, index):
@@ -233,9 +215,7 @@ class CS2TriggerBot:
             return None
 
     def should_trigger(self, entity_team, player_team, entity_health):
-        if self.attack_on_teammates:
-            return entity_health > 0
-        return entity_team != player_team and entity_health > 0
+        return (self.attack_on_teammates or entity_team != player_team) and entity_health > 0
 
     def start(self):
         if not self.initialize_pymem():
