@@ -35,7 +35,7 @@ class Logger:
 
         logging.basicConfig(
             level=logging.INFO,
-            format='%(levelname)s: %(message)s',
+            format='[%(levelname)s] %(message)s',
             handlers=[logging.FileHandler(Logger.LOG_FILE), logging.StreamHandler()]
         )
 
@@ -113,37 +113,19 @@ class ConfigFileChangeHandler(FileSystemEventHandler):
             self.bot.update_config(new_config)
 
 class Utility:
-    CACHE_DIRECTORY = ConfigManager.CONFIG_DIRECTORY
-    CACHE_FILE = os.path.join(CACHE_DIRECTORY, 'offsets_cache.json')
-
     @staticmethod
     def fetch_offsets():
         try:
+            # Fetch offsets and client data directly from the server
             response_offset = get("https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/offsets.json")
             response_client = get("https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/client_dll.json")
 
             if response_offset.status_code != 200 or response_client.status_code != 200:
-                logging.error(f"Failed to fetch offsets from server.")
+                logging.error("Failed to fetch offsets from server.")
                 return None, None
 
             offset = response_offset.json()
             client = response_client.json()
-
-            if os.path.exists(Utility.CACHE_FILE):
-                with open(Utility.CACHE_FILE, 'r') as f:
-                    cached_data = json.load(f)
-
-                if cached_data.get('offsets') != offset or cached_data.get('client') != client:
-                    logging.info(f"Offsets have changed, updating cache...")
-                    with open(Utility.CACHE_FILE, 'w') as f:
-                        json.dump({'offsets': offset, 'client': client}, f)
-                else:
-                    logging.info(f"Using cached offsets.")
-                    return cached_data['offsets'], cached_data['client']
-            else:
-                os.makedirs(Utility.CACHE_DIRECTORY, exist_ok=True)
-                with open(Utility.CACHE_FILE, 'w') as f:
-                    json.dump({'offsets': offset, 'client': client}, f)
 
             return offset, client
         except Exception as e:
@@ -158,20 +140,23 @@ class CS2TriggerBot:
         self.offsets, self.client_data = offsets, client_data
         self.pm, self.client_base = None, None
         self.is_running, self.stop_event = False, threading.Event()
-        self.dwEntityList = None
-        self.dwLocalPlayerPawn = None
-        self.m_iHealth = None
-        self.m_iTeamNum = None
-        self.m_iIDEntIndex = None
+        #self.dwEntityList = None
+        #self.dwLocalPlayerPawn = None
+        #self.m_iHealth = None
+        #self.m_iTeamNum = None
+        #self.m_iIDEntIndex = None
         self.update_config(self.config)
         self.initialize_offsets()
 
     def initialize_offsets(self):
-        self.dwEntityList = self.offsets["client.dll"]["dwEntityList"]
-        self.dwLocalPlayerPawn = self.offsets["client.dll"]["dwLocalPlayerPawn"]
-        self.m_iHealth = self.client_data["client.dll"]["classes"]["C_BaseEntity"]["fields"]["m_iHealth"]
-        self.m_iTeamNum = self.client_data["client.dll"]["classes"]["C_BaseEntity"]["fields"]["m_iTeamNum"]
-        self.m_iIDEntIndex = self.client_data["client.dll"]["classes"]["C_CSPlayerPawnBase"]["fields"]["m_iIDEntIndex"]
+        try:
+            self.dwEntityList = self.offsets["client.dll"]["dwEntityList"]
+            self.dwLocalPlayerPawn = self.offsets["client.dll"]["dwLocalPlayerPawn"]
+            self.m_iHealth = self.client_data["client.dll"]["classes"]["C_BaseEntity"]["fields"]["m_iHealth"]
+            self.m_iTeamNum = self.client_data["client.dll"]["classes"]["C_BaseEntity"]["fields"]["m_iTeamNum"]
+            self.m_iIDEntIndex = self.client_data["client.dll"]["classes"]["C_CSPlayerPawnBase"]["fields"]["m_iIDEntIndex"]
+        except KeyError as e:
+            logging.error(f"Offset initialization error: {e}")
 
     def update_config(self, config):
         self.config = config
@@ -218,12 +203,9 @@ class CS2TriggerBot:
         return (self.attack_on_teammates or entity_team != player_team) and entity_health > 0
 
     def start(self):
-        if not self.initialize_pymem():
+        if not self.initialize_pymem() or not self.get_client_module():
             return
-
-        if not self.get_client_module():
-            return
-
+            
         self.is_running = True
 
         while not self.stop_event.is_set():
@@ -292,6 +274,9 @@ class MainWindow(QMainWindow):
         self.update_info = QLabel(self)
         self.check_for_updates(self.bot.VERSION)
 
+        self.status_label = QLabel("Bot Status: Stopped", self)
+        self.status_label.setStyleSheet("color: red; font-weight: bold;")
+
         self.trigger_key_label = QLabel("Trigger Key:", self)
         self.trigger_key_input = QLineEdit(self.bot.config['Settings']['TriggerKey'], self)
         self.trigger_key_input.setStyleSheet("background-color: #222222; color: white;")
@@ -345,6 +330,7 @@ class MainWindow(QMainWindow):
 
         main_layout.addWidget(self.name_app)
         main_layout.addWidget(self.update_info)
+        main_layout.addWidget(self.status_label)
         main_layout.addWidget(self.trigger_key_label)
         main_layout.addWidget(self.trigger_key_input)
         main_layout.addWidget(self.min_delay_label)
@@ -405,11 +391,11 @@ class MainWindow(QMainWindow):
     def start_bot(self):
         """Handle start bot action with button state control."""
         if self.bot.is_running:
-            QMessageBox.warning(self, "Bot Running", "The bot is already running.")
+            QMessageBox.warning(self, "Bot started", "The bot is already running.")
             return
         
         if not self.bot.is_game_running():
-            QMessageBox.critical(self, "Game Not Running", "Could not find cs2.exe process. Make sure the game is running.")
+            QMessageBox.critical(self, "The game is not running", "Could not find cs2.exe process. Make sure the game is running.")
             return
 
         try:
@@ -420,6 +406,10 @@ class MainWindow(QMainWindow):
             # Start bot in a separate thread
             self.bot_thread = threading.Thread(target=self.bot.start, daemon=True)
             self.bot_thread.start()
+
+            # Update status label
+            self.status_label.setText("Bot Status: Running")
+            self.status_label.setStyleSheet("color: green; font-weight: bold;")
         except ValueError as ve:
             QMessageBox.critical(self, "Invalid Input", str(ve))
         
@@ -430,8 +420,12 @@ class MainWindow(QMainWindow):
             if self.bot_thread is not None:
                 self.bot_thread.join()
                 self.bot_thread = None
+
+            # Update status label
+            self.status_label.setText("Bot Status: Stopped")
+            self.status_label.setStyleSheet("color: red; font-weight: bold;")
         else:
-            QMessageBox.warning(self, "Bot Not Running", "The bot is not running.")
+            QMessageBox.warning(self, "Bot has not been started", "The bot is not running.")
 
     def save_config(self):
         """Handle config saving logic and reinitialize bot if needed."""
