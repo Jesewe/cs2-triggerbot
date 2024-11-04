@@ -78,9 +78,6 @@ Example `config.json`:
 - **Could Not Open `cs2.exe`:** Make sure the game is running and that you have the necessary permissions.
 - **Unexpected Errors:** Check the log file located in the log directory for more details.
 
-## Upcoming Features
-We are actively working on several new features for the CS2 Triggerbot. For a detailed list of upcoming enhancements and improvements, please check the following GitHub Discussions: [Upcoming Features](https://github.com/Jesewe/cs2-triggerbot/discussions/categories/ideas).
-
 ## Contributing
 Contributions are welcome! Please open an issue or submit a pull request on the [GitHub repository](https://github.com/Jesewe/cs2-triggerbot).
 
