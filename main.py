@@ -3,6 +3,7 @@ import logging
 import os
 import json
 import pymem
+import pymem.exception
 import pymem.process
 import keyboard
 import time
@@ -12,7 +13,7 @@ from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox
 from PyQt6.QtGui import QIcon
-from pynput.mouse import Controller, Button, Listener
+from pynput.mouse import Controller, Button
 from requests import get
 from random import uniform
 from win32gui import GetWindowText, GetForegroundWindow
@@ -97,11 +98,13 @@ class ConfigManager:
         return cls._config_cache
 
     @classmethod
-    def save_config(cls, config):
-        cls._config_cache = config  # Update the cache
+    def save_config(cls, config, log_info=True):
+        cls._config_cache = config
         with open(cls.CONFIG_FILE, 'w') as config_file:
             json.dump(config, config_file, indent=4)
-            logging.info(f"Saved configuration.")
+            if log_info:
+                logging.info("Saved configuration.")
+
 
 class ConfigFileChangeHandler(FileSystemEventHandler):
     def __init__(self, bot):
@@ -109,8 +112,11 @@ class ConfigFileChangeHandler(FileSystemEventHandler):
 
     def on_modified(self, event):
         if event.src_path == ConfigManager.CONFIG_FILE:
-            new_config = ConfigManager.load_config()
-            self.bot.update_config(new_config)
+            try:
+                new_config = ConfigManager.load_config()
+                self.bot.update_config(new_config)
+            except Exception as e:
+                logging.error(f"Failed to reload configuration: {e}")
 
 class Utility:
     @staticmethod
@@ -140,11 +146,6 @@ class CS2TriggerBot:
         self.offsets, self.client_data = offsets, client_data
         self.pm, self.client_base = None, None
         self.is_running, self.stop_event = False, threading.Event()
-        #self.dwEntityList = None
-        #self.dwLocalPlayerPawn = None
-        #self.m_iHealth = None
-        #self.m_iTeamNum = None
-        #self.m_iIDEntIndex = None
         self.update_config(self.config)
         self.initialize_offsets()
 
@@ -249,7 +250,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(f"CS2 TriggerBot | github.com/Jesewe/cs2-triggerbot")
-        self.setFixedSize(700, 500)
+        self.setFixedSize(700, 600)
         self.setStyleSheet("background-color: #111111; color: #f0f0f0; font-family: Arial; font-size: 16px; font-weight: bold;")
 
         icon_path = os.path.join(os.path.dirname(__file__), 'icon.png')
@@ -279,18 +280,22 @@ class MainWindow(QMainWindow):
 
         self.trigger_key_label = QLabel("Trigger Key:", self)
         self.trigger_key_input = QLineEdit(self.bot.config['Settings']['TriggerKey'], self)
+        self.trigger_key_input.setToolTip("Set the key to activate the trigger bot (e.g., 'x').")
         self.trigger_key_input.setStyleSheet("background-color: #222222; color: white;")
 
         self.min_delay_label = QLabel("Min Shot Delay:", self)
         self.min_delay_input = QLineEdit(str(self.bot.config['Settings']['ShotDelayMin']), self)
+        self.min_delay_input.setToolTip("Minimum delay between shots in seconds (e.g., 0.01).")
         self.min_delay_input.setStyleSheet("background-color: #222222; color: white;")
 
         self.max_delay_label = QLabel("Max Shot Delay:", self)
         self.max_delay_input = QLineEdit(str(self.bot.config['Settings']['ShotDelayMax']), self)
+        self.max_delay_input.setToolTip("Maximum delay between shots in seconds (must be >= Min Delay).")
         self.max_delay_input.setStyleSheet("background-color: #222222; color: white;")
 
         self.attack_teammates_checkbox = QCheckBox("Attack Teammates", self)
         self.attack_teammates_checkbox.setChecked(self.bot.config['Settings']['AttackOnTeammates'])
+        self.attack_teammates_checkbox.setToolTip("If checked, the bot will attack teammates as well.")
         self.attack_teammates_checkbox.setStyleSheet("color: white;")
 
         self.log_output = QTextEdit(self)
@@ -328,6 +333,15 @@ class MainWindow(QMainWindow):
     QPushButton:pressed {
         background-color: #161616;}""")
 
+        self.reset_button = QPushButton("Reset to Default", self)
+        self.reset_button.setStyleSheet("""
+    QPushButton {
+        background-color: #1E1E1E; 
+        color: #D5006D; 
+        border-radius: 15px;}
+    QPushButton:pressed {
+        background-color: #161616;}""")
+
         main_layout.addWidget(self.name_app)
         main_layout.addWidget(self.update_info)
         main_layout.addWidget(self.status_label)
@@ -339,6 +353,7 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.max_delay_input)
         main_layout.addWidget(self.attack_teammates_checkbox)
         main_layout.addWidget(self.save_button)
+        main_layout.addWidget(self.reset_button)
         main_layout.addWidget(self.log_output)
         main_layout.addLayout(buttons_layout)
 
@@ -349,6 +364,7 @@ class MainWindow(QMainWindow):
         self.start_button.clicked.connect(self.start_bot)
         self.stop_button.clicked.connect(self.stop_bot)
         self.save_button.clicked.connect(self.save_config)
+        self.reset_button.clicked.connect(self.reset_to_default)
 
         self.last_log_position = 0
         self.timer = QTimer(self)
@@ -389,7 +405,6 @@ class MainWindow(QMainWindow):
             self.update_info.setStyleSheet("color: red;")
 
     def start_bot(self):
-        """Handle start bot action with button state control."""
         if self.bot.is_running:
             QMessageBox.warning(self, "Bot started", "The bot is already running.")
             return
@@ -403,32 +418,29 @@ class MainWindow(QMainWindow):
 
             self.bot.stop_event.clear()
             
-            # Start bot in a separate thread
             self.bot_thread = threading.Thread(target=self.bot.start, daemon=True)
             self.bot_thread.start()
 
-            # Update status label
             self.status_label.setText("Bot Status: Running")
             self.status_label.setStyleSheet("color: green; font-weight: bold;")
         except ValueError as ve:
             QMessageBox.critical(self, "Invalid Input", str(ve))
         
     def stop_bot(self):
-        """Handle stop bot action with thread cleanup."""
         if self.bot.is_running:
             self.bot.stop()
             if self.bot_thread is not None:
-                self.bot_thread.join()
+                self.bot_thread.join(timeout=2)
+                if self.bot_thread.is_alive():
+                    logging.warning("Bot thread did not terminate cleanly.")
                 self.bot_thread = None
 
-            # Update status label
             self.status_label.setText("Bot Status: Stopped")
             self.status_label.setStyleSheet("color: red; font-weight: bold;")
         else:
             QMessageBox.warning(self, "Bot has not been started", "The bot is not running.")
 
     def save_config(self):
-        """Handle config saving logic and reinitialize bot if needed."""
         try:
             self.validate_inputs()
             bot_was_running = self.bot.is_running
@@ -445,8 +457,16 @@ class MainWindow(QMainWindow):
         except ValueError as ve:
             QMessageBox.critical(self, "Invalid Input", str(ve))
 
+    def reset_to_default(self):
+        ConfigManager.save_config(ConfigManager.DEFAULT_CONFIG, log_info=False)
+        self.bot.update_config(ConfigManager.DEFAULT_CONFIG)
+        self.trigger_key_input.setText(ConfigManager.DEFAULT_CONFIG['Settings']['TriggerKey'])
+        self.min_delay_input.setText(str(ConfigManager.DEFAULT_CONFIG['Settings']['ShotDelayMin']))
+        self.max_delay_input.setText(str(ConfigManager.DEFAULT_CONFIG['Settings']['ShotDelayMax']))
+        self.attack_teammates_checkbox.setChecked(ConfigManager.DEFAULT_CONFIG['Settings']['AttackOnTeammates'])
+        logging.info("Configuration reset to default.")
+
     def validate_inputs(self):
-        """Ensure inputs for delay and trigger key are valid."""
         try:
             min_delay = float(self.min_delay_input.text())
             max_delay = float(self.max_delay_input.text())
@@ -461,23 +481,21 @@ class MainWindow(QMainWindow):
             raise ValueError("Trigger key cannot be empty.")
 
     def update_bot_config_from_ui(self):
-        """Update bot configuration based on the current UI values."""
         self.bot.config['Settings']['TriggerKey'] = self.trigger_key_input.text()
         self.bot.config['Settings']['ShotDelayMin'] = float(self.min_delay_input.text())
         self.bot.config['Settings']['ShotDelayMax'] = float(self.max_delay_input.text())
         self.bot.config['Settings']['AttackOnTeammates'] = self.attack_teammates_checkbox.isChecked()
 
     def update_log_output(self):
-        """Append new log entries to the log_output widget."""
         try:
             with open(Logger.LOG_FILE, 'r') as log_file:
-                log_file.seek(self.last_log_position)  # Start reading from the last position
+                log_file.seek(self.last_log_position)
                 new_logs = log_file.read()
-                self.last_log_position = log_file.tell()  # Update the last position to the end of the file
+                self.last_log_position = log_file.tell()
 
                 if new_logs:
                     self.log_output.append(new_logs)
-                    self.log_output.ensureCursorVisible()  # Ensure the latest logs are visible
+                    self.log_output.ensureCursorVisible()
         except Exception as e:
             self.log_output.append(f"Error reading log file: {e}")
             self.log_output.ensureCursorVisible()
