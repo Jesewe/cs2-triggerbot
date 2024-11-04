@@ -251,7 +251,52 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle(f"CS2 TriggerBot | github.com/Jesewe/cs2-triggerbot")
         self.setFixedSize(700, 600)
-        self.setStyleSheet("background-color: #111111; color: #f0f0f0; font-family: Arial; font-size: 16px; font-weight: bold;")
+        self.setStyleSheet("""
+            QMainWindow {
+                background-color: #1A1A1A; 
+                color: #E0E0E0; 
+                font-family: Arial; 
+                font-size: 15px;
+            }
+            QLabel {
+                color: #F0F0F0;
+                font-weight: bold;
+            }
+            QLineEdit {
+                background-color: #2C2C2C; 
+                color: #E0E0E0; 
+                border: 1px solid #444444; 
+                padding: 5px;
+                border-radius: 5px;
+            }
+            QLineEdit:focus {
+                border: 1px solid #D5006D;
+            }
+            QCheckBox {
+                color: #E0E0E0;
+                font-weight: bold;
+            }
+            QTextEdit {
+                background-color: #2C2C2C; 
+                color: #E0E0E0; 
+                border: 1px solid #444444;
+                border-radius: 5px;
+            }
+            QPushButton {
+                background-color: #333333; 
+                color: #D5006D; 
+                font-weight: bold;
+                padding: 8px 15px; 
+                border-radius: 15px;
+                border: 1px solid #555555;
+            }
+            QPushButton:hover {
+                background-color: #444444;
+            }
+            QPushButton:pressed {
+                background-color: #222222;
+            }
+        """)
 
         icon_path = os.path.join(os.path.dirname(__file__), 'icon.png')
         if os.path.exists(icon_path):
@@ -281,66 +326,33 @@ class MainWindow(QMainWindow):
         self.trigger_key_label = QLabel("Trigger Key:", self)
         self.trigger_key_input = QLineEdit(self.bot.config['Settings']['TriggerKey'], self)
         self.trigger_key_input.setToolTip("Set the key to activate the trigger bot (e.g., 'x').")
-        self.trigger_key_input.setStyleSheet("background-color: #222222; color: white;")
 
         self.min_delay_label = QLabel("Min Shot Delay:", self)
         self.min_delay_input = QLineEdit(str(self.bot.config['Settings']['ShotDelayMin']), self)
         self.min_delay_input.setToolTip("Minimum delay between shots in seconds (e.g., 0.01).")
-        self.min_delay_input.setStyleSheet("background-color: #222222; color: white;")
 
         self.max_delay_label = QLabel("Max Shot Delay:", self)
         self.max_delay_input = QLineEdit(str(self.bot.config['Settings']['ShotDelayMax']), self)
         self.max_delay_input.setToolTip("Maximum delay between shots in seconds (must be >= Min Delay).")
-        self.max_delay_input.setStyleSheet("background-color: #222222; color: white;")
 
         self.attack_teammates_checkbox = QCheckBox("Attack Teammates", self)
         self.attack_teammates_checkbox.setChecked(self.bot.config['Settings']['AttackOnTeammates'])
         self.attack_teammates_checkbox.setToolTip("If checked, the bot will attack teammates as well.")
-        self.attack_teammates_checkbox.setStyleSheet("color: white;")
 
         self.log_output = QTextEdit(self)
         self.log_output.setReadOnly(True)
-        self.log_output.setStyleSheet("background-color: #222222; color: white; height: 80px;")
+        self.log_output.setToolTip("Log output area")
 
         buttons_layout = QHBoxLayout()
 
         self.start_button = QPushButton("Start Bot", self)
-        self.start_button.setStyleSheet("""
-    QPushButton {
-        background-color: #1E1E1E; 
-        color: #D5006D; 
-        border-radius: 15px;}
-    QPushButton:pressed {
-        background-color: #161616;}""")
         buttons_layout.addWidget(self.start_button)
 
         self.stop_button = QPushButton("Stop Bot", self)
-        self.stop_button.setStyleSheet("""
-    QPushButton {
-        background-color: #1E1E1E; 
-        color: #D5006D; 
-        border-radius: 15px;}
-    QPushButton:pressed {
-        background-color: #161616;}""")
         buttons_layout.addWidget(self.stop_button)
 
         self.save_button = QPushButton("Save Config", self)
-        self.save_button.setStyleSheet("""
-    QPushButton {
-        background-color: #1E1E1E; 
-        color: #D5006D; 
-        border-radius: 15px;}
-    QPushButton:pressed {
-        background-color: #161616;}""")
-
         self.reset_button = QPushButton("Reset to Default", self)
-        self.reset_button.setStyleSheet("""
-    QPushButton {
-        background-color: #1E1E1E; 
-        color: #D5006D; 
-        border-radius: 15px;}
-    QPushButton:pressed {
-        background-color: #161616;}""")
 
         main_layout.addWidget(self.name_app)
         main_layout.addWidget(self.update_info)
