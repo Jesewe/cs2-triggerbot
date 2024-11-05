@@ -3,7 +3,6 @@ import logging
 import os
 import json
 import pymem
-import pymem.exception
 import pymem.process
 import keyboard
 import time
@@ -36,7 +35,7 @@ class Logger:
 
         logging.basicConfig(
             level=logging.INFO,
-            format='[%(levelname)s] %(message)s',
+            format='[%(levelname)s] - %(message)s',
             handlers=[logging.FileHandler(Logger.LOG_FILE), logging.StreamHandler()]
         )
 
@@ -105,7 +104,6 @@ class ConfigManager:
             if log_info:
                 logging.info("Saved configuration.")
 
-
 class ConfigFileChangeHandler(FileSystemEventHandler):
     def __init__(self, bot):
         self.bot = bot
@@ -139,7 +137,7 @@ class Utility:
             return None, None
 
 class CS2TriggerBot:
-    VERSION = "v1.1.4"
+    VERSION = "v1.1.5"
 
     def __init__(self, offsets, client_data):
         self.config = ConfigManager.load_config()
@@ -341,7 +339,6 @@ class MainWindow(QMainWindow):
 
         self.log_output = QTextEdit(self)
         self.log_output.setReadOnly(True)
-        self.log_output.setToolTip("Log output area")
 
         buttons_layout = QHBoxLayout()
 
@@ -352,7 +349,6 @@ class MainWindow(QMainWindow):
         buttons_layout.addWidget(self.stop_button)
 
         self.save_button = QPushButton("Save Config", self)
-        self.reset_button = QPushButton("Reset to Default", self)
 
         main_layout.addWidget(self.name_app)
         main_layout.addWidget(self.update_info)
@@ -365,7 +361,6 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.max_delay_input)
         main_layout.addWidget(self.attack_teammates_checkbox)
         main_layout.addWidget(self.save_button)
-        main_layout.addWidget(self.reset_button)
         main_layout.addWidget(self.log_output)
         main_layout.addLayout(buttons_layout)
 
@@ -376,7 +371,6 @@ class MainWindow(QMainWindow):
         self.start_button.clicked.connect(self.start_bot)
         self.stop_button.clicked.connect(self.stop_bot)
         self.save_button.clicked.connect(self.save_config)
-        self.reset_button.clicked.connect(self.reset_to_default)
 
         self.last_log_position = 0
         self.timer = QTimer(self)
@@ -454,29 +448,19 @@ class MainWindow(QMainWindow):
 
     def save_config(self):
         try:
+            # Validate inputs to ensure they are correct before saving
             self.validate_inputs()
-            bot_was_running = self.bot.is_running
 
-            if bot_was_running:
-                self.stop_bot()
-
+            # Update the bot's configuration based on UI values
             self.update_bot_config_from_ui()
 
+            # Save the updated configuration without stopping the bot
             ConfigManager.save_config(self.bot.config)
 
-            if bot_was_running:
-                self.start_bot()
+            # Apply new configuration silently to the bot
+            self.bot.update_config(self.bot.config)
         except ValueError as ve:
             QMessageBox.critical(self, "Invalid Input", str(ve))
-
-    def reset_to_default(self):
-        ConfigManager.save_config(ConfigManager.DEFAULT_CONFIG, log_info=False)
-        self.bot.update_config(ConfigManager.DEFAULT_CONFIG)
-        self.trigger_key_input.setText(ConfigManager.DEFAULT_CONFIG['Settings']['TriggerKey'])
-        self.min_delay_input.setText(str(ConfigManager.DEFAULT_CONFIG['Settings']['ShotDelayMin']))
-        self.max_delay_input.setText(str(ConfigManager.DEFAULT_CONFIG['Settings']['ShotDelayMax']))
-        self.attack_teammates_checkbox.setChecked(ConfigManager.DEFAULT_CONFIG['Settings']['AttackOnTeammates'])
-        logging.info("Configuration reset to default.")
 
     def validate_inputs(self):
         try:
