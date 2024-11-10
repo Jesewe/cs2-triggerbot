@@ -17,7 +17,7 @@ CS2 TriggerBot is an automated tool designed for Counter-Strike 2 that assists w
 
 ## Features
 - **Automatic Trigger**: Fires your weapon when an enemy is detected under your crosshair.
-- **Configurable Trigger Key**: Configure the trigger key through the `config.json` file or the in-app GUI.
+- **Configurable Trigger Key**: Configure a keyboard key or mouse button (`x1` or `x2`) as the trigger via the GUI or `config.json` file.
 - **Configurable Delays**: Set minimum and maximum shot delays for more natural shooting behavior.
 - **Attack Teammates Option**: Toggle friendly fire with a checkbox in the GUI.
 - **Offsets and Client Data**: Automatically fetches the latest offsets and client data from remote sources.
@@ -28,7 +28,7 @@ CS2 TriggerBot is an automated tool designed for Counter-Strike 2 that assists w
 
 ## Installation
 
-You can either install the triggerbot by cloning the repository or by downloading a pre-built executable file from the releases.
+You can install the trigger bot by cloning the repository or by downloading a pre-built executable file from the releases.
 
 ### Option 1: Clone the Repository
 
@@ -50,7 +50,7 @@ You can either install the triggerbot by cloning the repository or by downloadin
 
 ### Option 2: Download Pre-Built Executable
 
-Alternatively, you can download the ready-to-use executable from the [Releases](https://github.com/Jesewe/cs2-triggerbot/releases) page. Simply download the latest version and run the executable directly.
+Alternatively, download the ready-to-use executable from the [Releases](https://github.com/Jesewe/cs2-triggerbot/releases) page. Download the latest version and run the executable directly.
 
 ## Configuration
 The `config.json` file is automatically generated in the directory `%LOCALAPPDATA%\Requests\ItsJesewe\` on the first run. You can modify the `TriggerKey` in this file or via the GUI.
@@ -67,11 +67,15 @@ Example `config.json`:
 }
 ```
 
+- **TriggerKey**: The key or mouse button (`x`, `x1`, or `x2`) to activate the bot.
+- **ShotDelayMin** and **ShotDelayMax**: Control the delay between shots to simulate natural behavior.
+- **AttackOnTeammates**: Set to `true` to enable friendly fire.
+
 ## Usage
-- Launch Counter-Strike 2.
-- Run the TriggerBot using the command mentioned above or by launching the GUI version.
-- Adjust settings like `Trigger Key`, `Shot Delay`, and `Attack Teammates` from the GUI.
-- The bot will automatically start functioning when the game is active.
+1. Launch Counter-Strike 2.
+2. Run the TriggerBot using the command mentioned above or by launching the GUI version.
+3. Adjust settings like `Trigger Key`, `Shot Delay`, and `Attack Teammates` from the GUI.
+4. The bot will automatically start functioning when the game is active.
 
 ## Troubleshooting
 - **Failed to Fetch Offsets:** Ensure you have an active internet connection and that the source URLs are accessible.
