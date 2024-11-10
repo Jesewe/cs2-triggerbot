@@ -12,7 +12,8 @@ from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox
 from PyQt6.QtGui import QIcon
-from pynput.mouse import Controller, Button
+from pynput.mouse import Controller, Button, Listener as MouseListener
+from pynput.keyboard import Key, Listener as KeyboardListener
 from requests import get
 from random import uniform
 from win32gui import GetWindowText, GetForegroundWindow
@@ -137,15 +138,22 @@ class Utility:
             return None, None
 
 class CS2TriggerBot:
-    VERSION = "v1.1.5"
+    VERSION = "v1.1.6"
 
     def __init__(self, offsets, client_data):
         self.config = ConfigManager.load_config()
         self.offsets, self.client_data = offsets, client_data
         self.pm, self.client_base = None, None
         self.is_running, self.stop_event = False, threading.Event()
+        self.trigger_active = False
         self.update_config(self.config)
         self.initialize_offsets()
+
+        self.keyboard_listener = KeyboardListener(on_press=self.on_key_press, on_release=self.on_key_release)
+        self.mouse_listener = MouseListener(on_click=self.on_mouse_click)
+        
+        self.keyboard_listener.start()
+        self.mouse_listener.start()
 
     def initialize_offsets(self):
         try:
@@ -163,6 +171,32 @@ class CS2TriggerBot:
         self.shot_delay_min = self.config['Settings']['ShotDelayMin']
         self.shot_delay_max = self.config['Settings']['ShotDelayMax']
         self.attack_on_teammates = self.config['Settings']['AttackOnTeammates']
+        # Determine trigger type: keyboard or mouse
+        self.is_mouse_trigger = self.trigger_key in ["x1", "x2"]
+
+    def on_key_press(self, key):
+        """Activate trigger bot on key press if it's a keyboard trigger."""
+        if not self.is_mouse_trigger:
+            try:
+                if key.char == self.trigger_key:
+                    self.trigger_active = True
+            except AttributeError:
+                pass
+
+    def on_key_release(self, key):
+        """Deactivate trigger bot on key release for keyboard trigger."""
+        if not self.is_mouse_trigger:
+            try:
+                if key.char == self.trigger_key:
+                    self.trigger_active = False
+            except AttributeError:
+                pass
+
+    def on_mouse_click(self, x, y, button, pressed):
+        """Activate/deactivate trigger bot on mouse click if it's a mouse trigger."""
+        if self.is_mouse_trigger:
+            if self.trigger_key in ["x2", "x1"] and button == Button[self.trigger_key]:
+                self.trigger_active = pressed
 
     @staticmethod
     def is_game_active():
@@ -213,7 +247,8 @@ class CS2TriggerBot:
                     time.sleep(0.05)
                     continue
 
-                if keyboard.is_pressed(self.trigger_key):
+                if (self.is_mouse_trigger and self.trigger_active) or \
+                   (not self.is_mouse_trigger and keyboard.is_pressed(self.trigger_key)):
                     player = self.pm.read_longlong(self.client_base + self.dwLocalPlayerPawn)
                     entity_id = self.pm.read_int(player + self.m_iIDEntIndex)
 
@@ -242,6 +277,8 @@ class CS2TriggerBot:
     def stop(self):
         self.is_running = False
         self.stop_event.set()
+        self.keyboard_listener.stop()
+        self.mouse_listener.stop()
         logging.info("TriggerBot stopped.")
 
 class MainWindow(QMainWindow):
@@ -448,16 +485,9 @@ class MainWindow(QMainWindow):
 
     def save_config(self):
         try:
-            # Validate inputs to ensure they are correct before saving
             self.validate_inputs()
-
-            # Update the bot's configuration based on UI values
             self.update_bot_config_from_ui()
-
-            # Save the updated configuration without stopping the bot
             ConfigManager.save_config(self.bot.config)
-
-            # Apply new configuration silently to the bot
             self.bot.update_config(self.bot.config)
         except ValueError as ve:
             QMessageBox.critical(self, "Invalid Input", str(ve))
