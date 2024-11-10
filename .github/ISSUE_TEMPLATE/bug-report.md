@@ -1,7 +1,7 @@
 ---
 name: Bug Report
 about: Create a report to help us improve
-title: "[BUG]"
+title: bug
 labels: "\U0001F41B Bug"
 assignees: Jesewe
 

@@ -1,7 +1,7 @@
 ---
 name: Feature Request
 about: Suggest an idea for this project
-title: "[FEATURE]"
+title: feature
 labels: "\U0001F680 Enhancement"
 assignees: Jesewe
 
