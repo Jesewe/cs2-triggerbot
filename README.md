@@ -18,7 +18,7 @@ CS2 TriggerBot is an automated tool designed for Counter-Strike 2 that assists w
 ## Features
 - **Automatic Trigger**: Fires your weapon when an enemy is detected under your crosshair.
 - **Configurable Trigger Key**: Configure a keyboard key or mouse button (`x1` or `x2`) as the trigger via the GUI or `config.json` file.
-- **Configurable Delays**: Set minimum and maximum shot delays for more natural shooting behavior.
+- **Configurable Delays**: Set minimum, maximum, and post-shot delays for more natural shooting behavior.
 - **Attack Teammates Option**: Toggle friendly fire with a checkbox in the GUI.
 - **Offsets and Client Data**: Automatically fetches the latest offsets and client data from remote sources.
 - **Logging**: Detailed logs are saved in `%LOCALAPPDATA%\Requests\ItsJesewe\crashes\tb_logs.log`.
@@ -62,23 +62,26 @@ Example `config.json`:
         "TriggerKey": "x",
         "ShotDelayMin": 0.01,
         "ShotDelayMax": 0.03,
-        "AttackOnTeammates": false
+        "AttackOnTeammates": false,
+        "PostShotDelay": 0.1
     }
 }
 ```
 
 - **TriggerKey**: The key or mouse button (`x`, `x1`, or `x2`) to activate the bot.
 - **ShotDelayMin** and **ShotDelayMax**: Control the delay between shots to simulate natural behavior.
+- **PostShotDelay**: Set a delay after each shot for more controlled firing.
 - **AttackOnTeammates**: Set to `true` to enable friendly fire.
 
 ## Usage
 1. Launch Counter-Strike 2.
 2. Run the TriggerBot using the command mentioned above or by launching the GUI version.
-3. Adjust settings like `Trigger Key`, `Shot Delay`, and `Attack Teammates` from the GUI.
+3. Adjust settings like `Trigger Key`, `Shot Delay`, `Post Shot Delay` and `Attack Teammates` from the GUI.
 4. The bot will automatically start functioning when the game is active.
 
 ## Troubleshooting
 - **Failed to Fetch Offsets:** Ensure you have an active internet connection and that the source URLs are accessible.
+- **Errors with Offsets after Game Update:** After a Counter-Strike 2 game update, there may be issues with offsets, which can result in errors. In this case, please wait for updated offsets to be released.
 - **Could Not Open `cs2.exe`:** Make sure the game is running and that you have the necessary permissions.
 - **Unexpected Errors:** Check the log file located in the log directory for more details.
 
