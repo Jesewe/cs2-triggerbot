@@ -1,13 +1,4 @@
-import sys
-import logging
-import os
-import json
-import pymem
-import pymem.process
-import keyboard
-import time
-import threading
-import psutil
+import sys, logging, os, json, pymem, pymem.process, keyboard, time, threading, psutil
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox
@@ -49,11 +40,12 @@ class ConfigManager:
             "TriggerKey": "x",
             "ShotDelayMin": 0.01,
             "ShotDelayMax": 0.03,
-            "AttackOnTeammates": False
+            "AttackOnTeammates": False,
+            "PostShotDelay": 0.1
         }
     }
 
-    _config_cache = None  # Singleton cache to avoid redundant reads
+    _config_cache = None
 
     @classmethod
     def load_config(cls):
@@ -138,7 +130,7 @@ class Utility:
             return None, None
 
 class CS2TriggerBot:
-    VERSION = "v1.1.6"
+    VERSION = "v1.1.7"
 
     def __init__(self, offsets, client_data):
         self.config = ConfigManager.load_config()
@@ -171,11 +163,10 @@ class CS2TriggerBot:
         self.shot_delay_min = self.config['Settings']['ShotDelayMin']
         self.shot_delay_max = self.config['Settings']['ShotDelayMax']
         self.attack_on_teammates = self.config['Settings']['AttackOnTeammates']
-        # Determine trigger type: keyboard or mouse
+        self.post_shot_delay = self.config['Settings'].get('PostShotDelay', 0.1)
         self.is_mouse_trigger = self.trigger_key in ["x1", "x2"]
 
     def on_key_press(self, key):
-        """Activate trigger bot on key press if it's a keyboard trigger."""
         if not self.is_mouse_trigger:
             try:
                 if key.char == self.trigger_key:
@@ -184,7 +175,6 @@ class CS2TriggerBot:
                 pass
 
     def on_key_release(self, key):
-        """Deactivate trigger bot on key release for keyboard trigger."""
         if not self.is_mouse_trigger:
             try:
                 if key.char == self.trigger_key:
@@ -193,7 +183,6 @@ class CS2TriggerBot:
                 pass
 
     def on_mouse_click(self, x, y, button, pressed):
-        """Activate/deactivate trigger bot on mouse click if it's a mouse trigger."""
         if self.is_mouse_trigger:
             if self.trigger_key in ["x2", "x1"] and button == Button[self.trigger_key]:
                 self.trigger_active = pressed
@@ -264,6 +253,8 @@ class CS2TriggerBot:
                                 mouse.press(Button.left)
                                 time.sleep(uniform(self.shot_delay_min, self.shot_delay_max))
                                 mouse.release(Button.left)
+                                # post-shot delay
+                                time.sleep(self.post_shot_delay)
 
                     time.sleep(0.01)
                 else:
@@ -370,6 +361,10 @@ class MainWindow(QMainWindow):
         self.max_delay_input = QLineEdit(str(self.bot.config['Settings']['ShotDelayMax']), self)
         self.max_delay_input.setToolTip("Maximum delay between shots in seconds (must be >= Min Delay).")
 
+        self.post_shot_delay_label = QLabel("Post Shot Delay:", self)
+        self.post_shot_delay_input = QLineEdit(str(self.bot.config['Settings'].get('PostShotDelay', 0.1)), self)
+        self.post_shot_delay_input.setToolTip("Delay after each shot in seconds (e.g., 0.1).")
+
         self.attack_teammates_checkbox = QCheckBox("Attack Teammates", self)
         self.attack_teammates_checkbox.setChecked(self.bot.config['Settings']['AttackOnTeammates'])
         self.attack_teammates_checkbox.setToolTip("If checked, the bot will attack teammates as well.")
@@ -396,6 +391,8 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.min_delay_input)
         main_layout.addWidget(self.max_delay_label)
         main_layout.addWidget(self.max_delay_input)
+        main_layout.addWidget(self.post_shot_delay_label)
+        main_layout.addWidget(self.post_shot_delay_input)
         main_layout.addWidget(self.attack_teammates_checkbox)
         main_layout.addWidget(self.save_button)
         main_layout.addWidget(self.log_output)
@@ -496,9 +493,10 @@ class MainWindow(QMainWindow):
         try:
             min_delay = float(self.min_delay_input.text())
             max_delay = float(self.max_delay_input.text())
+            post_shot_delay = float(self.post_shot_delay_input.text())
 
-            if min_delay <= 0 or max_delay <= 0 or min_delay > max_delay:
-                raise ValueError("Shot delay values must be positive and min should be less than max.")
+            if min_delay <= 0 or max_delay <= 0 or min_delay > max_delay or post_shot_delay < 0:
+                raise ValueError("Shot delay values must be positive and min should be less than max. Post-shot delay must be non-negative.")
         except ValueError:
             raise ValueError("Invalid shot delay values.")
 
@@ -511,6 +509,7 @@ class MainWindow(QMainWindow):
         self.bot.config['Settings']['ShotDelayMin'] = float(self.min_delay_input.text())
         self.bot.config['Settings']['ShotDelayMax'] = float(self.max_delay_input.text())
         self.bot.config['Settings']['AttackOnTeammates'] = self.attack_teammates_checkbox.isChecked()
+        self.bot.config['Settings']['PostShotDelay'] = float(self.post_shot_delay_input.text())
 
     def update_log_output(self):
         try:
