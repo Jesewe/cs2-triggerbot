@@ -1,7 +1,8 @@
 import sys, logging, os, json, pymem, pymem.process, keyboard, time, threading, psutil
+from datetime import datetime
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox
+from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox, QFormLayout, QTabWidget
 from PyQt6.QtGui import QIcon
 from pynput.mouse import Controller, Button, Listener as MouseListener
 from pynput.keyboard import Key, Listener as KeyboardListener
@@ -42,6 +43,11 @@ class ConfigManager:
             "ShotDelayMax": 0.03,
             "AttackOnTeammates": False,
             "PostShotDelay": 0.1
+        },
+        "Weapons": {
+            "Pistol": {"ShotDelayMin": 0.05, "ShotDelayMax": 0.1, "PostShotDelay": 0.1},
+            "Rifle": {"ShotDelayMin": 0.02, "ShotDelayMax": 0.05, "PostShotDelay": 0.1},
+            "Sniper": {"ShotDelayMin": 0.3, "ShotDelayMax": 0.5, "PostShotDelay": 0.5},
         }
     }
 
@@ -49,21 +55,17 @@ class ConfigManager:
 
     @classmethod
     def load_config(cls):
-        """Load configuration, filling in any missing keys with defaults."""
         if cls._config_cache is not None:
             return cls._config_cache
 
-        # Ensure the config directory exists
         if not os.path.exists(cls.CONFIG_DIRECTORY):
             os.makedirs(cls.CONFIG_DIRECTORY)
 
-        # Load the configuration file or create it if it doesn't exist
         if not os.path.exists(cls.CONFIG_FILE):
             logging.info("config.json not found, creating a default configuration.")
             cls.save_config(cls.DEFAULT_CONFIG)
             cls._config_cache = cls.DEFAULT_CONFIG
         else:
-            # Load the existing configuration
             try:
                 with open(cls.CONFIG_FILE, 'r') as config_file:
                     cls._config_cache = json.load(config_file)
@@ -71,7 +73,6 @@ class ConfigManager:
             except (json.JSONDecodeError, IOError) as e:
                 cls._config_cache = cls.DEFAULT_CONFIG
 
-            # Add missing keys from the default configuration
             updated = False
             for key, default_value in cls.DEFAULT_CONFIG.items():
                 if key not in cls._config_cache:
@@ -83,7 +84,6 @@ class ConfigManager:
                             cls._config_cache[key][sub_key] = sub_value
                             updated = True
 
-            # Save the updated config if any missing keys were added
             if updated:
                 cls.save_config(cls._config_cache)
 
@@ -130,7 +130,7 @@ class Utility:
             return None, None
 
 class CS2TriggerBot:
-    VERSION = "v1.1.7"
+    VERSION = "v1.1.8"
 
     def __init__(self, offsets, client_data):
         self.config = ConfigManager.load_config()
@@ -138,6 +138,7 @@ class CS2TriggerBot:
         self.pm, self.client_base = None, None
         self.is_running, self.stop_event = False, threading.Event()
         self.trigger_active = False
+        self.current_weapon_type = "Pistol"
         self.update_config(self.config)
         self.initialize_offsets()
 
@@ -160,11 +161,12 @@ class CS2TriggerBot:
     def update_config(self, config):
         self.config = config
         self.trigger_key = self.config['Settings']['TriggerKey']
-        self.shot_delay_min = self.config['Settings']['ShotDelayMin']
-        self.shot_delay_max = self.config['Settings']['ShotDelayMax']
         self.attack_on_teammates = self.config['Settings']['AttackOnTeammates']
-        self.post_shot_delay = self.config['Settings'].get('PostShotDelay', 0.1)
         self.is_mouse_trigger = self.trigger_key in ["x1", "x2"]
+        weapon_config = self.config['Weapons'].get(self.current_weapon_type, {})
+        self.shot_delay_min = weapon_config.get("ShotDelayMin", 0.1)
+        self.shot_delay_max = weapon_config.get("ShotDelayMax", 0.2)
+        self.post_shot_delay = weapon_config.get("PostShotDelay", 0.1)
 
     def on_key_press(self, key):
         if not self.is_mouse_trigger:
@@ -275,53 +277,14 @@ class CS2TriggerBot:
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle(f"CS2 TriggerBot | github.com/Jesewe/cs2-triggerbot")
-        self.setFixedSize(700, 600)
+        self.setWindowTitle("CS2 TriggerBot | github.com/Jesewe/cs2-triggerbot")
+        self.setFixedSize(700, 400)
         self.setStyleSheet("""
-            QMainWindow {
-                background-color: #1A1A1A; 
-                color: #E0E0E0; 
-                font-family: Arial; 
-                font-size: 15px;
-            }
-            QLabel {
-                color: #F0F0F0;
-                font-weight: bold;
-            }
-            QLineEdit {
-                background-color: #2C2C2C; 
-                color: #E0E0E0; 
-                border: 1px solid #444444; 
-                padding: 5px;
-                border-radius: 5px;
-            }
-            QLineEdit:focus {
-                border: 1px solid #D5006D;
-            }
-            QCheckBox {
-                color: #E0E0E0;
-                font-weight: bold;
-            }
-            QTextEdit {
-                background-color: #2C2C2C; 
-                color: #E0E0E0; 
-                border: 1px solid #444444;
-                border-radius: 5px;
-            }
-            QPushButton {
-                background-color: #333333; 
-                color: #D5006D; 
-                font-weight: bold;
-                padding: 8px 15px; 
-                border-radius: 15px;
-                border: 1px solid #555555;
-            }
-            QPushButton:hover {
-                background-color: #444444;
-            }
-            QPushButton:pressed {
-                background-color: #222222;
-            }
+            QMainWindow { background-color: #1A1A1A; color: #E0E0E0; font-family: Arial; font-size: 15px; }
+            QLabel { color: #F0F0F0; font-weight: bold; }
+            QLineEdit, QComboBox, QTextEdit { background-color: #2C2C2C; color: #E0E0E0; border: 1px solid #444444; padding: 5px; border-radius: 5px; }
+            QPushButton { background-color: #333333; color: #D5006D; font-weight: bold; padding: 8px 15px; border-radius: 15px; border: 1px solid #555555; }
+            QPushButton:hover { background-color: #444444; }
         """)
 
         icon_path = os.path.join(os.path.dirname(__file__), 'icon.png')
@@ -330,81 +293,25 @@ class MainWindow(QMainWindow):
         else:
             logging.warning("Icon not found, skipping.")
 
+        self.main_layout = QVBoxLayout()
+        self.tabs = QTabWidget()
+
         offsets, client_data = Utility.fetch_offsets()
         if offsets is None or client_data is None:
-            QMessageBox.warning(self, "Offsets Fetch Error", "Failed to fetch offsets from the server. The bot may not work correctly.")
-            offsets = {}  # Initialize empty offsets as a fallback
-            client_data = {}  # Initialize empty client data as a fallback
+            QMessageBox.warning(self, "Offsets Fetch Error", "Failed to fetch offsets from the server.")
+            offsets, client_data = {}, {}
 
         self.bot = CS2TriggerBot(offsets, client_data)
 
-        main_layout = QVBoxLayout()
+        self.init_home_tab()
+        self.init_general_settings_tab()
+        self.init_weapon_settings_tab()
+        self.init_logs_tab()
 
-        self.name_app = QLabel(f"CS2 TriggerBot {CS2TriggerBot.VERSION}", self)
-        self.name_app.setStyleSheet("color: #D5006D;")
-        
-        self.update_info = QLabel(self)
-        self.check_for_updates(self.bot.VERSION)
-
-        self.status_label = QLabel("Bot Status: Stopped", self)
-        self.status_label.setStyleSheet("color: red; font-weight: bold;")
-
-        self.trigger_key_label = QLabel("Trigger Key:", self)
-        self.trigger_key_input = QLineEdit(self.bot.config['Settings']['TriggerKey'], self)
-        self.trigger_key_input.setToolTip("Set the key to activate the trigger bot (e.g., 'x').")
-
-        self.min_delay_label = QLabel("Min Shot Delay:", self)
-        self.min_delay_input = QLineEdit(str(self.bot.config['Settings']['ShotDelayMin']), self)
-        self.min_delay_input.setToolTip("Minimum delay between shots in seconds (e.g., 0.01).")
-
-        self.max_delay_label = QLabel("Max Shot Delay:", self)
-        self.max_delay_input = QLineEdit(str(self.bot.config['Settings']['ShotDelayMax']), self)
-        self.max_delay_input.setToolTip("Maximum delay between shots in seconds (must be >= Min Delay).")
-
-        self.post_shot_delay_label = QLabel("Post Shot Delay:", self)
-        self.post_shot_delay_input = QLineEdit(str(self.bot.config['Settings'].get('PostShotDelay', 0.1)), self)
-        self.post_shot_delay_input.setToolTip("Delay after each shot in seconds (e.g., 0.1).")
-
-        self.attack_teammates_checkbox = QCheckBox("Attack Teammates", self)
-        self.attack_teammates_checkbox.setChecked(self.bot.config['Settings']['AttackOnTeammates'])
-        self.attack_teammates_checkbox.setToolTip("If checked, the bot will attack teammates as well.")
-
-        self.log_output = QTextEdit(self)
-        self.log_output.setReadOnly(True)
-
-        buttons_layout = QHBoxLayout()
-
-        self.start_button = QPushButton("Start Bot", self)
-        buttons_layout.addWidget(self.start_button)
-
-        self.stop_button = QPushButton("Stop Bot", self)
-        buttons_layout.addWidget(self.stop_button)
-
-        self.save_button = QPushButton("Save Config", self)
-
-        main_layout.addWidget(self.name_app)
-        main_layout.addWidget(self.update_info)
-        main_layout.addWidget(self.status_label)
-        main_layout.addWidget(self.trigger_key_label)
-        main_layout.addWidget(self.trigger_key_input)
-        main_layout.addWidget(self.min_delay_label)
-        main_layout.addWidget(self.min_delay_input)
-        main_layout.addWidget(self.max_delay_label)
-        main_layout.addWidget(self.max_delay_input)
-        main_layout.addWidget(self.post_shot_delay_label)
-        main_layout.addWidget(self.post_shot_delay_input)
-        main_layout.addWidget(self.attack_teammates_checkbox)
-        main_layout.addWidget(self.save_button)
-        main_layout.addWidget(self.log_output)
-        main_layout.addLayout(buttons_layout)
-
+        self.main_layout.addWidget(self.tabs)
         container = QWidget()
-        container.setLayout(main_layout)
+        container.setLayout(self.main_layout)
         self.setCentralWidget(container)
-
-        self.start_button.clicked.connect(self.start_bot)
-        self.stop_button.clicked.connect(self.stop_bot)
-        self.save_button.clicked.connect(self.save_config)
 
         self.last_log_position = 0
         self.timer = QTimer(self)
@@ -412,6 +319,146 @@ class MainWindow(QMainWindow):
         self.timer.start(1000)
 
         self.init_config_watcher()
+
+    def init_home_tab(self):
+        home_tab = QWidget()
+        layout = QVBoxLayout()
+
+        self.name_app = QLabel(f"CS2 TriggerBot {CS2TriggerBot.VERSION}")
+        self.name_app.setStyleSheet("color: #D5006D; font-size: 18px;")
+
+        self.update_info = QLabel(self)
+        self.check_for_updates(self.bot.VERSION)
+
+        self.status_label = QLabel("Bot Status: Stopped")
+        self.status_label.setStyleSheet("color: red; font-weight: bold;")
+
+        self.last_update_label = QLabel("Last offset update: Fetching...")
+        self.last_update_label.setStyleSheet("font-size: 13px; font-style: italic;")
+        self.fetch_last_offset_update()
+
+        quick_start_label = QLabel("Quick Start Guide")
+        quick_start_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #D5006D;")
+
+        quick_start_text = QLabel(
+            "1. Open CS2 game and ensure it’s running.\n"
+            "2. Configure trigger key and delays in 'General Settings' and 'Weapon Settings'.\n"
+            "3. Press 'Start Bot' to activate.\n"
+            "4. Monitor bot status and logs in the 'Logs' tab."
+        )
+        quick_start_text.setWordWrap(True)
+
+        self.start_button = QPushButton("Start Bot")
+        self.stop_button = QPushButton("Stop Bot")
+
+        self.start_button.clicked.connect(self.start_bot)
+        self.stop_button.clicked.connect(self.stop_bot)
+
+        buttons_layout = QHBoxLayout()
+        buttons_layout.addWidget(self.start_button)
+        buttons_layout.addWidget(self.stop_button)
+
+        layout.addWidget(self.name_app)
+        layout.addWidget(self.update_info)
+        layout.addWidget(quick_start_label)
+        layout.addWidget(quick_start_text)
+        layout.addWidget(self.status_label)
+        layout.addWidget(self.last_update_label)
+        layout.addLayout(buttons_layout)
+        home_tab.setLayout(layout)
+        self.tabs.addTab(home_tab, "Home")
+
+    def init_general_settings_tab(self):
+        general_settings_tab = QWidget()
+        form_layout = QFormLayout()
+
+        self.trigger_key_input = QLineEdit(self.bot.config['Settings']['TriggerKey'])
+        self.trigger_key_input.setToolTip("Set the key to activate the trigger bot (e.g., 'x').")
+
+        self.attack_teammates_checkbox = QCheckBox("Attack Teammates")
+        self.attack_teammates_checkbox.setChecked(self.bot.config['Settings']['AttackOnTeammates'])
+
+        form_layout.addRow("Trigger Key:", self.trigger_key_input)
+        form_layout.addRow(self.attack_teammates_checkbox)
+
+        save_button = QPushButton("Save Config")
+        save_button.clicked.connect(self.save_general_settings)
+        form_layout.addRow(save_button)
+
+        general_settings_tab.setLayout(form_layout)
+        self.tabs.addTab(general_settings_tab, "General Settings")
+
+    def init_weapon_settings_tab(self):
+        weapon_settings_tab = QWidget()
+        weapon_tabs = QTabWidget()
+        self.weapon_settings_inputs = {}
+
+        for weapon_type, config in ConfigManager.DEFAULT_CONFIG["Weapons"].items():
+            tab = QWidget()
+            form_layout = QFormLayout()
+
+            # Create fields for min/max/post delays
+            min_delay_input = QLineEdit(str(config["ShotDelayMin"]))
+            max_delay_input = QLineEdit(str(config["ShotDelayMax"]))
+            post_delay_input = QLineEdit(str(config["PostShotDelay"]))
+
+            # Set tooltips
+            min_delay_input.setToolTip(f"Minimum shot delay for {weapon_type}.")
+            max_delay_input.setToolTip(f"Maximum shot delay for {weapon_type} (must be >= Min Delay).")
+            post_delay_input.setToolTip(f"Post-shot delay after each shot for {weapon_type}.")
+
+            # Add inputs to the form layout
+            form_layout.addRow("Min Shot Delay:", min_delay_input)
+            form_layout.addRow("Max Shot Delay:", max_delay_input)
+            form_layout.addRow("Post Shot Delay:", post_delay_input)
+
+            # Store inputs for saving later
+            self.weapon_settings_inputs[weapon_type] = {
+                "min_delay": min_delay_input,
+                "max_delay": max_delay_input,
+                "post_delay": post_delay_input
+            }
+
+            tab.setLayout(form_layout)
+            weapon_tabs.addTab(tab, weapon_type)
+
+        save_button = QPushButton("Save Config")
+        save_button.clicked.connect(self.save_weapon_settings)
+
+        layout = QVBoxLayout()
+        layout.addWidget(weapon_tabs)
+        layout.addWidget(save_button)
+        weapon_settings_tab.setLayout(layout)
+        self.tabs.addTab(weapon_settings_tab, "Weapon Settings")
+
+    def fetch_last_offset_update(self):
+        try:
+            response = get("https://api.github.com/repos/a2x/cs2-dumper/commits/main")
+            response.raise_for_status()
+            commit_data = response.json()
+            commit_timestamp = commit_data["commit"]["committer"]["date"]
+
+            last_update_dt = datetime.fromisoformat(commit_timestamp.replace("Z", "+00:00"))
+            formatted_timestamp = last_update_dt.strftime("%m/%d/%Y %H:%M:%S")
+            
+            self.last_update_label.setText(f"Last offset update: {formatted_timestamp} (UTC)")
+            self.last_update_label.setStyleSheet("color: orange; font-weight: bold;")
+
+        except Exception as e:
+            self.last_update_label.setText("Last offset update: Error fetching data")
+            self.last_update_label.setStyleSheet("color: orange; font-weight: bold;")
+            logging.error(f"Failed to fetch last offset update info: {e}")
+
+    def init_logs_tab(self):
+        logs_tab = QWidget()
+        layout = QVBoxLayout()
+
+        self.log_output = QTextEdit()
+        self.log_output.setReadOnly(True)
+        layout.addWidget(self.log_output)
+
+        logs_tab.setLayout(layout)
+        self.tabs.addTab(logs_tab, "Logs")
 
     def init_config_watcher(self):
         event_handler = ConfigFileChangeHandler(self.bot)
@@ -448,7 +495,7 @@ class MainWindow(QMainWindow):
         if self.bot.is_running:
             QMessageBox.warning(self, "Bot started", "The bot is already running.")
             return
-        
+
         if not self.bot.is_game_running():
             QMessageBox.critical(self, "The game is not running", "Could not find cs2.exe process. Make sure the game is running.")
             return
@@ -465,7 +512,7 @@ class MainWindow(QMainWindow):
             self.status_label.setStyleSheet("color: green; font-weight: bold;")
         except ValueError as ve:
             QMessageBox.critical(self, "Invalid Input", str(ve))
-        
+
     def stop_bot(self):
         if self.bot.is_running:
             self.bot.stop()
@@ -480,36 +527,32 @@ class MainWindow(QMainWindow):
         else:
             QMessageBox.warning(self, "Bot has not been started", "The bot is not running.")
 
-    def save_config(self):
-        try:
-            self.validate_inputs()
-            self.update_bot_config_from_ui()
-            ConfigManager.save_config(self.bot.config)
-            self.bot.update_config(self.bot.config)
-        except ValueError as ve:
-            QMessageBox.critical(self, "Invalid Input", str(ve))
+    def save_general_settings(self):
+        self.bot.config['Settings']['TriggerKey'] = self.trigger_key_input.text()
+        self.bot.config['Settings']['AttackOnTeammates'] = self.attack_teammates_checkbox.isChecked()
+        ConfigManager.save_config(self.bot.config)
+        self.bot.update_config(self.bot.config)
+
+    def save_weapon_settings(self):
+        for weapon_type, inputs in self.weapon_settings_inputs.items():
+            self.bot.config['Weapons'][weapon_type]["ShotDelayMin"] = float(inputs["min_delay"].text())
+            self.bot.config['Weapons'][weapon_type]["ShotDelayMax"] = float(inputs["max_delay"].text())
+            self.bot.config['Weapons'][weapon_type]["PostShotDelay"] = float(inputs["post_delay"].text())
+        ConfigManager.save_config(self.bot.config)
+        self.bot.update_config(self.bot.config)
 
     def validate_inputs(self):
         try:
-            min_delay = float(self.min_delay_input.text())
-            max_delay = float(self.max_delay_input.text())
-            post_shot_delay = float(self.post_shot_delay_input.text())
+            trigger_key = self.trigger_key_input.text()
+            if not trigger_key:
+                raise ValueError("Trigger key cannot be empty.")
 
-            if min_delay <= 0 or max_delay <= 0 or min_delay > max_delay or post_shot_delay < 0:
-                raise ValueError("Shot delay values must be positive and min should be less than max. Post-shot delay must be non-negative.")
         except ValueError:
             raise ValueError("Invalid shot delay values.")
 
-        trigger_key = self.trigger_key_input.text()
-        if not trigger_key:
-            raise ValueError("Trigger key cannot be empty.")
-
     def update_bot_config_from_ui(self):
         self.bot.config['Settings']['TriggerKey'] = self.trigger_key_input.text()
-        self.bot.config['Settings']['ShotDelayMin'] = float(self.min_delay_input.text())
-        self.bot.config['Settings']['ShotDelayMax'] = float(self.max_delay_input.text())
         self.bot.config['Settings']['AttackOnTeammates'] = self.attack_teammates_checkbox.isChecked()
-        self.bot.config['Settings']['PostShotDelay'] = float(self.post_shot_delay_input.text())
 
     def update_log_output(self):
         try:
