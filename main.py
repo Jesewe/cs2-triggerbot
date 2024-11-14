@@ -261,6 +261,10 @@ class MainWindow(QMainWindow):
             QLineEdit, QComboBox, QTextEdit { background-color: #2C2C2C; color: #E0E0E0; border: 1px solid #444444; padding: 5px; border-radius: 5px; }
             QPushButton { background-color: #333333; color: #D5006D; font-weight: bold; padding: 8px 15px; border-radius: 15px; border: 1px solid #555555; }
             QPushButton:hover { background-color: #444444; }
+            QTabWidget::pane { border: 1px solid #444444; background-color: #1A1A1A; border-radius: 5px; }
+            QTabBar::tab { background-color: #2C2C2C; color: #E0E0E0; padding: 8px 15px; border: 1px solid #444444; border-top-left-radius: 5px; border-top-right-radius: 5px; margin: 2px; font-weight: bold; }
+            QTabBar::tab:selected { background-color: #444444; color: #D5006D; border-bottom: 2px solid #D5006D; }
+            QTabBar::tab:hover { background-color: #333333; }
         """)
 
         icon_path = os.path.join(os.path.dirname(__file__), 'icon.png')
