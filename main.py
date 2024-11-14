@@ -28,7 +28,7 @@ class Logger:
 
         logging.basicConfig(
             level=logging.INFO,
-            format='[%(levelname)s] - %(message)s',
+            format='[%(levelname)s]: %(message)s',
             handlers=[logging.FileHandler(Logger.LOG_FILE), logging.StreamHandler()]
         )
 
@@ -42,12 +42,7 @@ class ConfigManager:
             "ShotDelayMin": 0.01,
             "ShotDelayMax": 0.03,
             "AttackOnTeammates": False,
-            "PostShotDelay": 0.1
-        },
-        "Weapons": {
-            "Pistol": {"ShotDelayMin": 0.05, "ShotDelayMax": 0.1, "PostShotDelay": 0.1},
-            "Rifle": {"ShotDelayMin": 0.02, "ShotDelayMax": 0.05, "PostShotDelay": 0.1},
-            "Sniper": {"ShotDelayMin": 0.3, "ShotDelayMax": 0.5, "PostShotDelay": 0.5},
+            "PostShotDelay": 0.05
         }
     }
 
@@ -63,7 +58,7 @@ class ConfigManager:
 
         if not os.path.exists(cls.CONFIG_FILE):
             logging.info("config.json not found, creating a default configuration.")
-            cls.save_config(cls.DEFAULT_CONFIG)
+            cls.save_config(cls.DEFAULT_CONFIG, log_info=False)
             cls._config_cache = cls.DEFAULT_CONFIG
         else:
             try:
@@ -72,20 +67,6 @@ class ConfigManager:
                     logging.info("Loaded configuration.")
             except (json.JSONDecodeError, IOError) as e:
                 cls._config_cache = cls.DEFAULT_CONFIG
-
-            updated = False
-            for key, default_value in cls.DEFAULT_CONFIG.items():
-                if key not in cls._config_cache:
-                    cls._config_cache[key] = default_value
-                    updated = True
-                elif isinstance(default_value, dict):
-                    for sub_key, sub_value in default_value.items():
-                        if sub_key not in cls._config_cache[key]:
-                            cls._config_cache[key][sub_key] = sub_value
-                            updated = True
-
-            if updated:
-                cls.save_config(cls._config_cache)
 
         return cls._config_cache
 
@@ -138,7 +119,6 @@ class CS2TriggerBot:
         self.pm, self.client_base = None, None
         self.is_running, self.stop_event = False, threading.Event()
         self.trigger_active = False
-        self.current_weapon_type = "Pistol"
         self.update_config(self.config)
         self.initialize_offsets()
 
@@ -163,10 +143,6 @@ class CS2TriggerBot:
         self.trigger_key = self.config['Settings']['TriggerKey']
         self.attack_on_teammates = self.config['Settings']['AttackOnTeammates']
         self.is_mouse_trigger = self.trigger_key in ["x1", "x2"]
-        weapon_config = self.config['Weapons'].get(self.current_weapon_type, {})
-        self.shot_delay_min = weapon_config.get("ShotDelayMin", 0.1)
-        self.shot_delay_max = weapon_config.get("ShotDelayMax", 0.2)
-        self.post_shot_delay = weapon_config.get("PostShotDelay", 0.1)
 
     def on_key_press(self, key):
         if not self.is_mouse_trigger:
@@ -305,7 +281,6 @@ class MainWindow(QMainWindow):
 
         self.init_home_tab()
         self.init_general_settings_tab()
-        self.init_weapon_settings_tab()
         self.init_logs_tab()
 
         self.main_layout.addWidget(self.tabs)
@@ -333,7 +308,7 @@ class MainWindow(QMainWindow):
         self.status_label = QLabel("Bot Status: Stopped")
         self.status_label.setStyleSheet("color: red; font-weight: bold;")
 
-        self.last_update_label = QLabel("Last offset update: Fetching...")
+        self.last_update_label = QLabel("Last offsets update: Fetching...")
         self.last_update_label.setStyleSheet("font-size: 13px; font-style: italic;")
         self.fetch_last_offset_update()
 
@@ -375,10 +350,22 @@ class MainWindow(QMainWindow):
         self.trigger_key_input = QLineEdit(self.bot.config['Settings']['TriggerKey'])
         self.trigger_key_input.setToolTip("Set the key to activate the trigger bot (e.g., 'x').")
 
+        self.min_delay_input = QLineEdit(str(self.bot.config['Settings']['ShotDelayMin']), self)
+        self.min_delay_input.setToolTip("Minimum delay between shots in seconds (e.g., 0.01).")
+
+        self.max_delay_input = QLineEdit(str(self.bot.config['Settings']['ShotDelayMax']), self)
+        self.max_delay_input.setToolTip("Maximum delay between shots in seconds (must be >= Min Delay).")
+
+        self.post_shot_delay_input = QLineEdit(str(self.bot.config['Settings'].get('PostShotDelay', 0.1)), self)
+        self.post_shot_delay_input.setToolTip("Delay after each shot in seconds (e.g., 0.05).")
+
         self.attack_teammates_checkbox = QCheckBox("Attack Teammates")
         self.attack_teammates_checkbox.setChecked(self.bot.config['Settings']['AttackOnTeammates'])
 
         form_layout.addRow("Trigger Key:", self.trigger_key_input)
+        form_layout.addRow("Min Shot Delay:", self.min_delay_input)
+        form_layout.addRow("Max Shot Delay:", self.max_delay_input)
+        form_layout.addRow("Post Shot Delay:", self.post_shot_delay_input)
         form_layout.addRow(self.attack_teammates_checkbox)
 
         save_button = QPushButton("Save Config")
@@ -387,49 +374,6 @@ class MainWindow(QMainWindow):
 
         general_settings_tab.setLayout(form_layout)
         self.tabs.addTab(general_settings_tab, "General Settings")
-
-    def init_weapon_settings_tab(self):
-        weapon_settings_tab = QWidget()
-        weapon_tabs = QTabWidget()
-        self.weapon_settings_inputs = {}
-
-        for weapon_type, config in ConfigManager.DEFAULT_CONFIG["Weapons"].items():
-            tab = QWidget()
-            form_layout = QFormLayout()
-
-            # Create fields for min/max/post delays
-            min_delay_input = QLineEdit(str(config["ShotDelayMin"]))
-            max_delay_input = QLineEdit(str(config["ShotDelayMax"]))
-            post_delay_input = QLineEdit(str(config["PostShotDelay"]))
-
-            # Set tooltips
-            min_delay_input.setToolTip(f"Minimum shot delay for {weapon_type}.")
-            max_delay_input.setToolTip(f"Maximum shot delay for {weapon_type} (must be >= Min Delay).")
-            post_delay_input.setToolTip(f"Post-shot delay after each shot for {weapon_type}.")
-
-            # Add inputs to the form layout
-            form_layout.addRow("Min Shot Delay:", min_delay_input)
-            form_layout.addRow("Max Shot Delay:", max_delay_input)
-            form_layout.addRow("Post Shot Delay:", post_delay_input)
-
-            # Store inputs for saving later
-            self.weapon_settings_inputs[weapon_type] = {
-                "min_delay": min_delay_input,
-                "max_delay": max_delay_input,
-                "post_delay": post_delay_input
-            }
-
-            tab.setLayout(form_layout)
-            weapon_tabs.addTab(tab, weapon_type)
-
-        save_button = QPushButton("Save Config")
-        save_button.clicked.connect(self.save_weapon_settings)
-
-        layout = QVBoxLayout()
-        layout.addWidget(weapon_tabs)
-        layout.addWidget(save_button)
-        weapon_settings_tab.setLayout(layout)
-        self.tabs.addTab(weapon_settings_tab, "Weapon Settings")
 
     def fetch_last_offset_update(self):
         try:
@@ -441,13 +385,13 @@ class MainWindow(QMainWindow):
             last_update_dt = datetime.fromisoformat(commit_timestamp.replace("Z", "+00:00"))
             formatted_timestamp = last_update_dt.strftime("%m/%d/%Y %H:%M:%S")
             
-            self.last_update_label.setText(f"Last offset update: {formatted_timestamp} (UTC)")
+            self.last_update_label.setText(f"Last offsets update: {formatted_timestamp} (UTC)")
             self.last_update_label.setStyleSheet("color: orange; font-weight: bold;")
 
         except Exception as e:
-            self.last_update_label.setText("Last offset update: Error fetching data")
+            self.last_update_label.setText("Last offsets update: Error fetching data")
             self.last_update_label.setStyleSheet("color: orange; font-weight: bold;")
-            logging.error(f"Failed to fetch last offset update info: {e}")
+            logging.error(f"Failed to fetch last offsets update info: {e}")
 
     def init_logs_tab(self):
         logs_tab = QWidget()
@@ -530,14 +474,9 @@ class MainWindow(QMainWindow):
     def save_general_settings(self):
         self.bot.config['Settings']['TriggerKey'] = self.trigger_key_input.text()
         self.bot.config['Settings']['AttackOnTeammates'] = self.attack_teammates_checkbox.isChecked()
-        ConfigManager.save_config(self.bot.config)
-        self.bot.update_config(self.bot.config)
-
-    def save_weapon_settings(self):
-        for weapon_type, inputs in self.weapon_settings_inputs.items():
-            self.bot.config['Weapons'][weapon_type]["ShotDelayMin"] = float(inputs["min_delay"].text())
-            self.bot.config['Weapons'][weapon_type]["ShotDelayMax"] = float(inputs["max_delay"].text())
-            self.bot.config['Weapons'][weapon_type]["PostShotDelay"] = float(inputs["post_delay"].text())
+        self.bot.config['Settings']['ShotDelayMin'] = float(self.min_delay_input.text())
+        self.bot.config['Settings']['ShotDelayMax'] = float(self.max_delay_input.text())
+        self.bot.config['Settings']['PostShotDelay'] = float(self.post_shot_delay_input.text())
         ConfigManager.save_config(self.bot.config)
         self.bot.update_config(self.bot.config)
 
@@ -549,10 +488,6 @@ class MainWindow(QMainWindow):
 
         except ValueError:
             raise ValueError("Invalid shot delay values.")
-
-    def update_bot_config_from_ui(self):
-        self.bot.config['Settings']['TriggerKey'] = self.trigger_key_input.text()
-        self.bot.config['Settings']['AttackOnTeammates'] = self.attack_teammates_checkbox.isChecked()
 
     def update_log_output(self):
         try:
