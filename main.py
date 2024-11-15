@@ -142,6 +142,9 @@ class CS2TriggerBot:
         self.config = config
         self.trigger_key = self.config['Settings']['TriggerKey']
         self.attack_on_teammates = self.config['Settings']['AttackOnTeammates']
+        self.shot_delay_min = self.config['Settings']['ShotDelayMin']
+        self.shot_delay_max = self.config['Settings']['ShotDelayMax']
+        self.post_shot_delay = self.config['Settings']['PostShotDelay']
         self.is_mouse_trigger = self.trigger_key in ["x1", "x2"]
 
     def on_key_press(self, key):
