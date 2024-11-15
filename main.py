@@ -120,8 +120,6 @@ class CS2TriggerBot:
         self.is_running, self.stop_event = False, threading.Event()
         self.trigger_active = False
         self.update_config(self.config)
-        
-        # Инициализация смещений
         self.initialize_offsets()
 
         self.keyboard_listener = KeyboardListener(on_press=self.on_key_press, on_release=self.on_key_release)
@@ -148,13 +146,6 @@ class CS2TriggerBot:
         self.shot_delay_max = self.config['Settings']['ShotDelayMax']
         self.post_shot_delay = self.config['Settings']['PostShotDelay']
         self.is_mouse_trigger = self.trigger_key in ["x1", "x2"]
-
-    
-
-
-
-
-
 
     def on_key_press(self, key):
         if not self.is_mouse_trigger:
