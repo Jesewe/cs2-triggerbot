@@ -141,10 +141,10 @@ class CS2TriggerBot:
     def update_config(self, config):
         self.config = config
         self.trigger_key = self.config['Settings']['TriggerKey']
-        self.attack_on_teammates = self.config['Settings']['AttackOnTeammates']
         self.shot_delay_min = self.config['Settings']['ShotDelayMin']
         self.shot_delay_max = self.config['Settings']['ShotDelayMax']
         self.post_shot_delay = self.config['Settings']['PostShotDelay']
+        self.attack_on_teammates = self.config['Settings']['AttackOnTeammates']
         self.is_mouse_trigger = self.trigger_key in ["x1", "x2"]
 
     def on_key_press(self, key):
@@ -261,7 +261,9 @@ class MainWindow(QMainWindow):
         self.setStyleSheet("""
             QMainWindow { background-color: #1A1A1A; color: #E0E0E0; font-family: Arial; font-size: 15px; }
             QLabel { color: #F0F0F0; font-weight: bold; }
-            QLineEdit, QComboBox, QTextEdit { background-color: #2C2C2C; color: #E0E0E0; border: 1px solid #444444; padding: 5px; border-radius: 5px; }
+            QLineEdit, QComboBox { background-color: #2C2C2C; color: #E0E0E0; border: 1px solid #444444; padding: 5px; border-radius: 5px; }
+            QTextEdit { background-color: #2C2C2C;  color: #E0E0E0;  border: 1px solid #444444;  border-radius: 5px; padding: 10px; font-family: Consolas, monospace; font-size: 14px; }
+            QTextEdit:focus { border: 1px solid #D5006D; }
             QPushButton { background-color: #333333; color: #D5006D; font-weight: bold; padding: 8px 15px; border-radius: 15px; border: 1px solid #555555; }
             QPushButton:hover { background-color: #444444; }
             QTabWidget::pane { border: 1px solid #444444; background-color: #1A1A1A; border-radius: 5px; }
