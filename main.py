@@ -13,7 +13,6 @@ from packaging import version
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
-# Initialize mouse controller for trigger actions
 mouse = Controller()
 
 class Logger:
@@ -94,7 +93,6 @@ class Utility:
     @staticmethod
     def fetch_offsets():
         try:
-            # Fetch offsets and client data directly from the server
             response_offset = get("https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/offsets.json")
             response_client = get("https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/client_dll.json")
 
@@ -137,6 +135,8 @@ class CS2TriggerBot:
             self.m_iIDEntIndex = self.client_data["client.dll"]["classes"]["C_CSPlayerPawnBase"]["fields"]["m_iIDEntIndex"]
         except KeyError as e:
             logging.error(f"Offset initialization error: {e}")
+        else:
+            logging.info("Offsets have been initialised.")
 
     def update_config(self, config):
         self.config = config
@@ -234,7 +234,7 @@ class CS2TriggerBot:
                                 mouse.press(Button.left)
                                 time.sleep(uniform(self.shot_delay_min, self.shot_delay_max))
                                 mouse.release(Button.left)
-                                # post-shot delay
+
                                 time.sleep(self.post_shot_delay)
 
                     time.sleep(0.01)
@@ -326,7 +326,7 @@ class MainWindow(QMainWindow):
 
         quick_start_text = QLabel(
             "1. Open CS2 game and ensure it’s running.\n"
-            "2. Configure trigger key and delays in 'General Settings' and 'Weapon Settings'.\n"
+            "2. Configure trigger key and delays in 'General Settings'.\n"
             "3. Press 'Start Bot' to activate.\n"
             "4. Monitor bot status and logs in the 'Logs' tab."
         )
@@ -396,7 +396,7 @@ class MainWindow(QMainWindow):
             
             self.last_update_label.setText(f"Last offsets update: {formatted_timestamp} (UTC)")
             self.last_update_label.setStyleSheet("color: orange; font-weight: bold;")
-
+            logging.info(f"Last offsets update: {formatted_timestamp} (UTC)")
         except Exception as e:
             self.last_update_label.setText("Last offsets update: Error fetching data")
             self.last_update_label.setStyleSheet("color: orange; font-weight: bold;")
