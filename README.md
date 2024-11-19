@@ -15,6 +15,9 @@
 # Overview
 CS2 TriggerBot is an automated tool designed for Counter-Strike 2 that assists with precise aiming by automatically triggering a mouse click when an enemy is detected in the player's crosshairs. The tool features a graphical user interface (GUI) for easy configuration.
 
+**Official Telegram Channel:**  
+Stay updated with the latest features, updates, and support for CS2 TriggerBot! Join our Telegram community here: [CS2 TriggerBot Updates](https://t.me/cs2_jesewe).
+
 ## Features
 - **Automatic Trigger**: Fires your weapon when an enemy is detected under your crosshair.
 - **Configurable Trigger Key**: Configure a keyboard key or mouse button (`x1` or `x2`) as the trigger via the GUI or `config.json` file.
