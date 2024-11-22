@@ -38,6 +38,7 @@ class ConfigManager:
     DEFAULT_CONFIG = {
         "Settings": {
             "TriggerKey": "x",
+            "Hold": True,
             "ShotDelayMin": 0.01,
             "ShotDelayMax": 0.03,
             "AttackOnTeammates": False,
@@ -66,6 +67,20 @@ class ConfigManager:
                     logging.info("Loaded configuration.")
             except (json.JSONDecodeError, IOError) as e:
                 cls._config_cache = cls.DEFAULT_CONFIG
+
+            updated = False
+            for key, default_value in cls.DEFAULT_CONFIG.items():
+                if key not in cls._config_cache:
+                    cls._config_cache[key] = default_value
+                    updated = True
+                elif isinstance(default_value, dict):
+                    for sub_key, sub_value in default_value.items():
+                        if sub_key not in cls._config_cache[key]:
+                            cls._config_cache[key][sub_key] = sub_value
+                            updated = True
+
+            if updated:
+                cls.save_config(cls._config_cache, log_info=False)
 
         return cls._config_cache
 
@@ -117,6 +132,7 @@ class CS2TriggerBot:
         self.pm, self.client_base = None, None
         self.is_running, self.stop_event = False, threading.Event()
         self.trigger_active = False
+        self.single_fire_triggered = False
         self.update_config(self.config)
         self.initialize_offsets()
 
@@ -141,6 +157,7 @@ class CS2TriggerBot:
     def update_config(self, config):
         self.config = config
         self.trigger_key = self.config['Settings']['TriggerKey']
+        self.hold_key = self.config['Settings']['Hold']
         self.shot_delay_min = self.config['Settings']['ShotDelayMin']
         self.shot_delay_max = self.config['Settings']['ShotDelayMax']
         self.post_shot_delay = self.config['Settings']['PostShotDelay']
@@ -230,15 +247,15 @@ class CS2TriggerBot:
                             entity_health = self.pm.read_int(entity + self.m_iHealth)
 
                             if self.should_trigger(entity_team, player_team, entity_health):
-                                time.sleep(uniform(self.shot_delay_min, self.shot_delay_max))
-                                mouse.press(Button.left)
-                                time.sleep(uniform(self.shot_delay_min, self.shot_delay_max))
-                                mouse.release(Button.left)
-
-                                time.sleep(self.post_shot_delay)
+                                if self.hold_key or not self.single_fire_triggered:
+                                    time.sleep(uniform(self.shot_delay_min, self.shot_delay_max))
+                                    mouse.click(Button.left)
+                                    time.sleep(self.post_shot_delay)
+                                    self.single_fire_triggered = not self.hold_key
 
                     time.sleep(0.01)
                 else:
+                    self.single_fire_triggered = False
                     time.sleep(0.05)
             except KeyboardInterrupt:
                 logging.info(f"TriggerBot stopped by user.")
@@ -372,11 +389,15 @@ class MainWindow(QMainWindow):
         self.attack_teammates_checkbox = QCheckBox("Attack Teammates")
         self.attack_teammates_checkbox.setChecked(self.bot.config['Settings']['AttackOnTeammates'])
 
+        self.hold_key_checkbox = QCheckBox("Hold Key")
+        self.hold_key_checkbox.setChecked(self.bot.config['Settings']['Hold'])
+
         form_layout.addRow("Trigger Key:", self.trigger_key_input)
         form_layout.addRow("Min Shot Delay:", self.min_delay_input)
         form_layout.addRow("Max Shot Delay:", self.max_delay_input)
         form_layout.addRow("Post Shot Delay:", self.post_shot_delay_input)
         form_layout.addRow(self.attack_teammates_checkbox)
+        form_layout.addRow(self.hold_key_checkbox)
 
         save_button = QPushButton("Save Config")
         save_button.clicked.connect(self.save_general_settings)
@@ -517,6 +538,7 @@ class MainWindow(QMainWindow):
     def save_general_settings(self):
         self.bot.config['Settings']['TriggerKey'] = self.trigger_key_input.text()
         self.bot.config['Settings']['AttackOnTeammates'] = self.attack_teammates_checkbox.isChecked()
+        self.bot.config['Settings']['Hold'] = self.hold_key_checkbox.isChecked()
         self.bot.config['Settings']['ShotDelayMin'] = float(self.min_delay_input.text())
         self.bot.config['Settings']['ShotDelayMax'] = float(self.max_delay_input.text())
         self.bot.config['Settings']['PostShotDelay'] = float(self.post_shot_delay_input.text())
