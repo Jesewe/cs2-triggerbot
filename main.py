@@ -3,7 +3,7 @@ from datetime import datetime
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox, QFormLayout, QTabWidget
-from PyQt6.QtGui import QIcon, QDoubleValidator
+from PyQt6.QtGui import QIcon
 from pynput.mouse import Controller, Button, Listener as MouseListener
 from pynput.keyboard import Key, Listener as KeyboardListener
 from requests import get
@@ -123,7 +123,7 @@ class Utility:
             return None, None
 
 class CS2TriggerBot:
-    VERSION = "v1.1.8"
+    VERSION = "v1.1.9"
 
     def __init__(self, offsets, client_data):
         self.config = ConfigManager.load_config()
