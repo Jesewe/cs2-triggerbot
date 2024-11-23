@@ -27,7 +27,7 @@ class Logger:
 
         logging.basicConfig(
             level=logging.INFO,
-            format='[%(levelname)s]: %(message)s',
+            format='[%(asctime)s %(levelname)s]: %(message)s',
             handlers=[logging.FileHandler(Logger.LOG_FILE), logging.StreamHandler()]
         )
 
@@ -38,11 +38,10 @@ class ConfigManager:
     DEFAULT_CONFIG = {
         "Settings": {
             "TriggerKey": "x",
-            "Hold": True,
             "ShotDelayMin": 0.01,
             "ShotDelayMax": 0.03,
             "AttackOnTeammates": False,
-            "PostShotDelay": 0.05
+            "PostShotDelay": 0.1
         }
     }
 
@@ -132,7 +131,6 @@ class CS2TriggerBot:
         self.pm, self.client_base = None, None
         self.is_running, self.stop_event = False, threading.Event()
         self.trigger_active = False
-        self.single_fire_triggered = False
         self.update_config(self.config)
         self.initialize_offsets()
 
@@ -157,7 +155,6 @@ class CS2TriggerBot:
     def update_config(self, config):
         self.config = config
         self.trigger_key = self.config['Settings']['TriggerKey']
-        self.hold_key = self.config['Settings']['Hold']
         self.shot_delay_min = self.config['Settings']['ShotDelayMin']
         self.shot_delay_max = self.config['Settings']['ShotDelayMax']
         self.post_shot_delay = self.config['Settings']['PostShotDelay']
@@ -196,9 +193,9 @@ class CS2TriggerBot:
     def initialize_pymem(self):
         try:
             self.pm = pymem.Pymem("cs2.exe")
-            logging.info(f"Successfully attached to cs2.exe process.")
+            logging.info("Attached to cs2.exe.")
         except pymem.exception.ProcessNotFound:
-            logging.error("cs2.exe process not found. Ensure the game is running.")
+            logging.error("Game process not found.")
         return self.pm is not None
 
     def get_client_module(self):
@@ -207,7 +204,7 @@ class CS2TriggerBot:
                 client_module = pymem.process.module_from_name(self.pm.process_handle, "client.dll")
                 self.client_base = client_module.lpBaseOfDll
             except pymem.exception.ModuleNotFoundError:
-                logging.error("client.dll not found. Ensure it is loaded.")
+                logging.error("Client module not found.")
         return self.client_base is not None
 
     def get_entity(self, index):
@@ -225,7 +222,7 @@ class CS2TriggerBot:
     def start(self):
         if not self.initialize_pymem() or not self.get_client_module():
             return
-            
+
         self.is_running = True
 
         while not self.stop_event.is_set():
@@ -235,33 +232,32 @@ class CS2TriggerBot:
                     continue
 
                 if (self.is_mouse_trigger and self.trigger_active) or \
-                   (not self.is_mouse_trigger and keyboard.is_pressed(self.trigger_key)):
-                    player = self.pm.read_longlong(self.client_base + self.dwLocalPlayerPawn)
-                    entity_id = self.pm.read_int(player + self.m_iIDEntIndex)
-
-                    if entity_id > 0:
-                        entity = self.get_entity(entity_id)
-                        if entity:
-                            entity_team = self.pm.read_int(entity + self.m_iTeamNum)
-                            player_team = self.pm.read_int(player + self.m_iTeamNum)
-                            entity_health = self.pm.read_int(entity + self.m_iHealth)
-
-                            if self.should_trigger(entity_team, player_team, entity_health):
-                                if self.hold_key or not self.single_fire_triggered:
-                                    time.sleep(uniform(self.shot_delay_min, self.shot_delay_max))
-                                    mouse.click(Button.left)
-                                    time.sleep(self.post_shot_delay)
-                                    self.single_fire_triggered = not self.hold_key
-
-                    time.sleep(0.01)
+                (not self.is_mouse_trigger and keyboard.is_pressed(self.trigger_key)):
+                    self.perform_fire_logic()
                 else:
-                    self.single_fire_triggered = False
                     time.sleep(0.05)
+                    
             except KeyboardInterrupt:
-                logging.info(f"TriggerBot stopped by user.")
+                logging.info("TriggerBot stopped by user.")
                 self.stop()
             except Exception as e:
                 logging.error(f"Unexpected error: {e}")
+
+    def perform_fire_logic(self):
+        player = self.pm.read_longlong(self.client_base + self.dwLocalPlayerPawn)
+        entity_id = self.pm.read_int(player + self.m_iIDEntIndex)
+
+        if entity_id > 0:
+            entity = self.get_entity(entity_id)
+            if entity:
+                entity_team = self.pm.read_int(entity + self.m_iTeamNum)
+                player_team = self.pm.read_int(player + self.m_iTeamNum)
+                entity_health = self.pm.read_int(entity + self.m_iHealth)
+
+                if self.should_trigger(entity_team, player_team, entity_health):
+                    time.sleep(uniform(self.shot_delay_min, self.shot_delay_max))
+                    mouse.click(Button.left)
+                    time.sleep(self.post_shot_delay)
 
     def stop(self):
         self.is_running = False
@@ -384,20 +380,16 @@ class MainWindow(QMainWindow):
         self.max_delay_input.setToolTip("Maximum delay between shots in seconds (must be >= Min Delay).")
 
         self.post_shot_delay_input = QLineEdit(str(self.bot.config['Settings'].get('PostShotDelay', 0.1)), self)
-        self.post_shot_delay_input.setToolTip("Delay after each shot in seconds (e.g., 0.05).")
+        self.post_shot_delay_input.setToolTip("Delay after each shot in seconds (e.g., 0.1).")
 
         self.attack_teammates_checkbox = QCheckBox("Attack Teammates")
         self.attack_teammates_checkbox.setChecked(self.bot.config['Settings']['AttackOnTeammates'])
-
-        self.hold_key_checkbox = QCheckBox("Hold Key")
-        self.hold_key_checkbox.setChecked(self.bot.config['Settings']['Hold'])
 
         form_layout.addRow("Trigger Key:", self.trigger_key_input)
         form_layout.addRow("Min Shot Delay:", self.min_delay_input)
         form_layout.addRow("Max Shot Delay:", self.max_delay_input)
         form_layout.addRow("Post Shot Delay:", self.post_shot_delay_input)
         form_layout.addRow(self.attack_teammates_checkbox)
-        form_layout.addRow(self.hold_key_checkbox)
 
         save_button = QPushButton("Save Config")
         save_button.clicked.connect(self.save_general_settings)
@@ -418,11 +410,11 @@ class MainWindow(QMainWindow):
             
             self.last_update_label.setText(f"Last offsets update: {formatted_timestamp} (UTC)")
             self.last_update_label.setStyleSheet("color: orange; font-weight: bold;")
-            logging.info(f"Last offsets update: {formatted_timestamp} (UTC)")
+            logging.info(f"Offsets last updated: {formatted_timestamp}")
         except Exception as e:
-            self.last_update_label.setText("Last offsets update: Error fetching data")
+            self.last_update_label.setText("Error fetching last offsets update.")
             self.last_update_label.setStyleSheet("color: orange; font-weight: bold;")
-            logging.error(f"Failed to fetch last offsets update info: {e}")
+            logging.error(f"Offset update fetch failed: {e}")
 
     def init_logs_tab(self):
         logs_tab = QWidget()
@@ -538,7 +530,6 @@ class MainWindow(QMainWindow):
     def save_general_settings(self):
         self.bot.config['Settings']['TriggerKey'] = self.trigger_key_input.text()
         self.bot.config['Settings']['AttackOnTeammates'] = self.attack_teammates_checkbox.isChecked()
-        self.bot.config['Settings']['Hold'] = self.hold_key_checkbox.isChecked()
         self.bot.config['Settings']['ShotDelayMin'] = float(self.min_delay_input.text())
         self.bot.config['Settings']['ShotDelayMax'] = float(self.max_delay_input.text())
         self.bot.config['Settings']['PostShotDelay'] = float(self.post_shot_delay_input.text())
