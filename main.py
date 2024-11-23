@@ -243,7 +243,7 @@ class CS2TriggerBot:
 
         while not self.stop_event.is_set():
             try:
-                if not self.is_game_running():
+                if not self.is_game_active():
                     time.sleep(0.05)
                     continue
 
