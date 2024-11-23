@@ -3,7 +3,7 @@ from datetime import datetime
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox, QFormLayout, QTabWidget
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon, QDoubleValidator
 from pynput.mouse import Controller, Button, Listener as MouseListener
 from pynput.keyboard import Key, Listener as KeyboardListener
 from requests import get
@@ -219,30 +219,6 @@ class CS2TriggerBot:
     def should_trigger(self, entity_team, player_team, entity_health):
         return (self.attack_on_teammates or entity_team != player_team) and entity_health > 0
 
-    def start(self):
-        if not self.initialize_pymem() or not self.get_client_module():
-            return
-
-        self.is_running = True
-
-        while not self.stop_event.is_set():
-            try:
-                if not self.is_game_active():
-                    time.sleep(0.05)
-                    continue
-
-                if (self.is_mouse_trigger and self.trigger_active) or \
-                (not self.is_mouse_trigger and keyboard.is_pressed(self.trigger_key)):
-                    self.perform_fire_logic()
-                else:
-                    time.sleep(0.05)
-                    
-            except KeyboardInterrupt:
-                logging.info("TriggerBot stopped by user.")
-                self.stop()
-            except Exception as e:
-                logging.error(f"Unexpected error: {e}")
-
     def perform_fire_logic(self):
         player = self.pm.read_longlong(self.client_base + self.dwLocalPlayerPawn)
         entity_id = self.pm.read_int(player + self.m_iIDEntIndex)
@@ -258,6 +234,30 @@ class CS2TriggerBot:
                     time.sleep(uniform(self.shot_delay_min, self.shot_delay_max))
                     mouse.click(Button.left)
                     time.sleep(self.post_shot_delay)
+
+    def start(self):
+        if not self.initialize_pymem() or not self.get_client_module():
+            return
+
+        self.is_running = True
+
+        while not self.stop_event.is_set():
+            try:
+                if not self.is_game_running():
+                    time.sleep(0.05)
+                    continue
+
+                if (self.is_mouse_trigger and self.trigger_active) or \
+                (not self.is_mouse_trigger and keyboard.is_pressed(self.trigger_key)):
+                    self.perform_fire_logic()
+                else:
+                    time.sleep(0.05)
+                    
+            except KeyboardInterrupt:
+                logging.info("TriggerBot stopped by user.")
+                self.stop()
+            except Exception as e:
+                logging.error(f"Unexpected error: {e}")
 
     def stop(self):
         self.is_running = False
@@ -323,7 +323,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
 
         self.name_app = QLabel(f"CS2 TriggerBot {CS2TriggerBot.VERSION}")
-        self.name_app.setStyleSheet("color: #D5006D; font-size: 18px;")
+        self.name_app.setStyleSheet("color: #D5006D; font-size: 18px; font-weight: bold;")
 
         self.update_info = QLabel(self)
         self.check_for_updates(self.bot.VERSION)
@@ -345,6 +345,7 @@ class MainWindow(QMainWindow):
             "4. Monitor bot status and logs in the 'Logs' tab."
         )
         quick_start_text.setWordWrap(True)
+        quick_start_text.setStyleSheet("font-size: 13px;")
 
         self.start_button = QPushButton("Start Bot")
         self.stop_button = QPushButton("Stop Bot")
@@ -355,6 +356,7 @@ class MainWindow(QMainWindow):
         buttons_layout = QHBoxLayout()
         buttons_layout.addWidget(self.start_button)
         buttons_layout.addWidget(self.stop_button)
+        buttons_layout.setSpacing(20)
 
         layout.addWidget(self.name_app)
         layout.addWidget(self.update_info)
@@ -397,24 +399,6 @@ class MainWindow(QMainWindow):
 
         general_settings_tab.setLayout(form_layout)
         self.tabs.addTab(general_settings_tab, "General Settings")
-
-    def fetch_last_offset_update(self):
-        try:
-            response = get("https://api.github.com/repos/a2x/cs2-dumper/commits/main")
-            response.raise_for_status()
-            commit_data = response.json()
-            commit_timestamp = commit_data["commit"]["committer"]["date"]
-
-            last_update_dt = datetime.fromisoformat(commit_timestamp.replace("Z", "+00:00"))
-            formatted_timestamp = last_update_dt.strftime("%m/%d/%Y %H:%M:%S")
-            
-            self.last_update_label.setText(f"Last offsets update: {formatted_timestamp} (UTC)")
-            self.last_update_label.setStyleSheet("color: orange; font-weight: bold;")
-            logging.info(f"Offsets last updated: {formatted_timestamp}")
-        except Exception as e:
-            self.last_update_label.setText("Error fetching last offsets update.")
-            self.last_update_label.setStyleSheet("color: orange; font-weight: bold;")
-            logging.error(f"Offset update fetch failed: {e}")
 
     def init_logs_tab(self):
         logs_tab = QWidget()
@@ -490,6 +474,24 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.update_info.setText("Error checking for updates.")
             self.update_info.setStyleSheet("color: red;")
+
+    def fetch_last_offset_update(self):
+        try:
+            response = get("https://api.github.com/repos/a2x/cs2-dumper/commits/main")
+            response.raise_for_status()
+            commit_data = response.json()
+            commit_timestamp = commit_data["commit"]["committer"]["date"]
+
+            last_update_dt = datetime.fromisoformat(commit_timestamp.replace("Z", "+00:00"))
+            formatted_timestamp = last_update_dt.strftime("%m/%d/%Y %H:%M:%S")
+            
+            self.last_update_label.setText(f"Last offsets update: {formatted_timestamp} (UTC)")
+            self.last_update_label.setStyleSheet("color: orange; font-weight: bold;")
+            logging.info(f"Offsets last updated: {formatted_timestamp}")
+        except Exception as e:
+            self.last_update_label.setText("Error fetching last offsets update.")
+            self.last_update_label.setStyleSheet("color: orange; font-weight: bold;")
+            logging.error(f"Offset update fetch failed: {e}")
 
     def start_bot(self):
         if self.bot.is_running:
