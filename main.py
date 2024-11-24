@@ -193,9 +193,9 @@ class CS2TriggerBot:
     def initialize_pymem(self):
         try:
             self.pm = pymem.Pymem("cs2.exe")
-            logging.info("Attached to cs2.exe.")
+            logging.info(f"Successfully attached to cs2.exe process.")
         except pymem.exception.ProcessNotFound:
-            logging.error("Game process not found.")
+            logging.error("cs2.exe process not found. Ensure the game is running.")
         return self.pm is not None
 
     def get_client_module(self):
@@ -204,7 +204,7 @@ class CS2TriggerBot:
                 client_module = pymem.process.module_from_name(self.pm.process_handle, "client.dll")
                 self.client_base = client_module.lpBaseOfDll
             except pymem.exception.ModuleNotFoundError:
-                logging.error("Client module not found.")
+                logging.error("client.dll not found. Ensure it is loaded.")
         return self.client_base is not None
 
     def get_entity(self, index):
@@ -232,7 +232,9 @@ class CS2TriggerBot:
 
                 if self.should_trigger(entity_team, player_team, entity_health):
                     time.sleep(uniform(self.shot_delay_min, self.shot_delay_max))
-                    mouse.click(Button.left)
+                    mouse.press(Button.left)
+                    time.sleep(uniform(self.shot_delay_min, self.shot_delay_max))
+                    mouse.release(Button.left)
                     time.sleep(self.post_shot_delay)
 
     def start(self):
@@ -248,7 +250,7 @@ class CS2TriggerBot:
                     continue
 
                 if (self.is_mouse_trigger and self.trigger_active) or \
-                (not self.is_mouse_trigger and keyboard.is_pressed(self.trigger_key)):
+                    (not self.is_mouse_trigger and keyboard.is_pressed(self.trigger_key)):
                     self.perform_fire_logic()
                 else:
                     time.sleep(0.05)
