@@ -1,20 +1,29 @@
 ---
 name: Bug Report
-about: Create a report to help us improve
+about: 'Provide a clear and concise description of the issue. '
 title: bug
 labels: "\U0001F41B Bug"
 assignees: Jesewe
 
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+### Steps to Reproduce*
+Detailed steps to reproduce the issue:
+1. 
+2. 
+3. 
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+### Actual Behavior
+What actually happened? Include logs or screenshots if applicable.
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+### Environment Details
+- **OS:**  e.g., Windows 10, Windows 11 
+- **Python Version:** e.g., Python 3.9 
+- **Version of CS2 TriggerBot:** e.g., v1.1.5
+- **Game Version:** e.g., Latest CS2 update
 
-**Additional context**
-Add any other context about the problem here.
+### Logs
+Attach logs from `%LOCALAPPDATA%\Requests\ItsJesewe\crashes\tb_logs.log` if possible.
+
+### Additional Context
+Any other information that might be helpful for debugging.
