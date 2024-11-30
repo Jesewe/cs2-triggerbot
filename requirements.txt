@@ -1,9 +1,9 @@
 keyboard
 pymem
 pynput
-pywin32
 requests
 packaging
 psutil
-watchdog
 PyQt6
+watchdog
+pywin32
