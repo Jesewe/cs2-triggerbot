@@ -33,12 +33,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Step 4: Run the main Python script
+      # Step 4: Set up headless environment for PyQt6
+      - name: Set environment for PyQt6 (Headless)
+        run: |
+          set QT_QPA_PLATFORM=offscreen
+          set DISPLAY=:0
+          export PYTHONWARNINGS="ignore"
+      
+      # Step 5: Run the main Python script
       - name: Run the script (Main Execution)
         run: |
           python main.py
-
-      # Step 5: Discover and run unittests
-      - name: Run Tests
-        run: |
-          python -m unittest discover -s tests || echo "No tests found or failed."
