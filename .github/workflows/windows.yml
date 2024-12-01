@@ -44,3 +44,8 @@ jobs:
       - name: Run the script (Main Execution)
         run: |
           python main.py
+
+      # Optional: Wait for GUI initialization
+      - name: Wait for GUI initialization
+        run: |
+          timeout /t 30
