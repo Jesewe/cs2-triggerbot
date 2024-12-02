@@ -191,11 +191,23 @@ class MainWindow(QMainWindow):
 
         faqs_content = """
         <h3 style="color:#D5006D;">Frequently Asked Questions</h3>
-        <p><b>Q: What is a TriggerBot?</b></p>
-        <p>A: A TriggerBot is a software tool that automatically shoots when the crosshair is over an enemy in a game.</p>
+        <p><b>Q: What is a <span style="color:#BB86FC;">TriggerBot</span>?</b></p>
+        <p>A: A <span style="color:#BB86FC;">TriggerBot</span> is a software tool that automatically shoots when the crosshair is over an enemy in a game.</p>
         
-        <p><b>Q: How do I start the TriggerBot?</b></p>
+        <p><b>Q: Is this tool safe to use?</b></p>
+        <p>A: This tool is for educational purposes only. Use it at your own risk as it may violate the game's <span style="color:#BB86FC;">terms of service</span>.</p>
+        
+        <p><b>Q: How do I start the <span style="color:#BB86FC;">TriggerBot</span>?</b></p>
         <p>A: Go to the 'Home' tab and click 'Start Bot' after ensuring the game is running and properly configured.</p>
+        
+        <p><b>Q: How can I update the <span style="color:#BB86FC;">offsets</span>?</b></p>
+        <p>A: <span style="color:#BB86FC;">Offsets</span> are fetched automatically from the server. Check the 'Home' tab for the last update timestamp.</p>
+        
+        <p><b>Q: Can I customize the bot's behavior?</b></p>
+        <p>A: Yes, use the 'General Settings' tab to adjust <span style="color:#BB86FC;">key configurations</span>, delays, and teammate attack settings.</p>
+        
+        <p><b>Q: I found a bug, where can I report it?</b></p>
+        <p>A: You can report bugs by opening an issue on our <a style="color: #BB86FC;">GitHub Issues page</a>. Please include details about the bug and steps to reproduce it.</p>
         """
 
         faqs_widget = QTextEdit()
