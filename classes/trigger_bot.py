@@ -18,19 +18,37 @@ class CS2TriggerBot:
         Initialize the TriggerBot with offsets, configuration, and client data.
         Sets up listeners for keyboard and mouse events.
         """
-        self.config = ConfigManager.load_config()  # Load configuration from the config manager.
-        self.offsets, self.client_data = offsets, client_data
-        self.pm, self.client_base = None, None
-        self.is_running, self.stop_event = False, threading.Event()  # Thread control flags.
+        # Load initial configuration and data
+        self.config = ConfigManager.load_config()
+        self.offsets = offsets
+        self.client_data = client_data
+        
+        # Memory-related attributes
+        self.pm = None
+        self.client_base = None
+        
+        # Thread control and state flags
+        self.is_running = False
+        self.stop_event = threading.Event()
         self.trigger_active = False
-        self.update_config(self.config)  # Update configuration settings.
-        self.initialize_offsets()  # Load memory offsets.
+        
+        # Initialize bot settings
+        self.update_config(self.config)
+        self.initialize_offsets()
 
-        # Initialize keyboard and mouse listeners.
-        self.keyboard_listener = KeyboardListener(on_press=self.on_key_press, on_release=self.on_key_release)
+        # Setup input listeners
+        self._setup_input_listeners()
+
+    def _setup_input_listeners(self):
+        """
+        Helper method to setup and start keyboard/mouse listeners
+        """
+        self.keyboard_listener = KeyboardListener(
+            on_press=self.on_key_press, 
+            on_release=self.on_key_release
+        )
         self.mouse_listener = MouseListener(on_click=self.on_mouse_click)
-
-        # Start the listeners to capture input.
+        
         self.keyboard_listener.start()
         self.mouse_listener.start()
 
@@ -40,16 +58,22 @@ class CS2TriggerBot:
         Ensures memory addresses for critical game data are ready.
         """
         try:
+            # Extract offsets from client data
             self.dwEntityList = self.offsets["client.dll"]["dwEntityList"]
             self.dwLocalPlayerPawn = self.offsets["client.dll"]["dwLocalPlayerPawn"]
-            self.m_iHealth = self.client_data["client.dll"]["classes"]["C_BaseEntity"]["fields"]["m_iHealth"]
-            self.m_iTeamNum = self.client_data["client.dll"]["classes"]["C_BaseEntity"]["fields"]["m_iTeamNum"]
+            
+            # Get entity class fields
+            base_entity = self.client_data["client.dll"]["classes"]["C_BaseEntity"]["fields"]
+            self.m_iHealth = base_entity["m_iHealth"]
+            self.m_iTeamNum = base_entity["m_iTeamNum"]
+            
+            # Get player pawn fields
             self.m_iIDEntIndex = self.client_data["client.dll"]["classes"]["C_CSPlayerPawnBase"]["fields"]["m_iIDEntIndex"]
-        except KeyError as e:
-            # Log an error if required offsets are missing.
-            logger.error(f"Offset initialization error: {e}")
-        else:
+            
             logger.info("Offsets have been initialized.")
+            
+        except KeyError as e:
+            logger.error(f"Offset initialization error: {e}")
 
     def update_config(self, config):
         """
@@ -57,11 +81,16 @@ class CS2TriggerBot:
         Retrieves relevant settings such as keys, delays, and team attack preference.
         """
         self.config = config
-        self.trigger_key = self.config['Settings']['TriggerKey']
-        self.shot_delay_min = self.config['Settings']['ShotDelayMin']
-        self.shot_delay_max = self.config['Settings']['ShotDelayMax']
-        self.post_shot_delay = self.config['Settings']['PostShotDelay']
-        self.attack_on_teammates = self.config['Settings']['AttackOnTeammates']
+        settings = config['Settings']
+        
+        # Extract settings
+        self.trigger_key = settings['TriggerKey']
+        self.shot_delay_min = settings['ShotDelayMin']
+        self.shot_delay_max = settings['ShotDelayMax']
+        self.post_shot_delay = settings['PostShotDelay']
+        self.attack_on_teammates = settings['AttackOnTeammates']
+        
+        # Determine if using mouse trigger
         self.is_mouse_trigger = self.trigger_key in ["x1", "x2"]
 
     def on_key_press(self, key):
@@ -118,9 +147,10 @@ class CS2TriggerBot:
         try:
             self.pm = pymem.Pymem("cs2.exe")
             logger.info(f"Successfully attached to cs2.exe process.")
+            return True
         except pymem.exception.ProcessNotFound:
             logger.error("cs2.exe process not found. Ensure the game is running.")
-        return self.pm is not None
+            return False
 
     def get_client_module(self):
         """
@@ -130,9 +160,11 @@ class CS2TriggerBot:
             try:
                 client_module = pymem.process.module_from_name(self.pm.process_handle, "client.dll")
                 self.client_base = client_module.lpBaseOfDll
+                return True
             except pymem.exception.ModuleNotFoundError:
                 logger.error("client.dll not found. Ensure it is loaded.")
-        return self.client_base is not None
+                return False
+        return True
 
     def get_entity(self, index):
         """
@@ -158,22 +190,31 @@ class CS2TriggerBot:
         - Reads player and entity data.
         - Simulates a mouse click if conditions are met.
         """
+        # Get local player and target entity
         player = self.pm.read_longlong(self.client_base + self.dwLocalPlayerPawn)
         entity_id = self.pm.read_int(player + self.m_iIDEntIndex)
 
         if entity_id > 0:
             entity = self.get_entity(entity_id)
             if entity:
+                # Read entity data
                 entity_team = self.pm.read_int(entity + self.m_iTeamNum)
                 player_team = self.pm.read_int(player + self.m_iTeamNum)
                 entity_health = self.pm.read_int(entity + self.m_iHealth)
 
+                # Check if should trigger and perform click
                 if self.should_trigger(entity_team, player_team, entity_health):
-                    time.sleep(random.uniform(self.shot_delay_min, self.shot_delay_max))
-                    mouse.press(Button.left)
-                    time.sleep(random.uniform(self.shot_delay_min, self.shot_delay_max))
-                    mouse.release(Button.left)
-                    time.sleep(self.post_shot_delay)
+                    self._simulate_mouse_click()
+
+    def _simulate_mouse_click(self):
+        """
+        Helper method to simulate mouse click with configured delays
+        """
+        time.sleep(random.uniform(self.shot_delay_min, self.shot_delay_max))
+        mouse.press(Button.left)
+        time.sleep(random.uniform(self.shot_delay_min, self.shot_delay_max))
+        mouse.release(Button.left)
+        time.sleep(self.post_shot_delay)
 
     def start(self):
         """
@@ -181,6 +222,7 @@ class CS2TriggerBot:
         - Initializes pymem and client module.
         - Runs the bot in a loop, monitoring trigger activation.
         """
+        # Initialize memory access
         if not self.initialize_pymem() or not self.get_client_module():
             return
 
@@ -188,24 +230,24 @@ class CS2TriggerBot:
 
         while not self.stop_event.is_set():
             try:
-                # Ensure the game is active before performing actions.
+                # Check game window focus
                 if not self.is_game_active():
                     time.sleep(0.05)
                     continue
 
-                # Perform fire logic if trigger is active.
-                if (self.is_mouse_trigger and self.trigger_active) or \
-                    (not self.is_mouse_trigger and keyboard.is_pressed(self.trigger_key)):
+                # Check trigger activation
+                is_trigger_active = (self.is_mouse_trigger and self.trigger_active) or \
+                                  (not self.is_mouse_trigger and keyboard.is_pressed(self.trigger_key))
+                
+                if is_trigger_active:
                     self.perform_fire_logic()
                 else:
                     time.sleep(0.05)
 
             except KeyboardInterrupt:
-                # Gracefully stop the bot when interrupted.
                 logger.info("TriggerBot stopped by user.")
                 self.stop()
             except Exception as e:
-                # Log unexpected errors.
                 logger.error(f"Unexpected error: {e}")
 
     def stop(self):
