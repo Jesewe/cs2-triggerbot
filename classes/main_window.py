@@ -1,5 +1,7 @@
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox, QFormLayout, QTabWidget
+from PyQt6.QtWidgets import (QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, 
+                           QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox, 
+                           QFormLayout, QTabWidget)
 from PyQt6.QtGui import QIcon, QShortcut, QKeySequence
 from watchdog.observers import Observer
 from datetime import datetime
@@ -9,66 +11,82 @@ from classes.trigger_bot import CS2TriggerBot
 from classes.config_manager import ConfigManager
 from classes.file_watcher import ConfigFileChangeHandler
 from classes.logger import Logger
-import threading, os, requests
+import threading
+import os
+import requests
 
 # Initialize the logger for consistent logging
 logger = Logger.get_logger()
 
 class MainWindow(QMainWindow):
+    # Constants for UI styling and configuration
+    WINDOW_TITLE = "CS2 TriggerBot | github.com/Jesewe/cs2-triggerbot"
+    WINDOW_SIZE = (700, 400)
+    UI_STYLESHEET = """
+        QMainWindow { background-color: #1A1A1A; color: #E0E0E0; font-family: Arial; font-size: 15px; }
+        QLabel { color: #F0F0F0; font-weight: bold; }
+        QLineEdit, QComboBox { background-color: #2C2C2C; color: #E0E0E0; border: 1px solid #444444; padding: 5px; border-radius: 5px; }
+        QTextEdit { background-color: #2C2C2C;  color: #E0E0E0;  border: 1px solid #444444;  border-radius: 5px; padding: 10px; font-family: Consolas, monospace; font-size: 14px; }
+        QTextEdit:focus { border: 1px solid #D5006D; }
+        QPushButton { background-color: #333333; color: #D5006D; font-weight: bold; padding: 8px 15px; border-radius: 15px; border: 1px solid #555555; }
+        QPushButton:hover { background-color: #444444; }
+        QTabWidget::pane { border: 1px solid #444444; background-color: #1A1A1A; border-radius: 5px; }
+        QTabBar::tab { background-color: #2C2C2C; color: #E0E0E0; padding: 8px 15px; border: 1px solid #444444; border-top-left-radius: 5px; border-top-right-radius: 5px; margin: 2px; font-weight: bold; }
+        QTabBar::tab:selected { background-color: #444444; color: #D5006D; border-bottom: 2px solid #D5006D; }
+        QTabBar::tab:hover { background-color: #333333; }
+    """
+
     def __init__(self):
-        """
-        Initialize the main application window and setup UI components.
-        """
+        """Initialize the main application window and setup UI components."""
         super().__init__()
-        self.setWindowTitle("CS2 TriggerBot | github.com/Jesewe/cs2-triggerbot")
-        self.setFixedSize(700, 400)
+        self.setWindowTitle(self.WINDOW_TITLE)
+        self.setFixedSize(*self.WINDOW_SIZE)
+        self.setStyleSheet(self.UI_STYLESHEET)
 
-        # Apply custom styles for the UI
-        self.setStyleSheet("""
-            QMainWindow { background-color: #1A1A1A; color: #E0E0E0; font-family: Arial; font-size: 15px; }
-            QLabel { color: #F0F0F0; font-weight: bold; }
-            QLineEdit, QComboBox { background-color: #2C2C2C; color: #E0E0E0; border: 1px solid #444444; padding: 5px; border-radius: 5px; }
-            QTextEdit { background-color: #2C2C2C;  color: #E0E0E0;  border: 1px solid #444444;  border-radius: 5px; padding: 10px; font-family: Consolas, monospace; font-size: 14px; }
-            QTextEdit:focus { border: 1px solid #D5006D; }
-            QPushButton { background-color: #333333; color: #D5006D; font-weight: bold; padding: 8px 15px; border-radius: 15px; border: 1px solid #555555; }
-            QPushButton:hover { background-color: #444444; }
-            QTabWidget::pane { border: 1px solid #444444; background-color: #1A1A1A; border-radius: 5px; }
-            QTabBar::tab { background-color: #2C2C2C; color: #E0E0E0; padding: 8px 15px; border: 1px solid #444444; border-top-left-radius: 5px; border-top-right-radius: 5px; margin: 2px; font-weight: bold; }
-            QTabBar::tab:selected { background-color: #444444; color: #D5006D; border-bottom: 2px solid #D5006D; }
-            QTabBar::tab:hover { background-color: #333333; }
-        """)
+        # Initialize core components
+        self._setup_window_icon()
+        self._init_layout()
+        self._init_bot()
+        self._init_tabs()
+        self._setup_log_monitoring()
+        self._init_config_watcher()
+        self._init_shortcuts()
 
-        # Set application icon
+    def _setup_window_icon(self):
+        """Set up the application window icon if available"""
         icon_path = os.path.join(os.path.dirname(__file__), 'icon.png')
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
         else:
             logger.info("Icon not found, skipping.")
 
-        # Initialize layout and tabs
+    def _init_layout(self):
+        """Initialize the main layout and tab widget"""
         self.main_layout = QVBoxLayout()
         self.tabs = QTabWidget()
-
-        # Fetch offsets and initialize TriggerBot
-        offsets, client_data = Utility.fetch_offsets()
-        if offsets is None or client_data is None:
-            QMessageBox.warning(self, "Offsets Fetch Error", "Failed to fetch offsets from the server.")
-            offsets, client_data = {}, {}
-
-        self.bot = CS2TriggerBot(offsets, client_data)
-
-        # Initialize the tabs
-        self.init_home_tab()
-        self.init_general_settings_tab()
-        self.init_logs_tab()
-        self.init_faq_tab()
-
-        self.main_layout.addWidget(self.tabs)
         container = QWidget()
         container.setLayout(self.main_layout)
         self.setCentralWidget(container)
 
-        # Setup log file monitoring
+    def _init_bot(self):
+        """Initialize the TriggerBot with current offsets"""
+        offsets, client_data = Utility.fetch_offsets()
+        if offsets is None or client_data is None:
+            QMessageBox.warning(self, "Offsets Fetch Error", 
+                              "Failed to fetch offsets from the server.")
+            offsets, client_data = {}, {}
+        self.bot = CS2TriggerBot(offsets, client_data)
+
+    def _init_tabs(self):
+        """Initialize all application tabs"""
+        self.init_home_tab()
+        self.init_general_settings_tab()
+        self.init_logs_tab()
+        self.init_faq_tab()
+        self.main_layout.addWidget(self.tabs)
+
+    def _setup_log_monitoring(self):
+        """Set up periodic log file monitoring"""
         self.last_log_position = 0
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_log_output)
