@@ -1,44 +1,43 @@
 import os
 import logging
+from typing import ClassVar
 
 class Logger:
-    # Define the directory where logs will be stored.
-    # Use an environment variable (%LOCALAPPDATA%) to ensure logs are stored in a user-specific location.
-    LOG_DIRECTORY = os.path.expandvars(r'%LOCALAPPDATA%\Requests\ItsJesewe\crashes')
+    # Constants for log file configuration
+    LOG_DIRECTORY: ClassVar[str] = os.path.expandvars(r'%LOCALAPPDATA%\Requests\ItsJesewe\crashes')
+    LOG_FILE: ClassVar[str] = os.path.join(LOG_DIRECTORY, 'tb_logs.log')
+
+    # Default log format
+    _LOG_FORMAT: ClassVar[str] = '[%(asctime)s %(levelname)s]: %(message)s'
     
-    # Define the full path for the log file within the LOG_DIRECTORY.
-    LOG_FILE = os.path.join(LOG_DIRECTORY, 'tb_logs.log')
-
-    @staticmethod
-    def setup_logging():
+    @classmethod
+    def setup_logging(cls) -> None:
         """
-        Configures logging for the application.
-        - Ensures the log directory exists (creates it if necessary).
-        - Initializes the log file (clears previous logs).
-        - Sets up logging to write messages to both a file and the console.
+        Initializes application logging configuration.
+        Creates log directory and file, configures handlers and formatting.
         """
-        # Create the log directory if it doesn't exist to avoid errors during file operations.
-        os.makedirs(Logger.LOG_DIRECTORY, exist_ok=True)
+        # Ensure log directory exists
+        os.makedirs(cls.LOG_DIRECTORY, exist_ok=True)
         
-        # Create or clear the log file to start fresh with each application run.
-        with open(Logger.LOG_FILE, 'w') as f:
-            pass  # Just opening the file in 'write' mode clears its contents.
+        # Initialize empty log file
+        open(cls.LOG_FILE, 'w').close()
 
-        # Set up logging to output to both the log file and the console with INFO level or higher.
+        # Configure logging with file and console output
         logging.basicConfig(
-            level=logging.INFO,  # Minimum logging level (INFO, WARNING, ERROR, etc.).
-            format='[%(asctime)s %(levelname)s]: %(message)s',  # Standard log message format.
+            level=logging.INFO,
+            format=cls._LOG_FORMAT,
             handlers=[
-                logging.FileHandler(Logger.LOG_FILE),  # Log to the specified file.
-                logging.StreamHandler()  # Log to the console (stdout).
+                logging.FileHandler(cls.LOG_FILE),
+                logging.StreamHandler()
             ]
         )
 
-    @staticmethod
-    def get_logger():
+    @classmethod 
+    def get_logger(cls) -> logging.Logger:
         """
-        Provides a logger instance to be used throughout the application.
-        - This ensures a consistent logging setup in all parts of the code.
-        - Returns a logger configured with the settings from `setup_logging`.
+        Returns configured logger instance for application-wide use.
+        
+        Returns:
+            logging.Logger: Logger instance with module name
         """
-        return logging.getLogger(__name__)  # Logger's name is set to the module name.
+        return logging.getLogger(__name__)
