@@ -28,7 +28,7 @@ jobs:
 
       - name: Build executable
         run: |
-          pyinstaller --noconfirm --onefile --name "CS2 Triggerbot" --icon "./build/icon.ico" --version-file "./build/version.txt" --add-data "./classes;classes/" --add-data "./classes/icon.png;." ./main.py
+          pyinstaller --noconfirm --onefile --name "CS2 Triggerbot" --icon "./build/icon.ico" --version-file "./build/version.txt" --add-data "./classes;classes/" --add-data "./classes/icon.png;." --hidden-import PyQt6 ./main.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
