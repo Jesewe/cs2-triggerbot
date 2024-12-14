@@ -2,88 +2,80 @@ import os
 import json
 from classes.logger import Logger
 
-# Initialize the logger for consistent logging
+# Get logger instance for the module
 logger = Logger.get_logger()
 
 class ConfigManager:
     """
-    Manages the configuration file for the application.
-    Provides methods to load and save configuration settings, 
-    with caching for efficiency and default configuration management.
+    Manages application configuration file operations including loading, saving and caching.
+    Handles default configuration and error cases.
     """
-    # Directory where the configuration file is stored
+    # Configuration file paths
     CONFIG_DIRECTORY = os.path.expandvars(r'%LOCALAPPDATA%\Requests\ItsJesewe')
-    # Full path to the configuration file
     CONFIG_FILE = os.path.join(CONFIG_DIRECTORY, 'config.json')
 
-    # Default configuration settings
+    # Default configuration with gameplay settings
     DEFAULT_CONFIG = {
         "Settings": {
-            "TriggerKey": "x",  # Default trigger key
-            "ShotDelayMin": 0.01,  # Minimum delay between shots in seconds
-            "ShotDelayMax": 0.03,  # Maximum delay between shots in seconds
-            "AttackOnTeammates": False,  # Whether to attack teammates
-            "PostShotDelay": 0.1  # Delay after each shot
+            "TriggerKey": "x",
+            "ShotDelayMin": 0.01,
+            "ShotDelayMax": 0.03, 
+            "AttackOnTeammates": False,
+            "PostShotDelay": 0.1
         }
     }
 
-    # Cache to store the loaded configuration
+    # Cache for loaded configuration
     _config_cache = None
 
     @classmethod
     def load_config(cls):
         """
-        Loads the configuration from the configuration file.
-        - Creates the configuration directory and file with default settings if they do not exist.
-        - Caches the configuration to avoid redundant file reads.
-
+        Loads and caches configuration from file, creating defaults if needed.
+        
         Returns:
-            dict: The configuration settings.
+            dict: Current configuration settings
         """
-        # Return cached configuration if available
-        if cls._config_cache is not None:
+        # Return cached config if available
+        if cls._config_cache:
             return cls._config_cache
 
-        # Ensure the configuration directory exists
-        if not os.path.exists(cls.CONFIG_DIRECTORY):
-            os.makedirs(cls.CONFIG_DIRECTORY)
+        # Create config directory if missing
+        os.makedirs(cls.CONFIG_DIRECTORY, exist_ok=True)
 
-        # Check if the configuration file exists
+        # Handle missing config file
         if not os.path.exists(cls.CONFIG_FILE):
-            # If not, create the configuration file with default settings
-            logger.info("config.json not found, creating a default configuration.")
+            logger.info("Creating default configuration file")
             cls.save_config(cls.DEFAULT_CONFIG, log_info=False)
-            cls._config_cache = cls.DEFAULT_CONFIG
-        else:
-            try:
-                # Attempt to read and parse the configuration file
-                with open(cls.CONFIG_FILE, 'r') as config_file:
-                    cls._config_cache = json.load(config_file)
-                    logger.info("Loaded configuration.")
-            except (json.JSONDecodeError, IOError) as e:
-                # Handle errors during configuration loading
-                logger.error(f"Failed to load configuration: {e}")
-                cls._config_cache = cls.DEFAULT_CONFIG
+            return cls.DEFAULT_CONFIG
 
-        return cls._config_cache
+        try:
+            # Load and parse config file
+            with open(cls.CONFIG_FILE, 'r') as f:
+                cls._config_cache = json.load(f)
+                logger.info("Configuration loaded successfully")
+                return cls._config_cache
 
-    @classmethod
+        except (json.JSONDecodeError, IOError) as e:
+            # Return defaults on load failure
+            logger.error(f"Configuration load failed: {e}")
+            return cls.DEFAULT_CONFIG
+
+    @classmethod 
     def save_config(cls, config, log_info=True):
         """
-        Saves the configuration to the configuration file.
-        Updates the cache with the new configuration.
+        Saves configuration to file and updates cache.
 
         Args:
-            config (dict): The configuration settings to save.
-            log_info (bool): Whether to log a success message after saving.
+            config (dict): Configuration to save
+            log_info (bool): Whether to log success message
         """
         cls._config_cache = config
         try:
-            # Write the configuration to the file with pretty formatting
-            with open(cls.CONFIG_FILE, 'w') as config_file:
-                json.dump(config, config_file, indent=4)
+            # Write formatted config to file
+            with open(cls.CONFIG_FILE, 'w') as f:
+                json.dump(config, f, indent=4)
                 if log_info:
-                    logger.info("Saved configuration.")
+                    logger.info("Configuration saved successfully")
         except IOError as e:
-            # Log errors that occur during the save process
-            logger.error(f"Failed to save configuration: {e}")
+            logger.error(f"Configuration save failed: {e}")
