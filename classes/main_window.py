@@ -49,6 +49,9 @@ class MainWindow(QMainWindow):
         self.main_layout = QVBoxLayout()
         self.tabs = QTabWidget()
 
+        # Log loaded version
+        logger.info(f"Loaded version: {CS2TriggerBot.VERSION}")
+
         # Fetch offsets and initialize TriggerBot
         offsets, client_data = Utility.fetch_offsets()
         if offsets is None or client_data is None:
@@ -207,7 +210,13 @@ class MainWindow(QMainWindow):
         <p>A: Yes, use the 'General Settings' tab to adjust <span style="color:#BB86FC;">key configurations</span>, delays, and teammate attack settings.</p>
         
         <p><b>Q: I found a bug, where can I report it?</b></p>
-        <p>A: You can report bugs by opening an issue on our <a style="color: #BB86FC;">GitHub Issues page</a>. Please include details about the bug and steps to reproduce it.</p>
+        <p>A: You can report bugs by opening an issue on our <a style="color: #BB86FC;" href="https://github.com/Jesewe/cs2-triggerbot/issues">GitHub Issues page</a>. Please include details about the bug and steps to reproduce it.</p>
+
+        <p><b>Q: How can I contribute to the project?</b></p>
+        <p>A: If you want to contribute, feel free to open a pull request on our <a style="color: #BB86FC;" href="https://github.com/Jesewe/cs2-triggerbot/pulls">GitHub Pull Requests page</a>. We welcome improvements and bug fixes.</p>
+
+        <p><b>Q: Where can I join the community?</b></p>
+        <p>A: Join our community on Telegram for updates, discussions, and support. Visit our <a style="color: #BB86FC;" href="https://t.me/cs2_jesewe">Telegram Channel</a>.</p>
         """
 
         faqs_widget = QTextEdit()
