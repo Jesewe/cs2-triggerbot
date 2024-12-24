@@ -4,9 +4,9 @@
    <p>Your ultimate aiming assistant for Counter-Strike 2</p>
 
    ![Downloads](https://img.shields.io/github/downloads/jesewe/cs2-triggerbot/total?style=for-the-badge&logo=github&color=D5006D)
-   ![Platforms](https://img.shields.io/badge/platform-Windows-blue?style=for-the-badge&color=D5006D)
+   ![Platforms](https://img.shields.io/badge/platform-Windows-blue?style=for-the-badge&logo=windows&color=D5006D)
    ![License](https://img.shields.io/github/license/jesewe/cs2-triggerbot?style=for-the-badge&color=D5006D)
-   
+
    <a href="#features"><strong>Features</strong></a> •
    <a href="#installation"><strong>Installation</strong></a> •
    <a href="#usage"><strong>Usage</strong></a> •
@@ -58,7 +58,7 @@ You can install the trigger bot by cloning the repository or by downloading a pr
 
 ### Option 2: Download Pre-Built Executable
 
-Alternatively, download the ready-to-use executable from the [Releases](https://github.com/Jesewe/cs2-triggerbot/releases) page. Download the latest version and run the executable directly.
+Alternatively, download the ready-to-use executable from the [Releases](https://github.com/jesewe/cs2-triggerbot/releases) page. Download the latest version and run the executable directly.
 
 ## Configuration
 The `config.json` file is automatically generated in the directory `%LOCALAPPDATA%\Requests\ItsJesewe\` on the first run. You can modify the `TriggerKey` in this file or via the GUI.
