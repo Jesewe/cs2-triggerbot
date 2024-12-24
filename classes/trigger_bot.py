@@ -1,6 +1,8 @@
 import threading, pymem, pymem.process, time, psutil, random, keyboard, win32gui
+
 from pynput.mouse import Controller, Button, Listener as MouseListener
 from pynput.keyboard import Key, Listener as KeyboardListener
+
 from classes.config_manager import ConfigManager
 from classes.logger import Logger
 
@@ -11,7 +13,7 @@ logger = Logger.get_logger()
 
 class CS2TriggerBot:
     # Define the current version of the TriggerBot for reference.
-    VERSION = "v1.2.0"
+    VERSION = "v1.2.1"
 
     def __init__(self, offsets, client_data):
         """
@@ -216,4 +218,4 @@ class CS2TriggerBot:
         self.stop_event.set()
         self.keyboard_listener.stop()
         self.mouse_listener.stop()
-        logger.info("TriggerBot stopped.")
+        logger.info(f"TriggerBot stopped.")

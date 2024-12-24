@@ -1,15 +1,17 @@
+import threading, os, requests
+
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox, QFormLayout, QTabWidget
 from PyQt6.QtGui import QIcon, QShortcut, QKeySequence
+
 from watchdog.observers import Observer
-from datetime import datetime
 from packaging import version
+
 from classes.utility import Utility
 from classes.trigger_bot import CS2TriggerBot
 from classes.config_manager import ConfigManager
 from classes.file_watcher import ConfigFileChangeHandler
 from classes.logger import Logger
-import threading, os, requests
 
 # Initialize the logger for consistent logging
 logger = Logger.get_logger()
@@ -49,13 +51,13 @@ class MainWindow(QMainWindow):
         self.main_layout = QVBoxLayout()
         self.tabs = QTabWidget()
 
-        # Log loaded version
-        logger.info(f"Loaded version: {CS2TriggerBot.VERSION}")
-
         # Fetch offsets and initialize TriggerBot
-        offsets, client_data = Utility.fetch_offsets()
-        if offsets is None or client_data is None:
-            QMessageBox.warning(self, "Offsets Fetch Error", "Failed to fetch offsets from the server.")
+        try:
+            offsets, client_data = Utility.fetch_offsets()
+            if offsets is None or client_data is None:
+                raise ValueError("Failed to fetch offsets from the server.")
+        except Exception as e:
+            QMessageBox.warning(self, "Offsets Fetch Error", str(e))
             offsets, client_data = {}, {}
 
         self.bot = CS2TriggerBot(offsets, client_data)
@@ -294,14 +296,15 @@ class MainWindow(QMainWindow):
             commit_data = response.json()
             commit_timestamp = commit_data["commit"]["committer"]["date"]
 
-            last_update_dt = datetime.fromisoformat(commit_timestamp.replace("Z", "+00:00"))
+            from dateutil.parser import parse as parse_date
+            last_update_dt = parse_date(commit_timestamp)
             formatted_timestamp = last_update_dt.strftime("%m/%d/%Y %H:%M:%S")
             
             self.last_update_label.setText(f"Last offsets update: {formatted_timestamp} (UTC)")
             self.last_update_label.setStyleSheet("color: orange; font-weight: bold;")
             logger.info(f"Offsets last updated: {formatted_timestamp}")
         except Exception as e:
-            self.last_update_label.setText("Error fetching last offsets update.")
+            self.last_update_label.setText("Error fetching last offsets update. Please check your internet connection or try again later.")
             self.last_update_label.setStyleSheet("color: orange; font-weight: bold;")
             logger.error(f"Offset update fetch failed: {e}")
 
@@ -401,8 +404,8 @@ class MainWindow(QMainWindow):
                 self.last_log_position = log_file.tell()
 
                 if new_logs:
-                    self.log_output.append(new_logs)
+                    self.log_output.insertPlainText(new_logs)
                     self.log_output.ensureCursorVisible()
         except Exception as e:
-            self.log_output.append(f"Error reading log file: {e}")
+            self.log_output.append(f"Failed to read log file: {e}")
             self.log_output.ensureCursorVisible()

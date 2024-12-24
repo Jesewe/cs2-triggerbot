@@ -1,5 +1,5 @@
-import os
-import json
+import os, json
+
 from classes.logger import Logger
 
 # Initialize the logger for consistent logging
@@ -12,7 +12,7 @@ class ConfigManager:
     with caching for efficiency and default configuration management.
     """
     # Directory where the configuration file is stored
-    CONFIG_DIRECTORY = os.path.expandvars(r'%LOCALAPPDATA%\Requests\ItsJesewe')
+    CONFIG_DIRECTORY = os.path.expanduser(r'~\AppData\Local\Requests\ItsJesewe')
     # Full path to the configuration file
     CONFIG_FILE = os.path.join(CONFIG_DIRECTORY, 'config.json')
 
@@ -51,7 +51,7 @@ class ConfigManager:
         # Check if the configuration file exists
         if not os.path.exists(cls.CONFIG_FILE):
             # If not, create the configuration file with default settings
-            logger.info("config.json not found, creating a default configuration.")
+            logger.info(f"config.json not found at {cls.CONFIG_FILE}, creating a default configuration.")
             cls.save_config(cls.DEFAULT_CONFIG, log_info=False)
             cls._config_cache = cls.DEFAULT_CONFIG
         else:
@@ -62,7 +62,8 @@ class ConfigManager:
                     logger.info("Loaded configuration.")
             except (json.JSONDecodeError, IOError) as e:
                 # Handle errors during configuration loading
-                logger.error(f"Failed to load configuration: {e}")
+                logger.exception(f"Failed to load configuration: {e}")
+                cls.save_config(cls.DEFAULT_CONFIG, log_info=False)
                 cls._config_cache = cls.DEFAULT_CONFIG
 
         return cls._config_cache
@@ -79,11 +80,11 @@ class ConfigManager:
         """
         cls._config_cache = config
         try:
-            # Write the configuration to the file with pretty formatting
+            # Write the configuration to the file without pretty formatting for better performance
             with open(cls.CONFIG_FILE, 'w') as config_file:
-                json.dump(config, config_file, indent=4)
+                json.dump(config, config_file)
                 if log_info:
-                    logger.info("Saved configuration.")
+                    logger.info(f"Saved configuration to {cls.CONFIG_FILE}.")
         except IOError as e:
             # Log errors that occur during the save process
-            logger.error(f"Failed to save configuration: {e}")
+            logger.exception(f"Failed to save configuration: {e}")
