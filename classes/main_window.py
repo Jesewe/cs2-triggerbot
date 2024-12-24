@@ -2,7 +2,7 @@ import threading, os, requests
 
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox, QFormLayout, QTabWidget
-from PyQt6.QtGui import QIcon, QShortcut, QKeySequence
+from PyQt6.QtGui import QIcon
 
 from watchdog.observers import Observer
 from packaging import version
@@ -22,7 +22,8 @@ class MainWindow(QMainWindow):
         Initialize the main application window and setup UI components.
         """
         super().__init__()
-        self.setWindowTitle("CS2 TriggerBot | github.com/Jesewe/cs2-triggerbot")
+        self.repo_url = "github.com/Jesewe/cs2-triggerbot"
+        self.setWindowTitle(f"CS2 TriggerBot | {self.repo_url}")
         self.setFixedSize(700, 400)
 
         # Apply custom styles for the UI
@@ -81,9 +82,6 @@ class MainWindow(QMainWindow):
 
         # Initialize file watcher for config updates
         self.init_config_watcher()
-
-        # Initialize keyboard shortcuts for starting/stopping the bot
-        self.init_shortcuts()
 
     def init_home_tab(self):
         """
@@ -238,18 +236,6 @@ class MainWindow(QMainWindow):
         self.observer = Observer()
         self.observer.schedule(event_handler, path=ConfigManager.CONFIG_DIRECTORY, recursive=False)
         self.observer.start()
-
-    def init_shortcuts(self):
-        """
-        Sets up keyboard shortcuts for quick access to start and stop bot functions.
-        - Ctrl+S: Start the bot
-        - Ctrl+Q: Stop the bot
-        """
-        self.start_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
-        self.start_shortcut.activated.connect(self.start_bot)
-
-        self.stop_shortcut = QShortcut(QKeySequence("Ctrl+Q"), self)
-        self.stop_shortcut.activated.connect(self.stop_bot)
 
     def closeEvent(self, event):
         """

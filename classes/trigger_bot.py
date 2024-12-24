@@ -49,7 +49,7 @@ class CS2TriggerBot:
             self.m_iIDEntIndex = self.client_data["client.dll"]["classes"]["C_CSPlayerPawnBase"]["fields"]["m_iIDEntIndex"]
         except KeyError as e:
             # Log an error if required offsets are missing.
-            logger.error(f"Offset initialization error: {e}")
+            logger.error(f"Offset initialization error: Missing key {e}")
         else:
             logger.info("Offsets have been initialized.")
 
@@ -104,7 +104,8 @@ class CS2TriggerBot:
         """
         Checks if the game window (Counter-Strike 2) is currently active.
         """
-        return win32gui.GetWindowText(win32gui.GetForegroundWindow()) == "Counter-Strike 2"
+        hwnd = win32gui.GetForegroundWindow()
+        return win32gui.GetWindowText(hwnd) == "Counter-Strike 2"
 
     @staticmethod
     def is_game_running():
@@ -166,15 +167,18 @@ class CS2TriggerBot:
         if entity_id > 0:
             entity = self.get_entity(entity_id)
             if entity:
-                entity_team = self.pm.read_int(entity + self.m_iTeamNum)
-                player_team = self.pm.read_int(player + self.m_iTeamNum)
-                entity_health = self.pm.read_int(entity + self.m_iHealth)
+                try:
+                    entity_team = self.pm.read_int(entity + self.m_iTeamNum)
+                    player_team = self.pm.read_int(player + self.m_iTeamNum)
+                    entity_health = self.pm.read_int(entity + self.m_iHealth)
+                except Exception as e:
+                    logger.error(f"Error reading entity data: {e}")
+                    return
 
                 if self.should_trigger(entity_team, player_team, entity_health):
-                    time.sleep(random.uniform(self.shot_delay_min, self.shot_delay_max))
-                    mouse.press(Button.left)
-                    time.sleep(random.uniform(self.shot_delay_min, self.shot_delay_max))
-                    mouse.release(Button.left)
+                    shot_delay = random.uniform(self.shot_delay_min, self.shot_delay_max)
+                    time.sleep(shot_delay)
+                    mouse.click(Button.left)
                     time.sleep(self.post_shot_delay)
 
     def start(self):
@@ -207,15 +211,18 @@ class CS2TriggerBot:
                 logger.info("TriggerBot stopped by user.")
                 self.stop()
             except Exception as e:
-                # Log unexpected errors.
-                logger.error(f"Unexpected error: {e}")
+                # Log unexpected errors with more context.
+                logger.error(f"Unexpected error in start method: {e}", exc_info=True)
 
     def stop(self):
         """
         Stops the TriggerBot and cleans up resources.
+        Also stops the keyboard and mouse listeners.
         """
         self.is_running = False
         self.stop_event.set()
-        self.keyboard_listener.stop()
-        self.mouse_listener.stop()
+        if self.keyboard_listener.running:
+            self.keyboard_listener.stop()
+        if self.mouse_listener.running:
+            self.mouse_listener.stop()
         logger.info(f"TriggerBot stopped.")
