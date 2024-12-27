@@ -1,4 +1,7 @@
-import os, json, requests
+import os, json, requests, psutil, win32gui
+
+from packaging import version
+from dateutil.parser import parse as parse_date
 
 from classes.logger import Logger
 
@@ -13,9 +16,6 @@ class Utility:
         - Retrieves data from 'offsets.json' and 'client_dll.json' on GitHub.
         - Logs an error if either request fails or the server returns a non-200 status code.
         - Handles exceptions gracefully, ensuring no unhandled errors crash the application.
-        
-        Returns:
-            tuple: (offset data, client data) if successful, otherwise (None, None).
         """
         try:
             # Fetch the offsets JSON from the first URL
@@ -58,3 +58,61 @@ class Utility:
             # Log any other exceptions that may occur
             logger.exception(f"An unexpected error occurred: {e}")
             return None, None
+        
+    def check_for_updates(current_version, update_info):
+        """
+        Checks the GitHub repository for the latest version of the software.
+        Compares the current version with the latest version and updates the UI accordingly.
+        """
+        try:
+            response = requests.get("https://api.github.com/repos/Jesewe/cs2-triggerbot/tags")
+            response.raise_for_status()
+            latest_version = response.json()[0]["name"]
+
+            if version.parse(latest_version) > version.parse(current_version):
+                update_info.setText(f"New version available: {latest_version}. Please update for the latest fixes and features.")
+                update_info.setStyleSheet("color: #BB86FC;")
+            elif version.parse(current_version) > version.parse(latest_version):
+                update_info.setText("Developer version: You are using a pre-release or developer version.")
+                update_info.setStyleSheet("color: #F1C40F;")
+            else:
+                update_info.setText("You are using the latest version.")
+                update_info.setStyleSheet("color: #df73ff;")
+        except Exception as e:
+            update_info.setText(f"Error checking for updates. {e}")
+            update_info.setStyleSheet("color: red;")
+
+    def fetch_last_offset_update(last_update_label):
+        """
+        Fetches the timestamp of the latest commit to the offsets repository.
+        Updates the UI label with the timestamp or an error message if the fetch fails.
+        """
+        try:
+            response = requests.get("https://api.github.com/repos/a2x/cs2-dumper/commits/main")
+            response.raise_for_status()
+            commit_data = response.json()
+            commit_timestamp = commit_data["commit"]["committer"]["date"]
+
+            # Parse and format the timestamp
+            last_update_dt = parse_date(commit_timestamp)
+            formatted_timestamp = last_update_dt.strftime("%m/%d/%Y %H:%M:%S")
+            
+            # Update the label
+            last_update_label.setText(f"Last offsets update: {formatted_timestamp} (UTC)")
+            last_update_label.setStyleSheet("color: orange; font-weight: bold;")
+            logger.info(f"Offsets last updated: {formatted_timestamp}")
+        except Exception as e:
+            last_update_label.setText("Error fetching last offsets update. Please check your internet connection or try again later.")
+            last_update_label.setStyleSheet("color: orange; font-weight: bold;")
+            logger.error(f"Offset update fetch failed: {e}")
+
+    @staticmethod
+    def is_game_active():
+        """Check if the game window is active."""
+        hwnd = win32gui.GetForegroundWindow()
+        return win32gui.GetWindowText(hwnd) == "Counter-Strike 2"
+
+    @staticmethod
+    def is_game_running():
+        """Check if the game process is running."""
+        return any(proc.info['name'] == 'cs2.exe' for proc in psutil.process_iter(attrs=['name']))

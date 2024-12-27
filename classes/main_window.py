@@ -1,11 +1,10 @@
-import threading, os, requests
+import threading, os
 
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox, QFormLayout, QTabWidget
 from PyQt6.QtGui import QIcon
 
 from watchdog.observers import Observer
-from packaging import version
 
 from classes.utility import Utility
 from classes.trigger_bot import CS2TriggerBot
@@ -96,7 +95,7 @@ class MainWindow(QMainWindow):
 
         # Update info
         self.update_info = QLabel(self)
-        self.check_for_updates(self.bot.VERSION)
+        Utility.check_for_updates(self.bot.VERSION, self.update_info)
 
         # Status label
         self.status_label = QLabel("Bot Status: Stopped")
@@ -105,7 +104,7 @@ class MainWindow(QMainWindow):
         # Last offsets update
         self.last_update_label = QLabel("Last offsets update: Fetching...")
         self.last_update_label.setStyleSheet("font-size: 13px; font-style: italic;")
-        self.fetch_last_offset_update()
+        Utility.fetch_last_offset_update(self.last_update_label)
 
         # Quick start guide
         quick_start_label = QLabel("Quick Start Guide")
@@ -248,52 +247,6 @@ class MainWindow(QMainWindow):
         self.observer.join()
         event.accept()
 
-    def check_for_updates(self, current_version):
-        """
-        Checks the GitHub repository for the latest version of the software.
-        Compares the current version with the latest version and displays a message if an update is available.
-        """
-        try:
-            response = requests.get("https://api.github.com/repos/Jesewe/cs2-triggerbot/tags")
-            response.raise_for_status()
-            latest_version = response.json()[0]["name"]
-
-            if version.parse(latest_version) > version.parse(current_version):
-                self.update_info.setText(f"New version available: {latest_version}. Please update for the latest fixes and features.")
-                self.update_info.setStyleSheet("color: #BB86FC;")
-            elif version.parse(current_version) > version.parse(latest_version):
-                self.update_info.setText("Developer version: You are using a pre-release or developer version.")
-                self.update_info.setStyleSheet("color: #F1C40F;")
-            else:
-                self.update_info.setText("You are using the latest version.")
-                self.update_info.setStyleSheet("color: #df73ff;")
-        except Exception as e:
-            self.update_info.setText(f"Error checking for updates. {e}")
-            self.update_info.setStyleSheet("color: red;")
-
-    def fetch_last_offset_update(self):
-        """
-        Fetches the timestamp of the latest commit to the offsets repository.
-        Displays the timestamp in the UI or an error message if the fetch fails.
-        """
-        try:
-            response = requests.get("https://api.github.com/repos/a2x/cs2-dumper/commits/main")
-            response.raise_for_status()
-            commit_data = response.json()
-            commit_timestamp = commit_data["commit"]["committer"]["date"]
-
-            from dateutil.parser import parse as parse_date
-            last_update_dt = parse_date(commit_timestamp)
-            formatted_timestamp = last_update_dt.strftime("%m/%d/%Y %H:%M:%S")
-            
-            self.last_update_label.setText(f"Last offsets update: {formatted_timestamp} (UTC)")
-            self.last_update_label.setStyleSheet("color: orange; font-weight: bold;")
-            logger.info(f"Offsets last updated: {formatted_timestamp}")
-        except Exception as e:
-            self.last_update_label.setText("Error fetching last offsets update. Please check your internet connection or try again later.")
-            self.last_update_label.setStyleSheet("color: orange; font-weight: bold;")
-            logger.error(f"Offset update fetch failed: {e}")
-
     def start_bot(self):
         """
         Starts the bot if it is not already running:
@@ -305,7 +258,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Bot started", "The bot is already running.")
             return
 
-        if not self.bot.is_game_running():
+        if not Utility.is_game_running():
             QMessageBox.critical(self, "The game is not running", "Could not find cs2.exe process. Make sure the game is running.")
             return
 
