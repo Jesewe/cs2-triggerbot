@@ -1,5 +1,7 @@
-from PyQt6.QtWidgets import QApplication
 import sys
+
+from PyQt6.QtWidgets import QApplication
+
 from classes.logger import Logger
 from classes.main_window import MainWindow
 from classes.trigger_bot import CS2TriggerBot
