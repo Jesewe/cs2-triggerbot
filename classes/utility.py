@@ -5,7 +5,7 @@ from dateutil.parser import parse as parse_date
 
 from classes.logger import Logger
 
-# Get a logger instance to log messages consistently throughout the application.
+# Initialize the logger for consistent logging
 logger = Logger.get_logger()
 
 class Utility:
@@ -100,7 +100,6 @@ class Utility:
             # Update the label
             last_update_label.setText(f"Last offsets update: {formatted_timestamp} (UTC)")
             last_update_label.setStyleSheet("color: orange; font-weight: bold;")
-            logger.info(f"Offsets last updated: {formatted_timestamp}")
         except Exception as e:
             last_update_label.setText("Error fetching last offsets update. Please check your internet connection or try again later.")
             last_update_label.setStyleSheet("color: orange; font-weight: bold;")
