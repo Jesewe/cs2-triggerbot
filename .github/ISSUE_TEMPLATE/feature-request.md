@@ -1,7 +1,7 @@
 ---
 name: Feature Request
-about: Provide a detailed description of the proposed feature.
-title: feature
+about: Suggest a new feature for the project.
+title: "[Feature]: "
 labels: "\U0001F680 Enhancement"
 assignees: Jesewe
 
