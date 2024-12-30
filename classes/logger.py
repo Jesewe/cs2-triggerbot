@@ -23,9 +23,10 @@ class Logger:
         logging.basicConfig(
             level=logging.INFO,  # Minimum logging level (INFO, WARNING, ERROR, etc.).
             format=f'[%(asctime)s %(levelname)s]: %(message)s',  # Standard log message format.
+            datefmt='%Y-%m-%d %H:%M:%S',  # Date format without milliseconds.
             handlers=[
-                logging.FileHandler(Logger.LOG_FILE, mode='w'),  # Log to the specified file and clear it.
-                logging.StreamHandler()  # Log to the console (stdout).
+            logging.FileHandler(Logger.LOG_FILE, mode='w'),  # Log to the specified file and clear it.
+            logging.StreamHandler()  # Log to the console (stdout).
             ]
         )
 
