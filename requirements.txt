@@ -1,6 +1,6 @@
 keyboard==0.13.5
 packaging==24.2
-psutil==6.1.0
+psutil==6.1.1
 pymem==1.14.0
 pynput==1.7.7
 PyQt6==6.8.0
