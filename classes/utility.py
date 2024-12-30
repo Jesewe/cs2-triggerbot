@@ -78,9 +78,19 @@ class Utility:
             else:
                 update_info.setText("You are using the latest version.")
                 update_info.setStyleSheet("color: #df73ff;")
+        except requests.exceptions.HTTPError as e:
+            if response.status_code == 403:
+                update_info.setText("Request limit exceeded. Please try again later.")
+                update_info.setStyleSheet("color: orange; font-weight: bold;")
+                logger.error(f"Update check failed: {e} (403 Forbidden)")
+            else:
+                update_info.setText(f"Error checking for updates. {e}")
+                update_info.setStyleSheet("color: red;")
+                logger.error(f"Update check failed: {e}")
         except Exception as e:
             update_info.setText(f"Error checking for updates. {e}")
             update_info.setStyleSheet("color: red;")
+            logger.error(f"Update check failed: {e}")
 
     def fetch_last_offset_update(last_update_label):
         """
@@ -100,6 +110,15 @@ class Utility:
             # Update the label
             last_update_label.setText(f"Last offsets update: {formatted_timestamp} (UTC)")
             last_update_label.setStyleSheet("color: orange; font-weight: bold;")
+        except requests.exceptions.HTTPError as e:
+            if response.status_code == 403:
+                last_update_label.setText("Request limit exceeded. Please try again later.")
+                last_update_label.setStyleSheet("color: orange; font-weight: bold;")
+                logger.error(f"Offset update fetch failed: {e} (403 Forbidden)")
+            else:
+                last_update_label.setText("Error fetching last offsets update. Please check your internet connection or try again later.")
+                last_update_label.setStyleSheet("color: orange; font-weight: bold;")
+                logger.error(f"Offset update fetch failed: {e}")
         except Exception as e:
             last_update_label.setText("Error fetching last offsets update. Please check your internet connection or try again later.")
             last_update_label.setStyleSheet("color: orange; font-weight: bold;")
