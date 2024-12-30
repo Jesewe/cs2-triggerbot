@@ -208,6 +208,9 @@ class MainWindow(QMainWindow):
         <p><b>Q: Can I customize the bot's behavior?</b></p>
         <p>A: Yes, use the 'General Settings' tab to adjust <span style="color:#BB86FC;">key configurations</span>, delays, and teammate attack settings.</p>
         
+        <p><b>Q: Does the TriggerBot work on <span style="color:#BB86FC;">FACEIT</span>?</b></p>
+        <p>A: No, using the TriggerBot on <span style="color:#BB86FC;">FACEIT</span> is not work as it is against their terms of service and can result in a ban.</p>
+
         <p><b>Q: I found a bug, where can I report it?</b></p>
         <p>A: You can report bugs by opening an issue on our <a style="color: #BB86FC;" href="https://github.com/Jesewe/cs2-triggerbot/issues">GitHub Issues page</a>. Please include details about the bug and steps to reproduce it.</p>
 
