@@ -1,7 +1,7 @@
 import threading, os
 
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox, QFormLayout, QTabWidget
+from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox, QFormLayout, QTabWidget, QSizePolicy
 from PyQt6.QtGui import QIcon
 
 from watchdog.observers import Observer
@@ -38,6 +38,14 @@ class MainWindow(QMainWindow):
             QTabBar::tab { background-color: #2C2C2C; color: #E0E0E0; padding: 8px 15px; border: 1px solid #444444; border-top-left-radius: 5px; border-top-right-radius: 5px; margin: 2px; font-weight: bold; }
             QTabBar::tab:selected { background-color: #444444; color: #D5006D; border-bottom: 2px solid #D5006D; }
             QTabBar::tab:hover { background-color: #333333; }
+            QCheckBox { color: #E0E0E0; padding: 5px; }
+            QCheckBox::indicator { width: 20px; height: 20px; border-radius: 10px; border: 1px solid #444444; }
+            QCheckBox::indicator:checked { background-color: #D5006D; border: 1px solid #D5006D; }
+            QCheckBox::indicator:unchecked { background-color: #2C2C2C; border: 1px solid #444444; }
+            QScrollBar:vertical { background-color: #2C2C2C; width: 15px; margin: 15px 3px 15px 3px; border: 1px solid #444444; border-radius: 7px; }
+            QScrollBar::handle:vertical { background-color: #444444; min-height: 20px; border-radius: 7px; }
+            QScrollBar::handle:vertical:hover { background-color: #555555; }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { background: none; }
         """)
 
         # Set application icon
@@ -84,7 +92,7 @@ class MainWindow(QMainWindow):
 
     def init_home_tab(self):
         """
-        Setup the Home tab with basic information, bot controls, and status display.
+        Setup the Home tab with basic and additional information, bot controls, and status display.
         """
         home_tab = QWidget()
         layout = QVBoxLayout()
@@ -118,6 +126,16 @@ class MainWindow(QMainWindow):
         quick_start_text.setWordWrap(True)
         quick_start_text.setStyleSheet("font-size: 13px;")
 
+         # Additional information
+        additional_info_label = QLabel("Additional Information")
+        additional_info_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #D5006D;")
+        additional_info_text = QLabel(
+            "For more details, visit our GitHub repository or join our Telegram channel.\n"
+            "Make sure to read the FAQs for common questions and troubleshooting."
+        )
+        additional_info_text.setWordWrap(True)
+        additional_info_text.setStyleSheet("font-size: 13px;")
+
         # Start/Stop buttons
         self.start_button = QPushButton("Start Bot")
         self.stop_button = QPushButton("Stop Bot")
@@ -134,9 +152,12 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.update_info)
         layout.addWidget(quick_start_label)
         layout.addWidget(quick_start_text)
+        layout.addWidget(additional_info_label)
+        layout.addWidget(additional_info_text)
         layout.addWidget(self.status_label)
         layout.addWidget(self.last_update_label)
         layout.addLayout(buttons_layout)
+
         home_tab.setLayout(layout)
         self.tabs.addTab(home_tab, "Home")
 
@@ -149,11 +170,16 @@ class MainWindow(QMainWindow):
 
         # Input fields for configuration
         self.trigger_key_input = QLineEdit(self.bot.config['Settings']['TriggerKey'])
+        self.trigger_key_input.setToolTip("Set the key to activate the trigger bot (e.g., 'x' or 'x1' for mouse button 4, 'x2' for mouse button 5).")
         self.min_delay_input = QLineEdit(str(self.bot.config['Settings']['ShotDelayMin']), self)
+        self.min_delay_input.setToolTip("Minimum delay between shots in seconds (e.g., 0.01).")
         self.max_delay_input = QLineEdit(str(self.bot.config['Settings']['ShotDelayMax']), self)
+        self.max_delay_input.setToolTip("Maximum delay between shots in seconds (must be >= Min Delay).")
         self.post_shot_delay_input = QLineEdit(str(self.bot.config['Settings'].get('PostShotDelay', 0.1)), self)
+        self.post_shot_delay_input.setToolTip("Delay after each shot in seconds (e.g., 0.1).")
         self.attack_teammates_checkbox = QCheckBox("Attack Teammates")
         self.attack_teammates_checkbox.setChecked(self.bot.config['Settings']['AttackOnTeammates'])
+        self.attack_teammates_checkbox.setToolTip("If checked, the bot will attack teammates as well.")
 
         # Add fields to the form layout
         form_layout.addRow("Trigger Key:", self.trigger_key_input)
