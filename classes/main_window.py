@@ -1,8 +1,8 @@
 import threading, os
 
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox, QFormLayout, QTabWidget, QSizePolicy
-from PyQt6.QtGui import QIcon
+from PyQt6.QtCore import Qt, QTimer, QUrl, QSize
+from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox, QFormLayout, QTabWidget
+from PyQt6.QtGui import QIcon, QDesktopServices
 
 from watchdog.observers import Observer
 
@@ -23,7 +23,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.repo_url = "github.com/Jesewe/cs2-triggerbot"
         self.setWindowTitle(f"CS2 TriggerBot | {self.repo_url}")
-        self.setFixedSize(700, 400)
+        self.setFixedSize(700, 450)
 
         # Apply custom styles for the UI
         self.setStyleSheet("""
@@ -76,6 +76,54 @@ class MainWindow(QMainWindow):
         self.init_logs_tab()
         self.init_faq_tab()
 
+        # Create a horizontal layout for the top section
+        self.top_layout = QHBoxLayout()
+
+        # Application name and version
+        self.name_app = QLabel(f"CS2 TriggerBot {CS2TriggerBot.VERSION}")
+        self.name_app.setStyleSheet("color: #D5006D; font-size: 22px; font-weight: bold;")
+
+        # Add fixed icons for Telegram and GitHub
+        self.icon_layout = QHBoxLayout()
+        self.icon_layout.setAlignment(Qt.AlignmentFlag.AlignRight)
+
+        telegram_icon = QPushButton()
+        telegram_icon.setIcon(QIcon(os.path.join(os.path.dirname(__file__), 'telegram_icon.png')))
+        telegram_icon.setIconSize(QSize(24, 24))
+        telegram_icon.setFlat(True)
+        telegram_icon.setToolTip("Join our Telegram channel")
+        telegram_icon.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://t.me/cs2_jesewe")))
+
+        github_icon = QPushButton()
+        github_icon.setIcon(QIcon(os.path.join(os.path.dirname(__file__), 'github_icon.png')))
+        github_icon.setIconSize(QSize(24, 24))
+        github_icon.setFlat(True)
+        github_icon.setToolTip("Visit our GitHub repository")
+        github_icon.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/Jesewe/cs2-triggerbot")))
+
+        self.icon_layout.addWidget(telegram_icon)
+        self.icon_layout.addWidget(github_icon)
+
+        # Check for updates and add update icon if available
+        update_url = Utility.check_for_updates(self.bot.VERSION)
+        if update_url:
+            update_icon = QPushButton()
+            update_icon.setIcon(QIcon(os.path.join(os.path.dirname(__file__), 'update_icon.png')))
+            update_icon.setIconSize(QSize(24, 24))
+            update_icon.setFlat(True)
+            update_icon.setToolTip("New update available! Click to download.")
+            update_icon.setStyleSheet("QPushButton { background-color: #333333; border-radius: 12px; border: 2px solid #D5006D; } QPushButton:hover { background-color: #444444; } ")
+            update_icon.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(update_url)))
+            self.icon_layout.addWidget(update_icon)
+
+        # Add the name_app and icon layout to the top layout
+        self.top_layout.addWidget(self.name_app)
+        self.top_layout.addStretch()
+        self.top_layout.addLayout(self.icon_layout)
+
+        # Add the top layout to the main layout
+        self.main_layout.addLayout(self.top_layout)
+
         self.main_layout.addWidget(self.tabs)
         container = QWidget()
         container.setLayout(self.main_layout)
@@ -96,14 +144,6 @@ class MainWindow(QMainWindow):
         """
         home_tab = QWidget()
         layout = QVBoxLayout()
-
-        # Application name
-        self.name_app = QLabel(f"CS2 TriggerBot {CS2TriggerBot.VERSION}")
-        self.name_app.setStyleSheet("color: #D5006D; font-size: 18px; font-weight: bold;")
-
-        # Update info
-        self.update_info = QLabel(self)
-        Utility.check_for_updates(self.bot.VERSION, self.update_info)
 
         # Status label
         self.status_label = QLabel("Bot Status: Stopped")
@@ -148,8 +188,6 @@ class MainWindow(QMainWindow):
         buttons_layout.setSpacing(20)
 
         # Add components to the layout
-        layout.addWidget(self.name_app)
-        layout.addWidget(self.update_info)
         layout.addWidget(quick_start_label)
         layout.addWidget(quick_start_text)
         layout.addWidget(additional_info_label)
@@ -279,7 +317,6 @@ class MainWindow(QMainWindow):
     def start_bot(self):
         """
         Starts the bot if it is not already running:
-        - Validates user inputs for the bot's configuration.
         - Ensures the game process (cs2.exe) is running.
         - Launches the bot in a separate thread.
         """
@@ -291,20 +328,15 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "The game is not running", "Could not find cs2.exe process. Make sure the game is running.")
             return
 
-        try:
-            self.validate_inputs()
+        # Clear the stop event to ensure the bot runs
+        self.bot.stop_event.clear()
+        
+        # Start the bot in a separate thread
+        self.bot_thread = threading.Thread(target=self.bot.start, daemon=True)
+        self.bot_thread.start()
 
-            # Clear the stop event to ensure the bot runs
-            self.bot.stop_event.clear()
-            
-            # Start the bot in a separate thread
-            self.bot_thread = threading.Thread(target=self.bot.start, daemon=True)
-            self.bot_thread.start()
-
-            self.status_label.setText("Bot Status: Running")
-            self.status_label.setStyleSheet("color: green; font-weight: bold;")
-        except ValueError as ve:
-            QMessageBox.critical(self, "Invalid Input", str(ve))
+        self.status_label.setText("Bot Status: Running")
+        self.status_label.setStyleSheet("color: green; font-weight: bold;")
 
     def stop_bot(self):
         """
@@ -312,32 +344,39 @@ class MainWindow(QMainWindow):
         - Signals the bot's stop event to terminate its main loop.
         - Waits for the bot's thread to terminate and updates the UI.
         """
-        if self.bot.is_running:
-            self.bot.stop()
-            if self.bot_thread is not None:
-                self.bot_thread.join(timeout=2)
-                if self.bot_thread.is_alive():
-                    logger.warning("Bot thread did not terminate cleanly.")
-                self.bot_thread = None
-
-            self.status_label.setText("Bot Status: Stopped")
-            self.status_label.setStyleSheet("color: red; font-weight: bold;")
-        else:
+        if not self.bot.is_running:
             QMessageBox.warning(self, "Bot has not been started", "The bot is not running.")
+            return
+
+        self.bot.stop()
+        if self.bot_thread is not None:
+            self.bot_thread.join(timeout=2)
+            if self.bot_thread.is_alive():
+                logger.warning("Bot thread did not terminate cleanly.")
+            self.bot_thread = None
+
+        self.status_label.setText("Bot Status: Stopped")
+        self.status_label.setStyleSheet("color: red; font-weight: bold;")
 
     def save_general_settings(self):
         """
         Saves the user's changes to the bot's configuration:
+        - Validates user inputs.
         - Updates the bot's configuration with new values.
         - Persists the updated configuration using the ConfigManager.
         """
-        self.bot.config['Settings']['TriggerKey'] = self.trigger_key_input.text()
-        self.bot.config['Settings']['AttackOnTeammates'] = self.attack_teammates_checkbox.isChecked()
-        self.bot.config['Settings']['ShotDelayMin'] = float(self.min_delay_input.text())
-        self.bot.config['Settings']['ShotDelayMax'] = float(self.max_delay_input.text())
-        self.bot.config['Settings']['PostShotDelay'] = float(self.post_shot_delay_input.text())
-        ConfigManager.save_config(self.bot.config)
-        self.bot.update_config(self.bot.config)
+        try:
+            self.validate_inputs()
+            self.bot.config['Settings']['TriggerKey'] = self.trigger_key_input.text()
+            self.bot.config['Settings']['AttackOnTeammates'] = self.attack_teammates_checkbox.isChecked()
+            self.bot.config['Settings']['ShotDelayMin'] = float(self.min_delay_input.text())
+            self.bot.config['Settings']['ShotDelayMax'] = float(self.max_delay_input.text())
+            self.bot.config['Settings']['PostShotDelay'] = float(self.post_shot_delay_input.text())
+            ConfigManager.save_config(self.bot.config)
+            self.bot.update_config(self.bot.config)
+            QMessageBox.information(self, "Settings Saved", "Configuration has been successfully saved.")
+        except ValueError as e:
+            QMessageBox.critical(self, "Invalid Input", str(e))
 
     def validate_inputs(self):
         """

@@ -59,38 +59,31 @@ class Utility:
             logger.exception(f"An unexpected error occurred: {e}")
             return None, None
         
-    def check_for_updates(current_version, update_info):
+    def check_for_updates(current_version):
         """
         Checks the GitHub repository for the latest version of the software.
-        Compares the current version with the latest version and updates the UI accordingly.
+        Compares the current version with the latest version and returns the update URL if an update is available.
         """
         try:
-            response = requests.get("https://api.github.com/repos/Jesewe/cs2-triggerbot/tags")
+            response = requests.get("https://api.github.com/repos/Jesewe/cs2-triggerbot/releases/latest")
             response.raise_for_status()
-            latest_version = response.json()[0]["name"]
+            latest_release = response.json()
+            latest_version = latest_release["tag_name"]
+            update_url = latest_release["html_url"]
 
             if version.parse(latest_version) > version.parse(current_version):
-                update_info.setText(f"New version available: {latest_version}. Please update for the latest fixes and features.")
-                update_info.setStyleSheet("color: #BB86FC;")
-            elif version.parse(current_version) > version.parse(latest_version):
-                update_info.setText("Developer version: You are using a pre-release or developer version.")
-                update_info.setStyleSheet("color: #F1C40F;")
+                return update_url
             else:
-                update_info.setText("You are using the latest version.")
-                update_info.setStyleSheet("color: #df73ff;")
+                return None
         except requests.exceptions.HTTPError as e:
             if response.status_code == 403:
-                update_info.setText("Request limit exceeded. Please try again later.")
-                update_info.setStyleSheet("color: orange; font-weight: bold;")
                 logger.error(f"Update check failed: {e} (403 Forbidden)")
             else:
-                update_info.setText(f"Error checking for updates. {e}")
-                update_info.setStyleSheet("color: red;")
                 logger.error(f"Update check failed: {e}")
+            return None
         except Exception as e:
-            update_info.setText(f"Error checking for updates. {e}")
-            update_info.setStyleSheet("color: red;")
             logger.error(f"Update check failed: {e}")
+            return None
 
     def fetch_last_offset_update(last_update_label):
         """
