@@ -45,8 +45,7 @@ class ConfigManager:
             return cls._config_cache
 
         # Ensure the configuration directory exists
-        if not os.path.exists(cls.CONFIG_DIRECTORY):
-            os.makedirs(cls.CONFIG_DIRECTORY)
+        os.makedirs(cls.CONFIG_DIRECTORY, exist_ok=True)
 
         # Check if the configuration file exists
         if not os.path.exists(cls.CONFIG_FILE):
@@ -80,9 +79,13 @@ class ConfigManager:
         """
         cls._config_cache = config
         try:
-            # Write the configuration to the file without pretty formatting for better performance
+            # Ensure the configuration directory exists
+            if not os.path.exists(cls.CONFIG_DIRECTORY):
+                os.makedirs(cls.CONFIG_DIRECTORY)
+            
+            # Write the configuration to the file with pretty formatting for readability
             with open(cls.CONFIG_FILE, 'w') as config_file:
-                json.dump(config, config_file)
+                json.dump(config, config_file, indent=4)
                 if log_info:
                     logger.info(f"Saved configuration to {cls.CONFIG_FILE}.")
         except IOError as e:

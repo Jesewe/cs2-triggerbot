@@ -146,8 +146,8 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
 
         # Status label
-        self.status_label = QLabel("Bot Status: Stopped")
-        self.status_label.setStyleSheet("color: red; font-weight: bold;")
+        self.status_label = QLabel("Bot Status: Inactive")
+        self.status_label.setStyleSheet("color: #FF0000; font-weight: bold; font-size: 14px;")
 
         # Last offsets update
         self.last_update_label = QLabel("Last offsets update: Fetching...")
@@ -321,11 +321,11 @@ class MainWindow(QMainWindow):
         - Launches the bot in a separate thread.
         """
         if self.bot.is_running:
-            QMessageBox.warning(self, "Bot started", "The bot is already running.")
+            QMessageBox.warning(self, "Bot Already Running", "The bot is already running.")
             return
 
         if not Utility.is_game_running():
-            QMessageBox.critical(self, "The game is not running", "Could not find cs2.exe process. Make sure the game is running.")
+            QMessageBox.critical(self, "Game Not Running", "Could not find cs2.exe process. \nMake sure the game is running.")
             return
 
         # Clear the stop event to ensure the bot runs
@@ -335,8 +335,8 @@ class MainWindow(QMainWindow):
         self.bot_thread = threading.Thread(target=self.bot.start, daemon=True)
         self.bot_thread.start()
 
-        self.status_label.setText("Bot Status: Running")
-        self.status_label.setStyleSheet("color: green; font-weight: bold;")
+        self.status_label.setText("Bot Status: Active")
+        self.status_label.setStyleSheet("color: #008000; font-weight: bold; font-size: 14px;")
 
     def stop_bot(self):
         """
@@ -345,7 +345,7 @@ class MainWindow(QMainWindow):
         - Waits for the bot's thread to terminate and updates the UI.
         """
         if not self.bot.is_running:
-            QMessageBox.warning(self, "Bot has not been started", "The bot is not running.")
+            QMessageBox.warning(self, "Bot not started", "The bot is not running.")
             return
 
         self.bot.stop()
@@ -355,8 +355,8 @@ class MainWindow(QMainWindow):
                 logger.warning("Bot thread did not terminate cleanly.")
             self.bot_thread = None
 
-        self.status_label.setText("Bot Status: Stopped")
-        self.status_label.setStyleSheet("color: red; font-weight: bold;")
+        self.status_label.setText("Bot Status: Inactive")
+        self.status_label.setStyleSheet("color: #FF0000; font-weight: bold; font-size: 14px;")
 
     def save_general_settings(self):
         """

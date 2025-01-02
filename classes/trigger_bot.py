@@ -13,7 +13,7 @@ mouse = Controller()
 logger = Logger.get_logger()
 
 class CS2TriggerBot:
-    VERSION = "v1.2.1"
+    VERSION = "v1.2.2"
 
     def __init__(self, offsets: dict, client_data: dict) -> None:
         """
@@ -176,9 +176,14 @@ class CS2TriggerBot:
                 logger.error(f"Unexpected error in start loop: {e}", exc_info=True)
 
     def stop(self) -> None:
-        """Stop the TriggerBot."""
+        """
+        Stops the TriggerBot and cleans up resources.
+        Also stops the keyboard and mouse listeners.
+        """
         self.is_running = False
         self.stop_event.set()
-        self.keyboard_listener.stop()
-        self.mouse_listener.stop()
-        logger.info("TriggerBot stopped.")
+        if self.keyboard_listener.running:
+            self.keyboard_listener.stop()
+        if self.mouse_listener.running:
+            self.mouse_listener.stop()
+        logger.info(f"TriggerBot stopped.")
