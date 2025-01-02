@@ -20,12 +20,9 @@ class CS2TriggerBot:
         Initialize the TriggerBot with offsets, configuration, and client data.
         """
         self.config = ConfigManager.load_config()
-        self.offsets = offsets
-        self.client_data = client_data
-        self.pm = None
-        self.client_base = None
-        self.is_running = False
-        self.stop_event = threading.Event()
+        self.offsets, self.client_data = offsets, client_data
+        self.pm, self.client_base = None, None
+        self.is_running, self.stop_event = False, threading.Event()
         self.trigger_active = False
         self.update_config(self.config)
 

@@ -65,6 +65,21 @@ class ConfigManager:
                 cls.save_config(cls.DEFAULT_CONFIG, log_info=False)
                 cls._config_cache = cls.DEFAULT_CONFIG
 
+            # Add missing keys from the default configuration
+            def update_config(default, current):
+                updated = False
+                for key, value in default.items():
+                    if key not in current:
+                        current[key] = value
+                        updated = True
+                    elif isinstance(value, dict):
+                        if update_config(value, current[key]):
+                            updated = True
+                return updated
+
+            if update_config(cls.DEFAULT_CONFIG, cls._config_cache):
+                cls.save_config(cls._config_cache, log_info=False)
+
         return cls._config_cache
 
     @classmethod

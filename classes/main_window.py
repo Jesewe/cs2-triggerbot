@@ -1,7 +1,7 @@
 import threading, os
 
 from PyQt6.QtCore import Qt, QTimer, QUrl, QSize
-from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox, QFormLayout, QTabWidget
+from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox, QFormLayout, QTabWidget, QDialog
 from PyQt6.QtGui import QIcon, QDesktopServices
 
 from watchdog.observers import Observer
@@ -157,24 +157,28 @@ class MainWindow(QMainWindow):
         # Quick start guide
         quick_start_label = QLabel("Quick Start Guide")
         quick_start_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #D5006D;")
-        quick_start_text = QLabel(
-            "1. Open CS2 game and ensure it’s running.\n"
-            "2. Configure trigger key and delays in 'General Settings'.\n"
-            "3. Press 'Start Bot' to activate.\n"
-            "4. Monitor bot status and logs in the 'Logs' tab."
+        quick_start_text = QLabel()
+        quick_start_text.setText(
+            "1. Open CS2 game and ensure it’s running.<br>"
+            "2. Configure trigger key and delays in '<span style=\"color: #D5006D;\">General Settings</span>'.<br>"
+            "3. Press '<span style=\"color: #D5006D;\">Start Bot</span>' to activate.<br>"
+            "4. Monitor bot status and logs in the '<span style=\"color: #D5006D;\">Logs</span>' tab."
         )
+        quick_start_text.setStyleSheet("font-size: 14px;")
+        quick_start_text.setTextFormat(Qt.TextFormat.RichText)
         quick_start_text.setWordWrap(True)
-        quick_start_text.setStyleSheet("font-size: 13px;")
 
-         # Additional information
+        # Additional information
         additional_info_label = QLabel("Additional Information")
         additional_info_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #D5006D;")
-        additional_info_text = QLabel(
-            "For more details, visit our GitHub repository or join our Telegram channel.\n"
-            "Make sure to read the FAQs for common questions and troubleshooting."
+        additional_info_text = QLabel()
+        additional_info_text.setText(
+            "For more details, visit our <a style=\"color: #D5006D;\">GitHub repository</a> or join our <a style=\"color: #D5006D;\">Telegram channel</a>.<br>"
+            "Make sure to read the <span style=\"color: #D5006D;\">FAQs</span> for common questions and troubleshooting."
         )
+        additional_info_text.setStyleSheet("font-size: 14px;")
+        additional_info_text.setTextFormat(Qt.TextFormat.RichText)
         additional_info_text.setWordWrap(True)
-        additional_info_text.setStyleSheet("font-size: 13px;")
 
         # Start/Stop buttons
         self.start_button = QPushButton("Start Bot")

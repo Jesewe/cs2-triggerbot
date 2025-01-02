@@ -1,4 +1,4 @@
-import os, json, requests, psutil, win32gui
+import os, json, requests, psutil, win32gui, time
 
 from packaging import version
 from dateutil.parser import parse as parse_date
@@ -59,6 +59,7 @@ class Utility:
             logger.exception(f"An unexpected error occurred: {e}")
             return None, None
         
+    @staticmethod
     def check_for_updates(current_version):
         """
         Checks the GitHub repository for the latest version of the software.
@@ -72,19 +73,19 @@ class Utility:
             update_url = latest_release["html_url"]
 
             if version.parse(latest_version) > version.parse(current_version):
+                logger.info(f"New version available: {latest_version}.")
                 return update_url
             else:
+                logger.info("No new updates available.")
                 return None
-        except requests.exceptions.HTTPError as e:
-            if response.status_code == 403:
-                logger.error(f"Update check failed: {e} (403 Forbidden)")
-            else:
-                logger.error(f"Update check failed: {e}")
-            return None
-        except Exception as e:
+        except requests.exceptions.RequestException as e:
             logger.error(f"Update check failed: {e}")
             return None
+        except Exception as e:
+            logger.error(f"An unexpected error occurred during update check: {e}")
+            return None
 
+    @staticmethod
     def fetch_last_offset_update(last_update_label):
         """
         Fetches the timestamp of the latest commit to the offsets repository.
