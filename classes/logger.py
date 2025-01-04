@@ -8,27 +8,42 @@ class Logger:
     # Define the full path for the log file within the LOG_DIRECTORY.
     LOG_FILE = os.path.join(LOG_DIRECTORY, 'tb_logs.log')
 
+    # Define the full path for the detailed log file within the LOG_DIRECTORY.
+    DETAILED_LOG_FILE = os.path.join(LOG_DIRECTORY, 'tb_detailed_logs.log')
+
     @staticmethod
     def setup_logging():
         """
         Configures logging for the application.
         - Ensures the log directory exists (creates it if necessary).
-        - Initializes the log file (clears previous logs).
-        - Sets up logging to write messages to both a file and the console.
+        - Initializes the log files (clears previous logs).
+        - Sets up logging to write messages to both a brief log file, a detailed log file, and the console.
         """
         # Create the log directory if it doesn't exist to avoid errors during file operations.
         os.makedirs(Logger.LOG_DIRECTORY, exist_ok=True)
         
-        # Set up logging to output to both the log file and the console with INFO level or higher.
+        # Set up logging to output to the brief log file and the console with INFO level or higher.
         logging.basicConfig(
             level=logging.INFO,  # Minimum logging level (INFO, WARNING, ERROR, etc.).
             format=f'[%(asctime)s %(levelname)s]: %(message)s',  # Standard log message format.
             datefmt='%Y-%m-%d %H:%M:%S',  # Date format without milliseconds.
             handlers=[
-            logging.FileHandler(Logger.LOG_FILE, mode='w'),  # Log to the specified file and clear it.
-            logging.StreamHandler()  # Log to the console (stdout).
+                logging.FileHandler(Logger.LOG_FILE, mode='w'),  # Log to the brief log file and clear it.
+                logging.StreamHandler()  # Log to the console (stdout).
             ]
         )
+        
+        # Set up a separate handler for the detailed log file with a different format.
+        detailed_handler = logging.FileHandler(Logger.DETAILED_LOG_FILE, mode='w')
+        detailed_handler.setLevel(logging.INFO)
+        detailed_formatter = logging.Formatter(
+            fmt='[%(asctime)s %(levelname)s {%(module)s : %(funcName)s} (%(lineno)d) line ]: %(message)s',  # Detailed log message format.
+            datefmt='%Y-%m-%d %H:%M:%S'  # Date format without milliseconds.
+        )
+        detailed_handler.setFormatter(detailed_formatter)
+        
+        # Add the detailed handler to the root logger.
+        logging.getLogger().addHandler(detailed_handler)
 
     @staticmethod
     def get_logger():
