@@ -132,9 +132,9 @@ class MainWindow(QMainWindow):
 
         # Setup log file monitoring
         self.last_log_position = 0
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.update_log_output)
-        self.timer.start(1000)  # Update logs every second
+        self.log_timer = QTimer(self)
+        self.log_timer.timeout.connect(self.update_log_output)
+        self.log_timer.start(1000)  # Update logs every second
 
         # Initialize file watcher for config updates
         self.init_config_watcher()
@@ -234,8 +234,18 @@ class MainWindow(QMainWindow):
 
         # Save button
         save_button = QPushButton("Save Config")
+        save_button.setToolTip("Save the configuration settings to the configuration file.")
         save_button.clicked.connect(self.save_general_settings)
         form_layout.addRow(save_button)
+
+        # Open Config Directory button
+        open_config_button = QPushButton("Open Config Directory")
+        open_config_button.setToolTip("Open the directory where the configuration file is stored.")
+        open_config_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(ConfigManager.CONFIG_DIRECTORY)))
+        form_layout.addRow(open_config_button)
+
+        # Add spacing between form elements
+        form_layout.setSpacing(10)
 
         general_settings_tab.setLayout(form_layout)
         self.tabs.addTab(general_settings_tab, "General Settings")
