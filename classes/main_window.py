@@ -43,9 +43,10 @@ class MainWindow(QMainWindow):
             QCheckBox::indicator:checked { background-color: #D5006D; border: 1px solid #D5006D; }
             QCheckBox::indicator:unchecked { background-color: #2C2C2C; border: 1px solid #444444; }
             QScrollBar:vertical { background-color: #2C2C2C; width: 15px; margin: 15px 3px 15px 3px; border: 1px solid #444444; border-radius: 7px; }
-            QScrollBar::handle:vertical { background-color: #444444; min-height: 20px; border-radius: 7px; }
-            QScrollBar::handle:vertical:hover { background-color: #555555; }
+            QScrollBar::handle:vertical { background-color: #D5006D; min-height: 20px; border-radius: 7px; }
+            QScrollBar::handle:vertical:hover { background-color: #E91E63; }
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { background: none; }
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }
         """)
 
         # Set application icon
@@ -105,7 +106,7 @@ class MainWindow(QMainWindow):
         self.icon_layout.addWidget(github_icon)
 
         # Check for updates and add update icon if available
-        update_url = Utility.check_for_updates(self.bot.VERSION)
+        update_url = Utility.check_for_updates(CS2TriggerBot.VERSION)
         if update_url:
             update_icon = QPushButton()
             update_icon.setIcon(QIcon(os.path.join(os.path.dirname(__file__), 'update_icon.png')))
@@ -173,11 +174,12 @@ class MainWindow(QMainWindow):
         additional_info_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #D5006D;")
         additional_info_text = QLabel()
         additional_info_text.setText(
-            "For more details, visit our <a style=\"color: #D5006D;\">GitHub repository</a> or join our <a style=\"color: #D5006D;\">Telegram channel</a>.<br>"
+            "For more details, visit our <a href=\"https://github.com/Jesewe/cs2-triggerbot\" style=\"color: #D5006D;\">GitHub repository</a> or join our <a href=\"https://t.me/cs2_jesewe\" style=\"color: #D5006D;\">Telegram channel</a>.<br>"
             "Make sure to read the <span style=\"color: #D5006D;\">FAQs</span> for common questions and troubleshooting."
         )
         additional_info_text.setStyleSheet("font-size: 14px;")
         additional_info_text.setTextFormat(Qt.TextFormat.RichText)
+        additional_info_text.setOpenExternalLinks(True)
         additional_info_text.setWordWrap(True)
 
         # Start/Stop buttons
@@ -211,16 +213,16 @@ class MainWindow(QMainWindow):
         form_layout = QFormLayout()
 
         # Input fields for configuration
-        self.trigger_key_input = QLineEdit(self.bot.config['Settings']['TriggerKey'])
+        self.trigger_key_input = QLineEdit(self.bot.config['Settings'].get('TriggerKey', 'default_value'))
         self.trigger_key_input.setToolTip("Set the key to activate the trigger bot (e.g., 'x' or 'x1' for mouse button 4, 'x2' for mouse button 5).")
-        self.min_delay_input = QLineEdit(str(self.bot.config['Settings']['ShotDelayMin']), self)
+        self.min_delay_input = QLineEdit(str(self.bot.config['Settings'].get('ShotDelayMin', 0.01)), self)
         self.min_delay_input.setToolTip("Minimum delay between shots in seconds (e.g., 0.01).")
-        self.max_delay_input = QLineEdit(str(self.bot.config['Settings']['ShotDelayMax']), self)
+        self.max_delay_input = QLineEdit(str(self.bot.config['Settings'].get('ShotDelayMax', 0.1)), self)
         self.max_delay_input.setToolTip("Maximum delay between shots in seconds (must be >= Min Delay).")
-        self.post_shot_delay_input = QLineEdit(str(self.bot.config['Settings'].get('PostShotDelay', 0.1)), self)
+        self.post_shot_delay_input = QLineEdit(str(self.bot.config['Settings'].get('PostShotDelay', 0.1)))
         self.post_shot_delay_input.setToolTip("Delay after each shot in seconds (e.g., 0.1).")
         self.attack_teammates_checkbox = QCheckBox("Attack Teammates")
-        self.attack_teammates_checkbox.setChecked(self.bot.config['Settings']['AttackOnTeammates'])
+        self.attack_teammates_checkbox.setChecked(self.bot.config['Settings'].get('AttackOnTeammates', False))
         self.attack_teammates_checkbox.setToolTip("If checked, the bot will attack teammates as well.")
 
         # Add fields to the form layout
@@ -302,10 +304,14 @@ class MainWindow(QMainWindow):
         Initializes a file watcher to monitor changes in the configuration file.
         Automatically updates the bot's configuration when the file changes.
         """
-        event_handler = ConfigFileChangeHandler(self.bot)
-        self.observer = Observer()
-        self.observer.schedule(event_handler, path=ConfigManager.CONFIG_DIRECTORY, recursive=False)
-        self.observer.start()
+        try:
+            event_handler = ConfigFileChangeHandler(self.bot)
+            self.observer = Observer()
+            self.observer.schedule(event_handler, path=ConfigManager.CONFIG_DIRECTORY, recursive=False)
+            self.observer.start()
+            logger.info("Config file watcher started successfully.")
+        except Exception as e:
+            logger.error(f"Failed to initialize config watcher: {e}")
 
     def closeEvent(self, event):
         """
@@ -314,8 +320,16 @@ class MainWindow(QMainWindow):
         - Stops the bot if it is running.
         """
         self.observer.stop()
-        self.bot.stop()
         self.observer.join()
+        
+        if self.bot.is_running:
+            self.bot.stop()
+            if self.bot_thread is not None:
+                self.bot_thread.join(timeout=2)
+                if self.bot_thread.is_alive():
+                    logger.warning("Bot thread did not terminate cleanly.")
+                self.bot_thread = None
+        
         event.accept()
 
     def start_bot(self):
@@ -387,21 +401,21 @@ class MainWindow(QMainWindow):
         Validates user input fields in the General Settings tab.
         Ensures all required fields have valid values.
         """
+        trigger_key = self.trigger_key_input.text().strip()
+        if not trigger_key:
+            raise ValueError("Trigger key cannot be empty.")
+
         try:
-            trigger_key = self.trigger_key_input.text()
-            if not trigger_key:
-                raise ValueError("Trigger key cannot be empty.")
+            min_delay = float(self.min_delay_input.text().strip())
+            max_delay = float(self.max_delay_input.text().strip())
+            post_delay = float(self.post_shot_delay_input.text().strip())
+        except ValueError:
+            raise ValueError("Delay values must be valid numbers.")
 
-            min_delay = float(self.min_delay_input.text())
-            max_delay = float(self.max_delay_input.text())
-            post_delay = float(self.post_shot_delay_input.text())
-
-            if min_delay < 0 or max_delay < 0 or post_delay < 0:
-                raise ValueError("Delay values must be non-negative.")
-            if min_delay > max_delay:
-                raise ValueError("Minimum delay cannot be greater than maximum delay.")
-        except ValueError as e:
-            raise ValueError(f"Invalid input: {e}")
+        if min_delay < 0 or max_delay < 0 or post_delay < 0:
+            raise ValueError("Delay values must be non-negative.")
+        if min_delay > max_delay:
+            raise ValueError("Minimum delay cannot be greater than maximum delay.")
 
     def update_log_output(self):
         """
