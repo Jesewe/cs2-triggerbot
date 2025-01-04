@@ -20,7 +20,7 @@ What actually happened? Include logs or screenshots if applicable.
 - **Game Version:** e.g., Latest CS2 update
 
 ### Logs
-Attach logs from `%LOCALAPPDATA%\Requests\ItsJesewe\crashes\tb_logs.log` if possible.
+Attach logs from `%LOCALAPPDATA%\Requests\ItsJesewe\crashes\tb_logs.log` and `%LOCALAPPDATA%\Requests\ItsJesewe\crashes\tb_detailed_logs.log` if possible.
 
 ### Additional Context
 Any other information that might be helpful for debugging.
