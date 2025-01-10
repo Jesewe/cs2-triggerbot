@@ -1,0 +1,41 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12.5'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Install PyInstaller
+      run: pip install pyinstaller
+
+    - name: Package Application
+      run: |
+        pyinstaller --noconfirm --onefile --windowed --icon "src\img\icon.ico" --name "CS2 Triggerbot" --version-file "version.txt" --add-data "classes;classes/" --add-data "src/img/*;src/img" "main.py"
+
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: CS2_Triggerbot
+        path: dist/CS2\ Triggerbot.exe
