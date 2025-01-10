@@ -1,0 +1,35 @@
+# UTF-8
+# This is a version file for the executable
+
+VSVersionInfo(
+    ffi=FixedFileInfo(
+        filevers=(1, 2, 2, 0),
+        prodvers=(1, 2, 2, 0),
+        mask=0x3f,
+        flags=0x0,
+        OS=0x4,
+        fileType=0x1,
+        subtype=0x0,
+        date=(0, 0)
+    ),
+    kids=[
+        StringFileInfo(
+            [
+                StringTable(
+                    u'040904b0',
+                    [
+                        StringStruct(u'CompanyName', u'Jesewe'),
+                        StringStruct(u'FileDescription', u'CS2 Triggerbot'),
+                        StringStruct(u'FileVersion', u'1.2.2.0'),
+                        StringStruct(u'InternalName', u'CS2 Triggerbot'),
+                        StringStruct(u'LegalCopyright', u'(C) 2025 Jesewe. MIT License'),
+                        StringStruct(u'OriginalFilename', u'CS2 Triggerbot.exe'),
+                        StringStruct(u'ProductName', u'CS2 Triggerbot'),
+                        StringStruct(u'ProductVersion', u'1.2.2.0')
+                    ]
+                )
+            ]
+        ),
+        VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
+    ]
+)
