@@ -1,4 +1,4 @@
-import threading, os
+import threading, os, sys
 
 from PyQt6.QtCore import Qt, QTimer, QUrl, QSize
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox, QFormLayout, QTabWidget, QDialog
@@ -50,7 +50,7 @@ class MainWindow(QMainWindow):
         """)
 
         # Set application icon
-        icon_path = os.path.join(os.getcwd(), 'src', 'img', 'icon.png')
+        icon_path = Utility.resource_path('src/img/icon.png')
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
         else:
@@ -89,14 +89,14 @@ class MainWindow(QMainWindow):
         self.icon_layout.setAlignment(Qt.AlignmentFlag.AlignRight)
 
         telegram_icon = QPushButton()
-        telegram_icon.setIcon(QIcon(os.path.join(os.getcwd(), 'src', 'img', 'telegram_icon.png')))
+        telegram_icon.setIcon(QIcon(Utility.resource_path('src/img/telegram_icon.png')))
         telegram_icon.setIconSize(QSize(24, 24))
         telegram_icon.setFlat(True)
         telegram_icon.setToolTip("Join our Telegram channel")
         telegram_icon.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://t.me/cs2_jesewe")))
 
         github_icon = QPushButton()
-        github_icon.setIcon(QIcon(os.path.join(os.getcwd(), 'src', 'img', 'github_icon.png')))
+        github_icon.setIcon(QIcon(Utility.resource_path('src/img/github_icon.png')))
         github_icon.setIconSize(QSize(24, 24))
         github_icon.setFlat(True)
         github_icon.setToolTip("Visit our GitHub repository")
@@ -109,7 +109,7 @@ class MainWindow(QMainWindow):
         update_url = Utility.check_for_updates(CS2TriggerBot.VERSION)
         if update_url:
             update_icon = QPushButton()
-            update_icon.setIcon(QIcon(os.path.join(os.path.dirname(__file__), 'update_icon.png')))
+            update_icon.setIcon(QIcon(Utility.resource_path('src/img/update_icon.png')))
             update_icon.setIconSize(QSize(24, 24))
             update_icon.setFlat(True)
             update_icon.setToolTip("New update available! Click to download.")

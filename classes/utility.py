@@ -1,4 +1,5 @@
-import os, json, requests, psutil, win32gui, time
+import os, json, requests, psutil, sys
+import pygetwindow as gw
 
 from packaging import version
 from dateutil.parser import parse as parse_date
@@ -119,10 +120,17 @@ class Utility:
             logger.error(f"Offset update fetch failed: {e}")
 
     @staticmethod
+    def resource_path(relative_path):
+        """Returns the path to a resource that supports both normal startup and startup from .exe."""
+        if hasattr(sys, '_MEIPASS'):
+            return os.path.join(sys._MEIPASS, relative_path)
+        return os.path.join(os.path.abspath("."), relative_path)
+
+    @staticmethod
     def is_game_active():
-        """Check if the game window is active."""
-        hwnd = win32gui.GetForegroundWindow()
-        return win32gui.GetWindowText(hwnd) == "Counter-Strike 2"
+        """Check if the game window is active using the 'pygetwindow' module."""
+        windows = gw.getWindowsWithTitle('Counter-Strike 2')
+        return any(window.isActive for window in windows)
 
     @staticmethod
     def is_game_running():
