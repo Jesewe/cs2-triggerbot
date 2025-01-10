@@ -9,3 +9,4 @@ python_dateutil==2.9.0.post0
 pywin32==308
 Requests==2.32.3
 watchdog==6.0.0
+PyGetWindow==0.0.9
