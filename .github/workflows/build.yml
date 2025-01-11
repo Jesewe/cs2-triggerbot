@@ -62,7 +62,7 @@ jobs:
         fi
 
     - name: Download Build Artifact
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4
       with:
         name: CS2_Triggerbot
 
@@ -76,7 +76,7 @@ jobs:
         draft: false
         prerelease: false
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB }} 
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
 
     - name: Upload Release Asset
       uses: actions/upload-release-asset@v1
