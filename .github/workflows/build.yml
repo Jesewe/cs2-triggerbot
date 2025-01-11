@@ -61,6 +61,11 @@ jobs:
           echo "changelog=No changelog available." >> $GITHUB_ENV
         fi
 
+    - name: Download Build Artifact
+      uses: actions/download-artifact@v2
+      with:
+        name: CS2_Triggerbot
+
     - name: Create GitHub Release
       id: create_release
       uses: actions/create-release@v1
