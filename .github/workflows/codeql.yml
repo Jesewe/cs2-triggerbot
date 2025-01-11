@@ -67,3 +67,4 @@ jobs:
         VALIDATE_ALL_CODEBASE: false
         VALIDATE_YAML: true
         DEFAULT_WORKSPACE: ${{ github.workspace }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
