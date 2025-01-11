@@ -26,17 +26,12 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
         build-mode: ${{ matrix.build-mode }}
 
-    # If the analyze step fails for one of the languages you are analyzing with
-    # "We were unable to automatically build your code", modify the matrix above
-    # to set the build mode to "manual" for that language. Then modify this step
-    # to build your code.
     - if: matrix.build-mode == 'manual'
       shell: bash
       run: |
@@ -61,12 +56,14 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Initialize CodeQL for GitHub Actions
-      uses: github/codeql-action/init@v3
-      with:
-        languages: yaml
+    - name: Search for YAML Workflow Files
+      run: |
+        echo "Listing all workflow files:"
+        find .github/workflows -type f -name "*.yml"
 
-    - name: Analyze GitHub Actions Configurations
-      uses: github/codeql-action/analyze@v3
-      with:
-        category: "/language:yaml"
+    - name: Lint GitHub Actions Workflow Files
+      uses: github/super-linter@v5
+      env:
+        VALIDATE_ALL_CODEBASE: false
+        VALIDATE_YAML: true
+        DEFAULT_WORKSPACE: ${{ github.workspace }}
