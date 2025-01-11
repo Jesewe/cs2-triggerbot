@@ -65,12 +65,16 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: CS2_Triggerbot
+        path: ./artifact-download
 
-    - name: Unzip Build Artifact
+    - name: Verify Downloaded Artifact
       run: |
-        mkdir -p dist
-        unzip CS2_Triggerbot.zip -d dist
-      shell: bash
+        echo "Listing artifact-download directory:"
+        ls -la ./artifact-download
+        if [ ! -f ./artifact-download/CS2.Triggerbot.exe ]; then
+          echo "Error: File CS2.Triggerbot.exe not found in artifact-download directory!"
+          exit 1
+        fi
 
     - name: Create GitHub Release
       id: create_release
@@ -88,6 +92,6 @@ jobs:
       uses: actions/upload-release-asset@v1
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: dist/CS2.Triggerbot.exe
+        asset_path: ./artifact-download/CS2.Triggerbot.exe
         asset_name: CS2.Triggerbot.exe
         asset_content_type: application/octet-stream
