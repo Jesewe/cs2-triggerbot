@@ -62,6 +62,7 @@ jobs:
         fi
 
     - name: Create GitHub Release
+      id: create_release
       uses: actions/create-release@v1
       with:
         tag_name: ${{ github.event.inputs.tag_name }}
@@ -69,6 +70,8 @@ jobs:
         body: ${{ env.changelog }}
         draft: false
         prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB }} 
 
     - name: Upload Release Asset
       uses: actions/upload-release-asset@v1
