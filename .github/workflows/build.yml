@@ -66,6 +66,12 @@ jobs:
       with:
         name: CS2_Triggerbot
 
+    - name: Unzip Build Artifact
+      run: |
+        mkdir -p dist
+        unzip CS2_Triggerbot.zip -d dist
+      shell: bash
+
     - name: Create GitHub Release
       id: create_release
       uses: actions/create-release@v1
