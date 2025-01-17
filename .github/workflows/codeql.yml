@@ -19,52 +19,53 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - language: python
-          build-mode: none
+          - language: python
+            build-mode: none
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
-      with:
-        languages: ${{ matrix.language }}
-        build-mode: ${{ matrix.build-mode }}
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
 
-    - if: matrix.build-mode == 'manual'
-      shell: bash
-      run: |
-        echo 'If you are using a "manual" build mode for one or more of the' \
-          'languages you are analyzing, replace this with the commands to build' \
-          'your code, for example:'
-        echo '  make bootstrap'
-        echo '  make release'
-        exit 1
+      - if: matrix.build-mode == 'manual'
+        name: Manual Build Placeholder
+        shell: bash
+        run: |
+          echo 'Manual build mode selected. Replace this section with your build commands.'
+          echo 'Example:'
+          echo '  make bootstrap'
+          echo '  make release'
+          exit 1
 
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
-      with:
-        category: "/language:${{matrix.language}}"
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
 
   check-actions:
     name: Check GitHub Actions Configurations
     runs-on: ubuntu-latest
     permissions:
       contents: read
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Search for YAML Workflow Files
-      run: |
-        echo "Listing all workflow files:"
-        find .github/workflows -type f -name "*.yml"
+      - name: Search for YAML Workflow Files
+        run: |
+          echo "Searching for GitHub Actions workflow files in '.github/workflows':"
+          find .github/workflows -type f -name "*.yml" -exec echo "Found: {}" \;
 
-    - name: Lint GitHub Actions Workflow Files
-      uses: github/super-linter@v5
-      env:
-        VALIDATE_ALL_CODEBASE: false
-        VALIDATE_YAML: true
-        DEFAULT_WORKSPACE: ${{ github.workspace }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Lint GitHub Actions Workflow Files
+        uses: github/super-linter@v5
+        env:
+          VALIDATE_ALL_CODEBASE: false
+          VALIDATE_YAML: true
+          DEFAULT_WORKSPACE: ${{ github.workspace }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
