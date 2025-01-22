@@ -60,6 +60,8 @@ You can install the trigger bot by cloning the repository or by downloading a pr
 
 Alternatively, download the ready-to-use executable from the [Releases](https://github.com/jesewe/cs2-triggerbot/releases) page. Download the latest version and run the executable directly.
 
+**Note:** This project requires Python version >3.8 but <1.12.5.
+
 ## Configuration
 The `config.json` file is automatically generated in the directory `%LOCALAPPDATA%\Requests\ItsJesewe\` on the first run. You can modify the `TriggerKey` in this file or via the GUI.
 
