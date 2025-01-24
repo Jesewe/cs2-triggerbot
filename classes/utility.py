@@ -26,12 +26,14 @@ class Utility:
             client_dll_url = os.getenv('CLIENT_DLL_URL', 'https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/client_dll.json')
             response_client = requests.get(client_dll_url)
 
-            # Check if both requests were successful (HTTP 200 status)
+            # Check if the requests were successful
             if response_offset.status_code != 200:
+                # Log an error if the offsets request fails
                 logger.error("Failed to fetch offsets from server: offsets.json request failed.")
                 return None, None
 
             if response_client.status_code != 200:
+                # Log an error if the client DLL request fails
                 logger.error("Failed to fetch offsets from server: client_dll.json request failed.")
                 return None, None
 
@@ -67,22 +69,29 @@ class Utility:
         Compares the current version with the latest version and returns the update URL if an update is available.
         """
         try:
+            # Fetch the latest release data from the GitHub API
             response = requests.get("https://api.github.com/repos/Jesewe/cs2-triggerbot/releases/latest")
             response.raise_for_status()
+
+            # Parse the JSON response and extract the latest version and release URL
             latest_release = response.json()
             latest_version = latest_release["tag_name"]
             update_url = latest_release["html_url"]
 
             if version.parse(latest_version) > version.parse(current_version):
+                # Log that a new update is available
                 logger.info(f"New version available: {latest_version}.")
                 return update_url
             else:
+                # Log that no updates are available
                 logger.info("No new updates available.")
                 return None
         except requests.exceptions.RequestException as e:
+            # Log the request exception details if any errors occur during the process
             logger.error(f"Update check failed: {e}")
             return None
         except Exception as e:
+            # Log any other exceptions that may occur
             logger.error(f"An unexpected error occurred during update check: {e}")
             return None
 
@@ -93,8 +102,11 @@ class Utility:
         Updates the UI label with the timestamp or an error message if the fetch fails.
         """
         try:
+            # Fetch the latest commit data from the GitHub API
             response = requests.get("https://api.github.com/repos/a2x/cs2-dumper/commits/main")
             response.raise_for_status()
+
+            # Parse the commit data and extract the timestamp
             commit_data = response.json()
             commit_timestamp = commit_data["commit"]["committer"]["date"]
 
@@ -107,14 +119,17 @@ class Utility:
             last_update_label.setStyleSheet("color: #ffa420; font-weight: bold;")
         except requests.exceptions.HTTPError as e:
             if response.status_code == 403:
+                # Handle rate limit exceeded error
                 last_update_label.setText("Request limit exceeded. Please try again later.")
                 last_update_label.setStyleSheet("color: #0bda51; font-weight: bold;")
                 logger.error(f"Offset update fetch failed: {e} (403 Forbidden)")
             else:
+                # Handle other HTTP errors
                 last_update_label.setText("Error fetching last offsets update. Please check your internet connection or try again later.")
                 last_update_label.setStyleSheet("color: #0bda51; font-weight: bold;")
                 logger.error(f"Offset update fetch failed: {e}")
         except Exception as e:
+            # Handle other exceptions
             last_update_label.setText("Error fetching last offsets update. Please check your internet connection or try again later.")
             last_update_label.setStyleSheet("color: #0bda51; font-weight: bold;")
             logger.error(f"Offset update fetch failed: {e}")
@@ -123,7 +138,9 @@ class Utility:
     def resource_path(relative_path):
         """Returns the path to a resource that supports both normal startup and startup from .exe."""
         if hasattr(sys, '_MEIPASS'):
+            # If the application is frozen, use the MEIPASS path
             return os.path.join(sys._MEIPASS, relative_path)
+        # If the application is not frozen, use the relative path
         return os.path.join(os.path.abspath("."), relative_path)
 
     @staticmethod
