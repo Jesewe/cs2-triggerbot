@@ -1,0 +1,124 @@
+QMainWindow {
+    background-color: #1A1A1A;
+    color: #E0E0E0;
+    font-family: Arial;
+    font-size: 15px;
+}
+
+QLabel {
+    color: #F0F0F0;
+    font-weight: bold;
+}
+
+QLineEdit,
+QComboBox {
+    background-color: #2C2C2C;
+    color: #E0E0E0;
+    border: 1px solid #444444;
+    padding: 5px;
+    border-radius: 5px;
+}
+
+QTextEdit {
+    background-color: #2C2C2C;
+    color: #E0E0E0;
+    border: 1px solid #444444;
+    border-radius: 5px;
+    padding: 10px;
+    font-family: Consolas, monospace;
+    font-size: 14px;
+}
+
+QTextEdit:focus {
+    border: 1px solid #D5006D;
+}
+
+QPushButton {
+    background-color: #333333;
+    color: #D5006D;
+    font-weight: bold;
+    padding: 8px 15px;
+    border-radius: 15px;
+    border: 1px solid #555555;
+}
+
+QPushButton:hover {
+    background-color: #444444;
+}
+
+QTabWidget::pane {
+    border: 1px solid #444444;
+    background-color: #1A1A1A;
+    border-radius: 5px;
+}
+
+QTabBar::tab {
+    background-color: #2C2C2C;
+    color: #E0E0E0;
+    padding: 8px 15px;
+    border: 1px solid #444444;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    margin: 2px;
+    font-weight: bold;
+}
+
+QTabBar::tab:selected {
+    background-color: #444444;
+    color: #D5006D;
+    border-bottom: 2px solid #D5006D;
+}
+
+QTabBar::tab:hover {
+    background-color: #333333;
+}
+
+QCheckBox {
+    color: #E0E0E0;
+    padding: 5px;
+}
+
+QCheckBox::indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    border: 1px solid #444444;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #D5006D;
+    border: 1px solid #D5006D;
+}
+
+QCheckBox::indicator:unchecked {
+    background-color: #2C2C2C;
+    border: 1px solid #444444;
+}
+
+QScrollBar:vertical {
+    background-color: #2C2C2C;
+    width: 15px;
+    margin: 15px 3px 15px 3px;
+    border: 1px solid #444444;
+    border-radius: 7px;
+}
+
+QScrollBar::handle:vertical {
+    background-color: #D5006D;
+    min-height: 20px;
+    border-radius: 7px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background-color: #E91E63;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    background: none;
+}
+
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:vertical {
+    background: none;
+}
