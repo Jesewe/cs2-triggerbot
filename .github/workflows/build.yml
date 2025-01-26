@@ -37,7 +37,7 @@ jobs:
 
     - name: Package Application
       run: |
-        pyinstaller --noconfirm --onefile --windowed --icon "src\img\icon.ico" --name "CS2.Triggerbot" --version-file "version.txt" --add-data "classes;classes/" --add-data "src/img/*;src/img" "main.py"
+        pyinstaller --noconfirm --onefile --windowed --icon "src\img\icon.ico" --name "CS2.Triggerbot" --version-file "version.txt" --add-data "classes;classes/" --add-data "src/img/*;src/img" --add-data "src/*;src" "main.py"
 
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v4
