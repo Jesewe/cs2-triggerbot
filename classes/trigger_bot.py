@@ -13,7 +13,7 @@ mouse = Controller()
 logger = Logger.get_logger()
 
 class CS2TriggerBot:
-    VERSION = "v1.2.2"
+    VERSION = "v1.2.3"
 
     def __init__(self, offsets: dict, client_data: dict) -> None:
         """
