@@ -19,6 +19,12 @@ QComboBox {
     border-radius: 5px;
 }
 
+QLineEdit:focus,
+QComboBox:focus {
+    border: 1px solid #D5006D;
+    background-color: #333333;
+}
+
 QTextEdit {
     background-color: #2C2C2C;
     color: #E0E0E0;
@@ -31,6 +37,7 @@ QTextEdit {
 
 QTextEdit:focus {
     border: 1px solid #D5006D;
+    background-color: #333333;
 }
 
 QPushButton {
@@ -46,20 +53,32 @@ QPushButton:hover {
     background-color: #444444;
 }
 
+QPushButton:pressed {
+    background-color: #222222;
+    border: 1px solid #D5006D;
+}
+
+QPushButton:disabled {
+    background-color: #1F1F1F;
+    color: #666666;
+    border: 1px solid #333333;
+}
+
 QTabWidget::pane {
     border: 1px solid #444444;
     background-color: #1A1A1A;
-    border-radius: 5px;
+    border-radius: 6px;
+    padding: 4px;
 }
 
 QTabBar::tab {
     background-color: #2C2C2C;
     color: #E0E0E0;
-    padding: 8px 15px;
+    padding: 10px 18px;
     border: 1px solid #444444;
-    border-top-left-radius: 5px;
-    border-top-right-radius: 5px;
-    margin: 2px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    margin: 2px 3px;
     font-weight: bold;
 }
 
@@ -67,32 +86,54 @@ QTabBar::tab:selected {
     background-color: #444444;
     color: #D5006D;
     border-bottom: 2px solid #D5006D;
+    font-weight: bold;
 }
 
 QTabBar::tab:hover {
-    background-color: #333333;
+    background-color: #3A3A3A;
+}
+
+QTabBar::tab:disabled {
+    background-color: #1F1F1F;
+    color: #666666;
+    border: 1px solid #333333;
+}
+
+QTabBar::tab:selected:hover {
+    background-color: #505050;
 }
 
 QCheckBox {
     color: #E0E0E0;
     padding: 5px;
+    font-size: 14px;
 }
 
 QCheckBox::indicator {
     width: 20px;
     height: 20px;
     border-radius: 10px;
-    border: 1px solid #444444;
+    border: 2px solid #444444;
+    background-color: #2C2C2C;
 }
 
 QCheckBox::indicator:checked {
     background-color: #D5006D;
-    border: 1px solid #D5006D;
+    border: 2px solid #D5006D;
 }
 
-QCheckBox::indicator:unchecked {
-    background-color: #2C2C2C;
-    border: 1px solid #444444;
+QCheckBox::indicator:unchecked:hover {
+    border: 2px solid #666666;
+}
+
+QCheckBox::indicator:checked:hover {
+    background-color: #C4005F;
+    border: 2px solid #C4005F;
+}
+
+QCheckBox::indicator:disabled {
+    background-color: #1F1F1F;
+    border: 2px solid #333333;
 }
 
 QScrollBar:vertical {
