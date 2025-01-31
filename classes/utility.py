@@ -137,11 +137,15 @@ class Utility:
     @staticmethod
     def resource_path(relative_path):
         """Returns the path to a resource that supports both normal startup and startup from .exe."""
-        if hasattr(sys, '_MEIPASS'):
-            # If the application is frozen, use the MEIPASS path
-            return os.path.join(sys._MEIPASS, relative_path)
-        # If the application is not frozen, use the relative path
-        return os.path.join(os.path.abspath("."), relative_path)
+        try:
+            if hasattr(sys, '_MEIPASS'):
+                # If the application is frozen, use the MEIPASS path
+                return os.path.join(sys._MEIPASS, relative_path)
+            # If the application is not frozen, use the relative path
+            return os.path.join(os.path.abspath("."), relative_path)
+        except Exception as e:
+            logger.error(f"Failed to get resource path: {e}")
+            return None
 
     @staticmethod
     def is_game_active():

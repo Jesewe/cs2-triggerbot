@@ -1,7 +1,7 @@
 import threading, os, sys
 
 from PyQt6.QtCore import Qt, QTimer, QUrl, QSize
-from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox, QFormLayout, QTabWidget, QDialog
+from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit, QCheckBox, QVBoxLayout, QHBoxLayout, QWidget, QMessageBox, QFormLayout, QTabWidget, QSpacerItem, QSizePolicy
 from PyQt6.QtGui import QIcon, QDesktopServices
 
 from watchdog.observers import Observer
@@ -23,7 +23,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.repo_url = "github.com/Jesewe/cs2-triggerbot"
         self.setWindowTitle(f"CS2 TriggerBot | {self.repo_url}")
-        self.setFixedSize(700, 450)
+        self.setFixedSize(700, 500)
 
         # Apply custom styles for the UI
         stylesheet_path = Utility.resource_path('src/styles.css')
@@ -196,6 +196,9 @@ class MainWindow(QMainWindow):
         # Input fields for configuration
         self.trigger_key_input = QLineEdit(self.bot.config['Settings'].get('TriggerKey', 'default_value'))
         self.trigger_key_input.setToolTip("Set the key to activate the trigger bot (e.g., 'x' or 'x1' for mouse button 4, 'x2' for mouse button 5).")
+        self.toggle_mode_checkbox = QCheckBox("Toggle Mode")
+        self.toggle_mode_checkbox.setChecked(self.bot.config['Settings'].get('ToggleMode', False))
+        self.toggle_mode_checkbox.setToolTip("If checked, the trigger will toggle on/off with the trigger key.")
         self.min_delay_input = QLineEdit(str(self.bot.config['Settings'].get('ShotDelayMin', 0.01)), self)
         self.min_delay_input.setToolTip("Minimum delay between shots in seconds (e.g., 0.01).")
         self.max_delay_input = QLineEdit(str(self.bot.config['Settings'].get('ShotDelayMax', 0.1)), self)
@@ -206,27 +209,34 @@ class MainWindow(QMainWindow):
         self.attack_teammates_checkbox.setChecked(self.bot.config['Settings'].get('AttackOnTeammates', False))
         self.attack_teammates_checkbox.setToolTip("If checked, the bot will attack teammates as well.")
 
-        # Add fields to the form layout
-        form_layout.addRow("Trigger Key:", self.trigger_key_input)
-        form_layout.addRow("Min Shot Delay:", self.min_delay_input)
-        form_layout.addRow("Max Shot Delay:", self.max_delay_input)
-        form_layout.addRow("Post Shot Delay:", self.post_shot_delay_input)
-        form_layout.addRow(self.attack_teammates_checkbox)
-
         # Save button
         save_button = QPushButton("Save Config")
         save_button.setToolTip("Save the configuration settings to the configuration file.")
         save_button.clicked.connect(self.save_general_settings)
-        form_layout.addRow(save_button)
 
         # Open Config Directory button
         open_config_button = QPushButton("Open Config Directory")
         open_config_button.setToolTip("Open the directory where the configuration file is stored.")
         open_config_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(ConfigManager.CONFIG_DIRECTORY)))
-        form_layout.addRow(open_config_button)
 
-        # Add spacing between form elements
-        form_layout.setSpacing(10)
+        # Checkbox layout
+        checkbox_layout = QHBoxLayout()
+        checkbox_layout.addWidget(self.toggle_mode_checkbox)
+        checkbox_layout.addWidget(self.attack_teammates_checkbox)
+
+        # Button layout
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(save_button)
+        button_layout.addWidget(open_config_button)
+
+        # Add components to the form layout
+        form_layout.addRow("Trigger Key:", self.trigger_key_input)
+        form_layout.addRow(checkbox_layout)
+        form_layout.addRow("Min Shot Delay:", self.min_delay_input)
+        form_layout.addRow("Max Shot Delay:", self.max_delay_input)
+        form_layout.addRow("Post Shot Delay:", self.post_shot_delay_input)
+        form_layout.addItem(QSpacerItem(15, 15, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
+        form_layout.addRow(button_layout)
 
         general_settings_tab.setLayout(form_layout)
         self.tabs.addTab(general_settings_tab, "General Settings")
@@ -377,6 +387,7 @@ class MainWindow(QMainWindow):
         try:
             self.validate_inputs()
             self.bot.config['Settings']['TriggerKey'] = self.trigger_key_input.text()
+            self.bot.config['Settings']['ToggleMode'] = self.toggle_mode_checkbox.isChecked()
             self.bot.config['Settings']['AttackOnTeammates'] = self.attack_teammates_checkbox.isChecked()
             self.bot.config['Settings']['ShotDelayMin'] = float(self.min_delay_input.text())
             self.bot.config['Settings']['ShotDelayMax'] = float(self.max_delay_input.text())

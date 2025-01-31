@@ -13,7 +13,7 @@ mouse = Controller()
 logger = Logger.get_logger()
 
 class CS2TriggerBot:
-    VERSION = "v1.2.3"
+    VERSION = "v1.2.4"
 
     def __init__(self, offsets: dict, client_data: dict) -> None:
         """
@@ -25,6 +25,7 @@ class CS2TriggerBot:
         self.pm, self.client_base = None, None
         self.is_running, self.stop_event = False, threading.Event()
         self.trigger_active = False
+        self.toggle_state = False 
         self.update_config(self.config)
 
         # Initialize offsets and configuration settings
@@ -41,6 +42,7 @@ class CS2TriggerBot:
         """Load and apply configuration settings."""
         settings = self.config['Settings']
         self.trigger_key = settings['TriggerKey']
+        self.toggle_mode = settings['ToggleMode']
         self.shot_delay_min = settings['ShotDelayMin']
         self.shot_delay_max = settings['ShotDelayMax']
         self.post_shot_delay = settings['PostShotDelay']
@@ -65,12 +67,7 @@ class CS2TriggerBot:
     def update_config(self, config):
         """Update the configuration settings."""
         self.config = config
-        self.trigger_key = self.config['Settings']['TriggerKey']
-        self.shot_delay_min = self.config['Settings']['ShotDelayMin']
-        self.shot_delay_max = self.config['Settings']['ShotDelayMax']
-        self.post_shot_delay = self.config['Settings']['PostShotDelay']
-        self.attack_on_teammates = self.config['Settings']['AttackOnTeammates']
-        self.is_mouse_trigger = self.trigger_key in ["x1", "x2"]
+        self.load_configuration()
 
     def on_key_press(self, key) -> None:
         """Handle key press events."""
@@ -78,15 +75,17 @@ class CS2TriggerBot:
             try:
                 # Check if the key pressed is the trigger key
                 if hasattr(key, 'char') and key.char == self.trigger_key:
-                    self.trigger_active = True
+                    if self.toggle_mode:
+                        self.toggle_state = not self.toggle_state
+                    else:
+                        self.trigger_active = True
             except AttributeError:
                 pass
 
     def on_key_release(self, key) -> None:
         """Handle key release events."""
-        if not self.is_mouse_trigger:
+        if not self.is_mouse_trigger and not self.toggle_mode:
             try:
-                # Check if the key released is the trigger key
                 if hasattr(key, 'char') and key.char == self.trigger_key:
                     self.trigger_active = False
             except AttributeError:
@@ -95,7 +94,10 @@ class CS2TriggerBot:
     def on_mouse_click(self, x, y, button, pressed) -> None:
         """Handle mouse click events."""
         if self.is_mouse_trigger and button == Button[self.trigger_key]:
-            self.trigger_active = pressed
+            if self.toggle_mode and pressed:
+                self.toggle_state = not self.toggle_state
+            else:
+                self.trigger_active = pressed
 
     def initialize_pymem(self) -> bool:
         """Attach pymem to the game process."""
@@ -184,13 +186,18 @@ class CS2TriggerBot:
                 if not Utility.is_game_active():
                     time.sleep(0.05)
                     continue
-                # Check if the trigger is active
-                if (self.is_mouse_trigger and self.trigger_active) or \
-                    (not self.is_mouse_trigger and keyboard.is_pressed(self.trigger_key)):
-                    self.perform_fire_logic()
+
+                if self.toggle_mode:
+                    if self.toggle_state:
+                        self.perform_fire_logic()
                 else:
-                    # Sleep to reduce CPU usage
-                    time.sleep(0.05)
+                    if self.is_mouse_trigger and self.trigger_active:
+                        self.perform_fire_logic()
+                    elif not self.is_mouse_trigger and keyboard.is_pressed(self.trigger_key):
+                        self.perform_fire_logic()
+                    
+                time.sleep(0.05)  # Sleep to reduce CPU usage
+
             except KeyboardInterrupt:
                 # Log if the TriggerBot is stopped by the user
                 logger.info("TriggerBot stopped by user.")
