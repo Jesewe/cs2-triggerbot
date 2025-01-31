@@ -37,7 +37,7 @@ class Logger:
         detailed_handler = logging.FileHandler(Logger.DETAILED_LOG_FILE, mode='w')
         detailed_handler.setLevel(logging.INFO)
         detailed_formatter = logging.Formatter(
-            fmt='[%(asctime)s %(levelname)s {%(module)s : %(funcName)s} (%(lineno)d) line ]: %(message)s',  # Detailed log message format.
+            fmt='[%(asctime)s %(levelname)s {%(module)s : %(funcName)s} (%(lineno)d)]: %(message)s',  # Detailed log message format.
             datefmt='%Y-%m-%d %H:%M:%S'  # Date format without milliseconds.
         )
         detailed_handler.setFormatter(detailed_formatter)

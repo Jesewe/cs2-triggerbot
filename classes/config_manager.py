@@ -20,6 +20,7 @@ class ConfigManager:
     DEFAULT_CONFIG = {
         "Settings": {
             "TriggerKey": "x",  # Default trigger key
+            "ToggleMode": False, # Whether to use toggle mode for the trigger
             "ShotDelayMin": 0.01,  # Minimum delay between shots in seconds
             "ShotDelayMax": 0.03,  # Maximum delay between shots in seconds
             "AttackOnTeammates": False,  # Whether to attack teammates
@@ -76,10 +77,10 @@ class ConfigManager:
                         if update_config(value, current[key]):
                             updated = True
                 return updated
-
+            # Update the configuration if any keys are missing
             if update_config(cls.DEFAULT_CONFIG, cls._config_cache):
                 cls.save_config(cls._config_cache, log_info=False)
-
+        # Return the loaded configuration
         return cls._config_cache
 
     @classmethod
