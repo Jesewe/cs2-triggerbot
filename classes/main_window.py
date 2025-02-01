@@ -129,16 +129,16 @@ class MainWindow(QMainWindow):
 
         # Status label
         self.status_label = QLabel("Bot Status: Inactive")
-        self.status_label.setStyleSheet("color: #FF0000; font-weight: bold; font-size: 14px;")
+        self.status_label.setStyleSheet("font-size: 16px; color: #FF0000; font-weight: bold;")
 
         # Last offsets update
         self.last_update_label = QLabel("Last offsets update: Fetching...")
-        self.last_update_label.setStyleSheet("font-size: 13px; font-style: italic;")
+        self.last_update_label.setStyleSheet("font-size: 16px; font-style: italic;")
         Utility.fetch_last_offset_update(self.last_update_label)
 
         # Quick start guide
         quick_start_label = QLabel("Quick Start Guide")
-        quick_start_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #D5006D;")
+        quick_start_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #D5006D;")
         quick_start_text = QLabel()
         quick_start_text.setText(
             "1. Open CS2 game and ensure it’s running.<br>"
@@ -146,19 +146,19 @@ class MainWindow(QMainWindow):
             "3. Press '<span style=\"color: #D5006D;\">Start Bot</span>' to activate.<br>"
             "4. Monitor bot status and logs in the '<span style=\"color: #D5006D;\">Logs</span>' tab."
         )
-        quick_start_text.setStyleSheet("font-size: 14px;")
+        quick_start_text.setStyleSheet("font-size: 16px;")
         quick_start_text.setTextFormat(Qt.TextFormat.RichText)
         quick_start_text.setWordWrap(True)
 
         # Additional information
         additional_info_label = QLabel("Additional Information")
-        additional_info_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #D5006D;")
+        additional_info_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #D5006D;")
         additional_info_text = QLabel()
         additional_info_text.setText(
             "For more details, visit our <a href=\"https://github.com/Jesewe/cs2-triggerbot\" style=\"color: #D5006D;\">GitHub repository</a> or join our <a href=\"https://t.me/cs2_jesewe\" style=\"color: #D5006D;\">Telegram channel</a>.<br>"
             "Make sure to read the <span style=\"color: #D5006D;\">FAQs</span> for common questions and troubleshooting."
         )
-        additional_info_text.setStyleSheet("font-size: 14px;")
+        additional_info_text.setStyleSheet("font-size: 16px;")
         additional_info_text.setTextFormat(Qt.TextFormat.RichText)
         additional_info_text.setOpenExternalLinks(True)
         additional_info_text.setWordWrap(True)
@@ -355,7 +355,7 @@ class MainWindow(QMainWindow):
         self.bot_thread.start()
 
         self.status_label.setText("Bot Status: Active")
-        self.status_label.setStyleSheet("color: #008000; font-weight: bold; font-size: 14px;")
+        self.status_label.setStyleSheet("font-size: 16px; color: #008000; font-weight: bold;")
 
     def stop_bot(self):
         """
@@ -375,7 +375,7 @@ class MainWindow(QMainWindow):
             self.bot_thread = None
 
         self.status_label.setText("Bot Status: Inactive")
-        self.status_label.setStyleSheet("color: #FF0000; font-weight: bold; font-size: 14px;")
+        self.status_label.setStyleSheet("font-size: 16px; color: #FF0000; font-weight: bold;")
 
     def save_general_settings(self):
         """

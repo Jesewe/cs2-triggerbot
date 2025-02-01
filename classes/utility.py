@@ -116,22 +116,22 @@ class Utility:
             
             # Update the label
             last_update_label.setText(f"Last offsets update: {formatted_timestamp} (UTC)")
-            last_update_label.setStyleSheet("color: #ffa420; font-weight: bold;")
+            last_update_label.setStyleSheet("font-size: 16px; color: #ffa420; font-weight: bold;")
         except requests.exceptions.HTTPError as e:
             if response.status_code == 403:
                 # Handle rate limit exceeded error
                 last_update_label.setText("Request limit exceeded. Please try again later.")
-                last_update_label.setStyleSheet("color: #0bda51; font-weight: bold;")
+                last_update_label.setStyleSheet("font-size: 16px; color: #0bda51; font-weight: bold;")
                 logger.error(f"Offset update fetch failed: {e} (403 Forbidden)")
             else:
                 # Handle other HTTP errors
                 last_update_label.setText("Error fetching last offsets update. Please check your internet connection or try again later.")
-                last_update_label.setStyleSheet("color: #0bda51; font-weight: bold;")
+                last_update_label.setStyleSheet("font-size: 16px; color: #0bda51; font-weight: bold;")
                 logger.error(f"Offset update fetch failed: {e}")
         except Exception as e:
             # Handle other exceptions
             last_update_label.setText("Error fetching last offsets update. Please check your internet connection or try again later.")
-            last_update_label.setStyleSheet("color: #0bda51; font-weight: bold;")
+            last_update_label.setStyleSheet("font-size: 16px; color: #0bda51; font-weight: bold;")
             logger.error(f"Offset update fetch failed: {e}")
 
     @staticmethod
