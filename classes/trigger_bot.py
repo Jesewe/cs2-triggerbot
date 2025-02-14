@@ -11,9 +11,11 @@ from classes.utility import Utility
 mouse = Controller()
 # Initialize the logger for consistent logging
 logger = Logger.get_logger()
+# Define the main loop sleep time for reduced CPU usage
+MAIN_LOOP_SLEEP = 0.05
 
 class CS2TriggerBot:
-    VERSION = "v1.2.4.1"
+    VERSION = "v1.2.4.2"
 
     def __init__(self, offsets: dict, client_data: dict) -> None:
         """
@@ -47,6 +49,7 @@ class CS2TriggerBot:
         self.shot_delay_max = settings['ShotDelayMax']
         self.post_shot_delay = settings['PostShotDelay']
         self.attack_on_teammates = settings['AttackOnTeammates']
+        # Check if the trigger key is a mouse button
         self.is_mouse_trigger = self.trigger_key in ["x1", "x2"]
 
     def initialize_offsets(self) -> None:
@@ -135,12 +138,15 @@ class CS2TriggerBot:
     def get_entity(self, index: int):
         """Retrieve an entity from the entity list."""
         try:
-            # Read the entity list and entry to retrieve the entity
-            ent_list = self.pm.read_longlong(self.client_base + self.dwEntityList)
-            ent_entry = self.pm.read_longlong(ent_list + 0x8 * (index >> 9) + 0x10)
-            return self.pm.read_longlong(ent_entry + 120 * (index & 0x1FF))
+            base = self.client_base + self.dwEntityList
+            # Cache the entity list pointer
+            ent_list = self.pm.read_longlong(base)
+            # Compute offsets using bitwise operations
+            list_offset = 0x8 * (index >> 9)
+            ent_entry = self.pm.read_longlong(ent_list + list_offset + 0x10)
+            entity_offset = 120 * (index & 0x1FF)
+            return self.pm.read_longlong(ent_entry + entity_offset)
         except Exception as e:
-            # Log any exceptions that may occur during the process
             logger.error(f"Error reading entity: {e}")
             return None
 
@@ -180,11 +186,15 @@ class CS2TriggerBot:
         self.is_running = True
         logger.info("TriggerBot started.")
 
+        # Define local variables for utility functions
+        is_game_active = Utility.is_game_active
+        sleep = time.sleep
+
         while not self.stop_event.is_set():
             try:
                 # Check if the game is active
-                if not Utility.is_game_active():
-                    time.sleep(0.05)
+                if not is_game_active():
+                    sleep(MAIN_LOOP_SLEEP)
                     continue
 
                 if self.toggle_mode:
@@ -195,16 +205,13 @@ class CS2TriggerBot:
                         self.perform_fire_logic()
                     elif not self.is_mouse_trigger and keyboard.is_pressed(self.trigger_key):
                         self.perform_fire_logic()
-                    
-                time.sleep(0.05)  # Sleep to reduce CPU usage
 
+                sleep(MAIN_LOOP_SLEEP)
             except KeyboardInterrupt:
-                # Log if the TriggerBot is stopped by the user
                 logger.info("TriggerBot stopped by user.")
                 self.stop()
             except Exception as e:
-                # Log any other exceptions that may occur during the process
-                logger.error(f"Unexpected error in start loop: {e}", exc_info=True)
+                logger.error(f"Unexpected error in main loop: {e}", exc_info=True)
 
     def stop(self) -> None:
         """

@@ -13,20 +13,24 @@ class ConfigFileChangeHandler(FileSystemEventHandler):
     Automatically updates the bot's configuration when the configuration file is modified.
     """
     def __init__(self, bot, debounce_interval=1.0):
-        """Initializes the file change handler with a reference to the bot instance."""
+        """
+        Initializes the file change handler with a reference to the bot instance.
+        Caches the configuration file path for efficiency.
+        """
         self.bot = bot
         self.debounce_interval = debounce_interval
         self.debounce_timer = None
+        self.config_path = ConfigManager.CONFIG_FILE
 
     def on_modified(self, event):
         """Called when a file or directory is modified."""
-        if os.path.exists(event.src_path) and os.path.exists(ConfigManager.CONFIG_FILE) and os.path.samefile(event.src_path, ConfigManager.CONFIG_FILE):
+        if event.src_path and os.path.exists(self.config_path) and os.path.samefile(event.src_path, self.config_path):
             if self.debounce_timer is not None:
                 self.debounce_timer.cancel()
-            self.debounce_timer = threading.Timer(self.debounce_interval, self.reload_config, [event.src_path])
+            self.debounce_timer = threading.Timer(self.debounce_interval, self.reload_config)
             self.debounce_timer.start()
 
-    def reload_config(self, src_path):
+    def reload_config(self):
         """Reloads the configuration file and updates the bot's configuration."""
         try:
             # Reload the updated configuration file
@@ -35,4 +39,4 @@ class ConfigFileChangeHandler(FileSystemEventHandler):
             self.bot.update_config(new_config)
         except Exception as e:
             # Log an error if the configuration update fails
-            logger.exception(f"Failed to reload configuration from {src_path}: {e}")
+            logger.exception("Failed to reload configuration from %s", self.config_path)

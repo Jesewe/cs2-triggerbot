@@ -1,4 +1,5 @@
 import os, json
+from pathlib import Path
 
 from classes.logger import Logger
 
@@ -14,7 +15,7 @@ class ConfigManager:
     # Directory where the configuration file is stored
     CONFIG_DIRECTORY = os.path.expanduser(r'~\AppData\Local\Requests\ItsJesewe')
     # Full path to the configuration file
-    CONFIG_FILE = os.path.join(CONFIG_DIRECTORY, 'config.json')
+    CONFIG_FILE = Path(CONFIG_DIRECTORY) / 'config.json'
 
     # Default configuration settings
     DEFAULT_CONFIG = {
@@ -37,73 +38,68 @@ class ConfigManager:
         Loads the configuration from the configuration file.
         - Creates the configuration directory and file with default settings if they do not exist.
         - Caches the configuration to avoid redundant file reads.
-
         Returns:
             dict: The configuration settings.
         """
-        # Return cached configuration if available
+        # Return cached configuration if available.
         if cls._config_cache is not None:
             return cls._config_cache
 
-        # Ensure the configuration directory exists
+        # Ensure the configuration directory exists.
         os.makedirs(cls.CONFIG_DIRECTORY, exist_ok=True)
 
-        # Check if the configuration file exists
-        if not os.path.exists(cls.CONFIG_FILE):
-            # If not, create the configuration file with default settings
-            logger.info(f"config.json not found at {cls.CONFIG_FILE}, creating a default configuration.")
+        # Create the configuration file with default settings if it doesn't exist.
+        if not Path(cls.CONFIG_FILE).exists():
+            logger.info("config.json not found at %s, creating a default configuration.", cls.CONFIG_FILE)
             cls.save_config(cls.DEFAULT_CONFIG, log_info=False)
             cls._config_cache = cls.DEFAULT_CONFIG
         else:
             try:
-                # Attempt to read and parse the configuration file
-                with open(cls.CONFIG_FILE, 'r') as config_file:
-                    cls._config_cache = json.load(config_file)
-                    logger.info("Loaded configuration.")
+                # Read and parse the configuration file.
+                cls._config_cache = json.loads(Path(cls.CONFIG_FILE).read_text())
+                logger.info("Loaded configuration.")
             except (json.JSONDecodeError, IOError) as e:
-                # Handle errors during configuration loading
-                logger.exception(f"Failed to load configuration: {e}")
+                logger.exception("Failed to load configuration: %s", e)
                 cls.save_config(cls.DEFAULT_CONFIG, log_info=False)
-                cls._config_cache = cls.DEFAULT_CONFIG
+                cls._config_cache = cls.DEFAULT_CONFIG.copy()
 
-            # Add missing keys from the default configuration
-            def update_config(default, current):
-                updated = False
-                for key, value in default.items():
-                    if key not in current:
-                        current[key] = value
-                        updated = True
-                    elif isinstance(value, dict):
-                        if update_config(value, current[key]):
-                            updated = True
-                return updated
-            # Update the configuration if any keys are missing
-            if update_config(cls.DEFAULT_CONFIG, cls._config_cache):
+            # Update the configuration if any keys are missing.
+            if cls._update_config(cls.DEFAULT_CONFIG, cls._config_cache):
                 cls.save_config(cls._config_cache, log_info=False)
-        # Return the loaded configuration
         return cls._config_cache
 
     @classmethod
-    def save_config(cls, config, log_info=True):
+    def _update_config(cls, default: dict, current: dict) -> bool:
+        """
+        Recursively update `current` with missing keys from `default`.
+        Returns True if any keys were added.
+        """
+        updated = False
+        for key, value in default.items():
+            if key not in current:
+                current[key] = value
+                updated = True
+            elif isinstance(value, dict) and isinstance(current.get(key), dict):
+                if cls._update_config(value, current[key]):
+                    updated = True
+        return updated
+
+    @classmethod
+    def save_config(cls, config: dict, log_info: bool = True):
         """
         Saves the configuration to the configuration file.
         Updates the cache with the new configuration.
-
         Args:
             config (dict): The configuration settings to save.
             log_info (bool): Whether to log a success message after saving.
         """
         cls._config_cache = config
         try:
-            # Ensure the configuration directory exists
-            if not os.path.exists(cls.CONFIG_DIRECTORY):
-                os.makedirs(cls.CONFIG_DIRECTORY)
-            
-            # Write the configuration to the file with pretty formatting for readability
-            with open(cls.CONFIG_FILE, 'w') as config_file:
-                json.dump(config, config_file, indent=4)
-                if log_info:
-                    logger.info(f"Saved configuration to {cls.CONFIG_FILE}.")
+            # Ensure the configuration directory exists.
+            Path(cls.CONFIG_DIRECTORY).mkdir(parents=True, exist_ok=True)
+            # Write the configuration to the file with pretty formatting for readability.
+            Path(cls.CONFIG_FILE).write_text(json.dumps(config, indent=4))
+            if log_info:
+                logger.info("Saved configuration to %s.", cls.CONFIG_FILE)
         except IOError as e:
-            # Log errors that occur during the save process
-            logger.exception(f"Failed to save configuration: {e}")
+            logger.exception("Failed to save configuration: %s", e)
