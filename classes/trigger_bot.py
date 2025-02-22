@@ -1,4 +1,4 @@
-import threading, time, random, pymem, pymem.process, keyboard
+import threading, time, random, pymem, pymem.process, keyboard, winsound
 
 from pynput.mouse import Controller, Button, Listener as MouseListener
 from pynput.keyboard import Listener as KeyboardListener
@@ -15,7 +15,7 @@ logger = Logger.get_logger()
 MAIN_LOOP_SLEEP = 0.05
 
 class CS2TriggerBot:
-    VERSION = "v1.2.4.2"
+    VERSION = "v1.2.4.3"
 
     def __init__(self, offsets: dict, client_data: dict) -> None:
         """
@@ -72,6 +72,18 @@ class CS2TriggerBot:
         self.config = config
         self.load_configuration()
 
+    def play_toggle_sound(self, state: bool) -> None:
+        """Play a sound when the toggle key is pressed."""
+        try:
+            if state:
+                # Sound for activation: frequency 1000 Hz, duration 200 ms
+                winsound.Beep(1000, 200)
+            else:
+                # Sound for deactivation: frequency 500 Hz, duration 200 ms
+                winsound.Beep(500, 200)
+        except Exception as e:
+            logger.error("Error playing toggle sound: {e}")
+
     def on_key_press(self, key) -> None:
         """Handle key press events."""
         if not self.is_mouse_trigger:
@@ -80,6 +92,7 @@ class CS2TriggerBot:
                 if hasattr(key, 'char') and key.char == self.trigger_key:
                     if self.toggle_mode:
                         self.toggle_state = not self.toggle_state
+                        self.play_toggle_sound(self.toggle_state)
                     else:
                         self.trigger_active = True
             except AttributeError:
@@ -99,6 +112,7 @@ class CS2TriggerBot:
         if self.is_mouse_trigger and button == Button[self.trigger_key]:
             if self.toggle_mode and pressed:
                 self.toggle_state = not self.toggle_state
+                self.play_toggle_sound(self.toggle_state)
             else:
                 self.trigger_active = pressed
 

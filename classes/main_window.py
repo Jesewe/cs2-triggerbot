@@ -425,10 +425,23 @@ class MainWindow(QMainWindow):
         Appends new log entries since the last read position to the log display.
         """
         try:
+            # Check the current size of the log file.
+            file_size = os.path.getsize(Logger.LOG_FILE)
+            
+            # If the file has been truncated or rotated, reset the position.
+            if file_size < self.last_log_position:
+                self.last_log_position = 0
+            
+            # If there's no new content, exit early.
+            if self.last_log_position == file_size:
+                return
+            
             with open(Logger.LOG_FILE, 'r') as log_file:
                 log_file.seek(self.last_log_position)
                 new_logs = log_file.read()
+                # Update the last read position.
                 self.last_log_position = log_file.tell()
+                
                 if new_logs:
                     self.log_output.insertPlainText(new_logs)
                     self.log_output.ensureCursorVisible()
