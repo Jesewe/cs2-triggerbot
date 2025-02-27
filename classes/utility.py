@@ -1,13 +1,52 @@
-import os, json, requests, psutil, sys
+import os, json, requests, psutil, sys, subprocess
 import pygetwindow as gw
 
 from packaging import version
 from dateutil.parser import parse as parse_date
 
+from PyQt6.QtWidgets import QDialog, QProgressBar, QMessageBox, QVBoxLayout
+from PyQt6.QtCore import QThread, pyqtSignal
+
 from classes.logger import Logger
 
 # Initialize the logger for consistent logging
 logger = Logger.get_logger()
+
+class UpdateDownloader(QThread):
+    # Emits progress as an integer (0-100)
+    progress_signal = pyqtSignal(int)
+    # Emits a finished signal with a success flag and either file path or error message
+    finished_signal = pyqtSignal(bool, str)
+
+    def __init__(self, download_url, target_path, parent=None):
+        super().__init__(parent)
+        self.download_url = download_url
+        self.target_path = target_path
+
+    def run(self):
+        try:
+            response = requests.get(self.download_url, stream=True)
+            response.raise_for_status()
+            total_length = response.headers.get('content-length')
+            if total_length is None:
+                # If no content-length header, download all at once.
+                with open(self.target_path, 'wb') as f:
+                    f.write(response.content)
+                self.progress_signal.emit(100)
+            else:
+                total_length = int(total_length)
+                downloaded = 0
+                chunk_size = 8192
+                with open(self.target_path, 'wb') as f:
+                    for data in response.iter_content(chunk_size=chunk_size):
+                        if data:
+                            f.write(data)
+                            downloaded += len(data)
+                            progress = int(100 * downloaded / total_length)
+                            self.progress_signal.emit(progress)
+            self.finished_signal.emit(True, self.target_path)
+        except Exception as e:
+            self.finished_signal.emit(False, str(e))
 
 class Utility:
     @staticmethod
@@ -93,6 +132,25 @@ class Utility:
         except Exception as e:
             # Log any other exceptions that may occur
             logger.error(f"An unexpected error occurred during update check: {e}")
+            return None
+        
+    @staticmethod
+    def get_latest_exe_download_url():
+        """
+        Retrieves the direct download URL for the 'CS2.Triggerbot.exe' asset
+        from the latest GitHub release.
+        """
+        try:
+            response = requests.get("https://api.github.com/repos/Jesewe/cs2-triggerbot/releases/latest")
+            response.raise_for_status()
+            release = response.json()
+            for asset in release.get("assets", []):
+                if asset.get("name") == "CS2.Triggerbot.exe":
+                    return asset.get("browser_download_url")
+            logger.error("Executable asset not found in the latest release.")
+            return None
+        except Exception as e:
+            logger.error("Error getting update asset URL: " + str(e))
             return None
 
     @staticmethod
