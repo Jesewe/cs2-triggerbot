@@ -2,7 +2,7 @@ keyboard==0.13.5
 packaging==24.2
 psutil==7.0.0
 pymem==1.14.0
-pynput==1.7.7
+pynput==1.7.8
 PyQt6==6.8.1
 PyQt6_sip==13.10.0
 python_dateutil==2.9.0.post0
