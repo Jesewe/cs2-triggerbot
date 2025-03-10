@@ -6,7 +6,7 @@ pynput==1.7.8
 PyQt6==6.8.1
 PyQt6_sip==13.10.0
 python_dateutil==2.9.0.post0
-pywin32==308
+pywin32==309
 Requests==2.32.3
 watchdog==6.0.0
 PyGetWindow==0.0.9
