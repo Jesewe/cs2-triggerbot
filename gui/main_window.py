@@ -1,5 +1,4 @@
-import os
-import threading
+import os, threading
 
 from PyQt6.QtCore import Qt, QTimer, QUrl, QSize
 from PyQt6.QtWidgets import (QMainWindow, QPushButton, QLabel, QLineEdit, QTextEdit,
@@ -62,12 +61,6 @@ class MainWindow(QMainWindow):
         container = QWidget()
         container.setLayout(self.main_layout)
         self.setCentralWidget(container)
-
-        # Setup periodic log updates.
-        self.last_log_position = 0
-        self.log_timer = QTimer(self)
-        self.log_timer.timeout.connect(self.update_log_output)
-        self.log_timer.start(1000)  # Update logs every second
 
         # Initialize file watcher for configuration changes.
         self.init_config_watcher()
@@ -223,77 +216,4 @@ class MainWindow(QMainWindow):
             self.bot_thread = None
 
         self.status_label.setText("Bot Status: Inactive")
-        self.status_label.setStyleSheet("font-size: 16px; color: #FF0000; font-weight: bold;")
-
-    def save_general_settings(self):
-        """
-        Saves the user's changes to the bot's configuration:
-        - Validates user inputs.
-        - Updates the bot's configuration with new values.
-        - Persists the updated configuration using the ConfigManager.
-        """
-        try:
-            self.validate_inputs()
-            settings = self.bot.config['Settings']
-            settings['TriggerKey'] = self.trigger_key_input.text().strip()
-            settings['ToggleMode'] = self.toggle_mode_checkbox.isChecked()
-            settings['AttackOnTeammates'] = self.attack_teammates_checkbox.isChecked()
-            settings['ShotDelayMin'] = float(self.min_delay_input.text())
-            settings['ShotDelayMax'] = float(self.max_delay_input.text())
-            settings['PostShotDelay'] = float(self.post_shot_delay_input.text())
-            ConfigManager.save_config(self.bot.config)
-            self.bot.update_config(self.bot.config)
-            QMessageBox.information(self, "Settings Saved", "Configuration has been successfully saved.")
-        except ValueError as e:
-            QMessageBox.critical(self, "Invalid Input", str(e))
-
-    def validate_inputs(self):
-        """
-        Validates user input fields in the General Settings tab.
-        Ensures all required fields have valid values.
-        """
-        trigger_key = self.trigger_key_input.text().strip()
-        if not trigger_key:
-            raise ValueError("Trigger key cannot be empty.")
-
-        try:
-            min_delay = float(self.min_delay_input.text().strip())
-            max_delay = float(self.max_delay_input.text().strip())
-            post_delay = float(self.post_shot_delay_input.text().strip())
-        except ValueError:
-            raise ValueError("Delay values must be valid numbers.")
-
-        if min_delay < 0 or max_delay < 0 or post_delay < 0:
-            raise ValueError("Delay values must be non-negative.")
-        if min_delay > max_delay:
-            raise ValueError("Minimum delay cannot be greater than maximum delay.")
-
-    def update_log_output(self):
-        """
-        Periodically updates the Logs tab with new log entries from the log file.
-        Appends new log entries since the last read position to the log display.
-        """
-        try:
-            # Check the current size of the log file.
-            file_size = os.path.getsize(Logger.LOG_FILE)
-            
-            # If the file has been truncated or rotated, reset the position.
-            if file_size < self.last_log_position:
-                self.last_log_position = 0
-            
-            # If there's no new content, exit early.
-            if self.last_log_position == file_size:
-                return
-            
-            with open(Logger.LOG_FILE, 'r') as log_file:
-                log_file.seek(self.last_log_position)
-                new_logs = log_file.read()
-                # Update the last read position.
-                self.last_log_position = log_file.tell()
-                
-                if new_logs:
-                    self.log_output.insertPlainText(new_logs)
-                    self.log_output.ensureCursorVisible()
-        except Exception as e:
-            self.log_output.append(f"Failed to read log file: {e}")
-            self.log_output.ensureCursorVisible()
+        self.status_label.setStyleSheet("font-size: 16px; color: #FF5252; font-weight: bold;")

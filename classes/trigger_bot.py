@@ -15,7 +15,7 @@ logger = Logger.get_logger()
 MAIN_LOOP_SLEEP = 0.05
 
 class CS2TriggerBot:
-    VERSION = "v1.2.4.4"
+    VERSION = "v1.2.4.5"
 
     def __init__(self, offsets: dict, client_data: dict) -> None:
         """
@@ -28,6 +28,7 @@ class CS2TriggerBot:
         self.is_running, self.stop_event = False, threading.Event()
         self.trigger_active = False
         self.toggle_state = False 
+        self.ent_list = None  # Cache for entity list pointer
         self.update_config(self.config)
 
         # Initialize offsets and configuration settings
@@ -152,12 +153,9 @@ class CS2TriggerBot:
     def get_entity(self, index: int):
         """Retrieve an entity from the entity list."""
         try:
-            base = self.client_base + self.dwEntityList
-            # Cache the entity list pointer
-            ent_list = self.pm.read_longlong(base)
-            # Compute offsets using bitwise operations
+            # Use cached entity list pointer
             list_offset = 0x8 * (index >> 9)
-            ent_entry = self.pm.read_longlong(ent_list + list_offset + 0x10)
+            ent_entry = self.pm.read_longlong(self.ent_list + list_offset + 0x10)
             entity_offset = 120 * (index & 0x1FF)
             return self.pm.read_longlong(ent_entry + entity_offset)
         except Exception as e:
@@ -196,6 +194,8 @@ class CS2TriggerBot:
         # Check if pymem is initialized and the client module is retrieved
         if not self.initialize_pymem() or not self.get_client_module():
             return
+        # Cache the entity list pointer
+        self.ent_list = self.pm.read_longlong(self.client_base + self.dwEntityList)
         # Set the running flag to True and log that the TriggerBot has started
         self.is_running = True
         logger.info("TriggerBot started.")

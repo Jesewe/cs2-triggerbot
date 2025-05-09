@@ -10,3 +10,4 @@ pywin32==310
 Requests==2.32.3
 watchdog==6.0.0
 PyGetWindow==0.0.9
+orjson==3.10.18

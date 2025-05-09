@@ -22,9 +22,6 @@
 
 CS2 TriggerBot is an automated tool designed for Counter-Strike 2 that assists with precise aiming by automatically triggering a mouse click when an enemy is detected in the player's crosshairs. The tool features a graphical user interface (GUI) for easy configuration.
 
-**Official Telegram Channel:**  
-Stay updated with the latest features, updates, and support for CS2 TriggerBot! Join our Telegram community here: [CS2 TriggerBot Updates](https://t.me/cs2_jesewe).
-
 ## Features
 
 - **Automatic Trigger**: Fires your weapon when an enemy is detected under your crosshair.
@@ -37,6 +34,8 @@ Stay updated with the latest features, updates, and support for CS2 TriggerBot! 
 - **Update Checker**: Automatically checks for updates from the GitHub repository.
 - **GUI Interface**: Control the bot's behavior and configuration using the included graphical interface.
 - **Dynamic Config Update**: Automatically detects and applies changes to the `config.json` file without restarting the bot.
+- **Share/Import Settings**: Export your settings to share with others or import settings from a file.
+- **Reset to Defaults**: Restore all settings to their default values via the GUI.
 
 ## Installation
 
@@ -97,7 +96,7 @@ Example `config.json`:
 
 1. Launch Counter-Strike 2.
 2. Run the TriggerBot using the command mentioned above or by launching the GUI version.
-3. Adjust settings like `Trigger Key`, `Toggle Mode`, `Shot Delay`, `Post Shot Delay` and `Attack Teammates` from the GUI.
+3. Adjust settings like `Trigger Key`, `Toggle Mode`, `Shot Delay`, `Post Shot Delay`, `Attack Teammates`, or use `Share/Import Settings` and `Reset to Defaults` from the GUI.
 4. The bot will automatically start functioning when the game is active.
 
 ## Troubleshooting
@@ -106,6 +105,7 @@ Example `config.json`:
 - **Errors with Offsets after Game Update:** After a Counter-Strike 2 game update, there may be issues with offsets, which can result in errors. In this case, please wait for updated offsets to be released.
 - **Could Not Open `cs2.exe`:** Make sure the game is running and that you have the necessary permissions.
 - **Unexpected Errors:** Check the log file located in the log directory for more details.
+- **Issues with Importing Settings:** Ensure the imported config.json file is valid and matches the expected format.
 
 ## Contributing
 

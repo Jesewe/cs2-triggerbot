@@ -1,4 +1,4 @@
-import os, json
+import os, zlib, base64, orjson
 from pathlib import Path
 
 from classes.logger import Logger
@@ -20,12 +20,12 @@ class ConfigManager:
     # Default configuration settings
     DEFAULT_CONFIG = {
         "Settings": {
-            "TriggerKey": "x",  # Default trigger key
-            "ToggleMode": False, # Whether to use toggle mode for the trigger
-            "ShotDelayMin": 0.01,  # Minimum delay between shots in seconds
-            "ShotDelayMax": 0.03,  # Maximum delay between shots in seconds
-            "AttackOnTeammates": False,  # Whether to attack teammates
-            "PostShotDelay": 0.1  # Delay after each shot
+            "TriggerKey": "x",              # Default trigger key
+            "ToggleMode": False,            # Whether to use toggle mode for the trigger
+            "ShotDelayMin": 0.01,           # Minimum delay between shots in seconds
+            "ShotDelayMax": 0.03,           # Maximum delay between shots in seconds
+            "AttackOnTeammates": False,     # Whether to attack teammates
+            "PostShotDelay": 0.1            # Delay after each shot
         }
     }
 
@@ -55,10 +55,11 @@ class ConfigManager:
             cls._config_cache = cls.DEFAULT_CONFIG
         else:
             try:
-                # Read and parse the configuration file.
-                cls._config_cache = json.loads(Path(cls.CONFIG_FILE).read_text())
+                # Read and parse the configuration file using orjson.
+                file_bytes = Path(cls.CONFIG_FILE).read_bytes()
+                cls._config_cache = orjson.loads(file_bytes)
                 logger.info("Loaded configuration.")
-            except (json.JSONDecodeError, IOError) as e:
+            except (orjson.JSONDecodeError, IOError) as e:
                 logger.exception("Failed to load configuration: %s", e)
                 cls.save_config(cls.DEFAULT_CONFIG, log_info=False)
                 cls._config_cache = cls.DEFAULT_CONFIG.copy()
@@ -97,8 +98,9 @@ class ConfigManager:
         try:
             # Ensure the configuration directory exists.
             Path(cls.CONFIG_DIRECTORY).mkdir(parents=True, exist_ok=True)
-            # Write the configuration to the file with pretty formatting for readability.
-            Path(cls.CONFIG_FILE).write_text(json.dumps(config, indent=4))
+            # Serialize and write the configuration to the file with pretty formatting.
+            config_bytes = orjson.dumps(config, option=orjson.OPT_INDENT_2)
+            Path(cls.CONFIG_FILE).write_bytes(config_bytes)
             if log_info:
                 logger.info("Saved configuration to %s.", cls.CONFIG_FILE)
         except IOError as e:
