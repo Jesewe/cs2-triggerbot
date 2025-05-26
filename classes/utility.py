@@ -85,54 +85,6 @@ class Utility:
             return None
 
     @staticmethod
-    def get_latest_exe_download_url():
-        """
-        Retrieves the direct download URL for the 'CS2.Triggerbot.exe' asset
-        from the latest GitHub release, parsing JSON with orjson.
-        """
-        try:
-            response = requests.get("https://api.github.com/repos/Jesewe/cs2-triggerbot/releases/latest")
-            response.raise_for_status()
-            data = orjson.loads(response.content)
-            for asset in data.get("assets", []):
-                if asset.get("name") == "CS2.Triggerbot.exe":
-                    return asset.get("browser_download_url")
-            logger.error("Executable asset not found in the latest release.")
-            return None
-        except Exception as e:
-            logger.error(f"Error getting update asset URL: {e}")
-            return None
-
-    @staticmethod
-    def fetch_last_offset_update(last_update_label):
-        """
-        Fetches the timestamp of the latest commit to the offsets repository.
-        """
-        try:
-            response = requests.get("https://api.github.com/repos/a2x/cs2-dumper/commits/main")
-            response.raise_for_status()
-            commit_data = orjson.loads(response.content)
-            commit_timestamp = commit_data["commit"]["committer"]["date"]
-
-            last_update_dt = parse_date(commit_timestamp)
-            formatted_timestamp = last_update_dt.strftime("%m/%d/%Y %H:%M:%S")
-            last_update_label.setText(f"Last offsets update: {formatted_timestamp} (UTC)")
-            last_update_label.setStyleSheet("font-size: 16px; color: #ffa420; font-weight: bold;")
-        except requests.exceptions.HTTPError as e:
-            if response.status_code == 403:
-                last_update_label.setText("Request limit exceeded. Please try again later.")
-                last_update_label.setStyleSheet("font-size: 16px; color: #0bda51; font-weight: bold;")
-                logger.error(f"Offset update fetch failed: {e} (403 Forbidden)")
-            else:
-                last_update_label.setText("Error fetching last offsets update. Please check your internet connection or try again later.")
-                last_update_label.setStyleSheet("font-size: 16px; color: #0bda51; font-weight: bold;")
-                logger.error(f"Offset update fetch failed: {e}")
-        except Exception as e:
-            last_update_label.setText("Error fetching last offsets update. Please check your internet connection or try again later.")
-            last_update_label.setStyleSheet("font-size: 16px; color: #0bda51; font-weight: bold;")
-            logger.error(f"Offset update fetch failed: {e}")
-
-    @staticmethod
     def resource_path(relative_path):
         """Returns the path to a resource, supporting both normal startup and frozen .exe."""
         try:

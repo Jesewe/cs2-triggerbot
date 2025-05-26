@@ -1,215 +1,340 @@
-import orjson, base64, zlib
+import customtkinter as ctk
 
-from PyQt6.QtWidgets import QWidget, QFormLayout, QLineEdit, QCheckBox, QPushButton, QHBoxLayout, QSpacerItem, QSizePolicy, QDialog, QVBoxLayout, QLabel, QTextEdit, QApplication
-from PyQt6.QtGui import QDesktopServices
-from PyQt6.QtCore import QUrl, Qt
-
-from classes.config_manager import ConfigManager
-from classes.utility import Utility
-
-class ShareImportDialog(QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Share/Import Settings")
-        self.setModal(True)
-        self.setFixedSize(400, 250)
-        self.init_ui()
-
-    def init_ui(self):
-        layout = QVBoxLayout()
-
-        # Label and text area for code input/output
-        self.label = QLabel("Enter code to import or generate code to share:")
-        self.code_input = QTextEdit()
-        self.code_input.setFixedHeight(100)
-
-        # Buttons
-        self.import_button = QPushButton("Import Settings")
-        self.export_button = QPushButton("Generate and Copy Code")
-        
-        # Button connections
-        self.import_button.clicked.connect(self.import_settings)
-        self.export_button.clicked.connect(self.export_settings)
-
-        # Add widgets to layout
-        layout.addWidget(self.label)
-        layout.addWidget(self.code_input)
-        layout.addWidget(self.import_button)
-        layout.addWidget(self.export_button)
-
-        self.setLayout(layout)
-
-    def export_settings(self):
-        # Gather current settings
-        settings = {
-            'TriggerKey': self.parent().trigger_key_input.text(),
-            'ToggleMode': self.parent().toggle_mode_checkbox.isChecked(),
-            'ShotDelayMin': float(self.parent().min_delay_input.text() or 0.01),
-            'ShotDelayMax': float(self.parent().max_delay_input.text() or 0.1),
-            'PostShotDelay': float(self.parent().post_shot_delay_input.text() or 0.1),
-            'AttackOnTeammates': self.parent().attack_teammates_checkbox.isChecked()
-        }
-        
-        # Serialize to JSON, compress with zlib, and encode to base64
-        json_bytes = orjson.dumps(settings)
-        compressed = zlib.compress(json_bytes)
-        encoded = base64.b64encode(compressed).decode()
-        code = f"TB-{encoded}"
-        
-        # Copy to clipboard using QApplication
-        clipboard = QApplication.instance().clipboard()
-        clipboard.setText(code)
-        
-        # Show in text area and notify user
-        self.code_input.setText(code)
-        self.label.setText("Code copied to clipboard!")
-
-    def import_settings(self):
-        code = self.code_input.toPlainText().strip()
-        if not code.startswith("TB-"):
-            self.label.setText("Invalid code format. Must start with 'TB-'")
-            return
-        
-        # Decode, decompress, and apply settings
-        try:
-            encoded = code[3:]
-            compressed = base64.b64decode(encoded)
-            json_bytes = zlib.decompress(compressed)
-            settings = orjson.loads(json_bytes)
-            
-            # Apply settings to UI
-            main_window = self.parent()
-            main_window.trigger_key_input.setText(settings.get('TriggerKey', ''))
-            main_window.toggle_mode_checkbox.setChecked(settings.get('ToggleMode', False))
-            main_window.min_delay_input.setText(str(settings.get('ShotDelayMin', 0.01)))
-            main_window.max_delay_input.setText(str(settings.get('ShotDelayMax', 0.1)))
-            main_window.post_shot_delay_input.setText(str(settings.get('PostShotDelay', 0.1)))
-            main_window.attack_teammates_checkbox.setChecked(settings.get('AttackOnTeammates', False))
-            
-            # Save the imported settings using the module function
-            save_general_settings(main_window)
-            
-            self.label.setText("Settings imported and saved successfully!")
-        except Exception as e:
-            self.label.setText(f"Error importing settings: {str(e)}")
-
-def init_general_settings_tab(main_window):
-    """
-    Sets up the General Settings tab for configuring the bot.
-    Creates input fields and buttons, then attaches them to the main window.
-    """
-    general_settings_tab = QWidget()
-    form_layout = QFormLayout()
-
-    settings = main_window.bot.config.get('Settings', {})
-
-    main_window.trigger_key_input = QLineEdit(settings.get('TriggerKey', ''))
-    main_window.trigger_key_input.setToolTip("Set the key to activate the trigger bot (e.g., 'x' or 'x1' for mouse button 4, 'x2' for mouse button 5).")
-    main_window.toggle_mode_checkbox = QCheckBox("Toggle Mode")
-    main_window.toggle_mode_checkbox.setChecked(settings.get('ToggleMode', False))
-    main_window.toggle_mode_checkbox.setToolTip("If checked, the trigger will toggle on/off with the trigger key.")
-    main_window.min_delay_input = QLineEdit(str(settings.get('ShotDelayMin', 0.01)))
-    main_window.min_delay_input.setToolTip("Minimum delay between shots in seconds (e.g., 0.01).")
-    main_window.max_delay_input = QLineEdit(str(settings.get('ShotDelayMax', 0.1)))
-    main_window.max_delay_input.setToolTip("Maximum delay between shots in seconds (must be >= Min Delay).")
-    main_window.post_shot_delay_input = QLineEdit(str(settings.get('PostShotDelay', 0.1)))
-    main_window.post_shot_delay_input.setToolTip("Delay after each shot in seconds (e.g., 0.1).")
-    main_window.attack_teammates_checkbox = QCheckBox("Attack Teammates")
-    main_window.attack_teammates_checkbox.setChecked(settings.get('AttackOnTeammates', False))
-    main_window.attack_teammates_checkbox.setToolTip("If checked, the bot will attack teammates as well.")
-
-    save_button = QPushButton("Save Config")
-    save_button.setToolTip("Save the configuration settings to the configuration file.")
-    save_button.clicked.connect(lambda: save_general_settings(main_window))
-    open_config_button = QPushButton("Open Config Directory")
-    open_config_button.setToolTip("Open the directory where the configuration file is stored.")
-    open_config_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(ConfigManager.CONFIG_DIRECTORY)))
-    share_import_button = QPushButton("Share/Import")
-    share_import_button.setToolTip("Open a dialog to share or import settings.")
-    share_import_button.clicked.connect(lambda: ShareImportDialog(main_window).exec())
-    reset_button = QPushButton("Reset to Defaults")
-    reset_button.setToolTip("Reset all settings to their default values.")
-    reset_button.clicked.connect(lambda: reset_to_defaults(main_window))
-
-    # First checkbox layout for Toggle Mode and Attack Teammates
-    checkbox_layout_1 = QHBoxLayout()
-    checkbox_layout_1.addWidget(main_window.toggle_mode_checkbox)
-    checkbox_layout_1.addWidget(main_window.attack_teammates_checkbox)
-
-    button_layout = QHBoxLayout()
-    button_layout.addWidget(save_button)
-    button_layout.addWidget(open_config_button)
-    button_layout.addWidget(share_import_button)
-    button_layout.addWidget(reset_button)
-
-    form_layout.addRow("Trigger Key:", main_window.trigger_key_input)
-    form_layout.addRow(checkbox_layout_1)
-    form_layout.addRow("Min Shot Delay:", main_window.min_delay_input)
-    form_layout.addRow("Max Shot Delay:", main_window.max_delay_input)
-    form_layout.addRow("Post Shot Delay:", main_window.post_shot_delay_input)
-    form_layout.addItem(QSpacerItem(15, 15, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
-    form_layout.addRow(button_layout)
-
-    general_settings_tab.setLayout(form_layout)
-    main_window.tabs.addTab(general_settings_tab, "General Settings")
-
-def save_general_settings(main_window):
-    """
-    Saves the user's changes to the bot's configuration:
-    - Validates user inputs.
-    - Updates the bot's configuration with new values.
-    - Persists the updated configuration using the ConfigManager.
-    """
-    try:
-        validate_inputs(main_window)
-        settings = main_window.bot.config['Settings']
-        settings['TriggerKey'] = main_window.trigger_key_input.text().strip()
-        settings['ToggleMode'] = main_window.toggle_mode_checkbox.isChecked()
-        settings['AttackOnTeammates'] = main_window.attack_teammates_checkbox.isChecked()
-        settings['ShotDelayMin'] = float(main_window.min_delay_input.text())
-        settings['ShotDelayMax'] = float(main_window.max_delay_input.text())
-        settings['PostShotDelay'] = float(main_window.post_shot_delay_input.text())
-        ConfigManager.save_config(main_window.bot.config)
-        main_window.bot.update_config(main_window.bot.config)
-        from PyQt6.QtWidgets import QMessageBox
-        QMessageBox.information(main_window, "Settings Saved", "Configuration has been successfully saved.")
-    except ValueError as e:
-        from PyQt6.QtWidgets import QMessageBox
-        QMessageBox.critical(main_window, "Invalid Input", str(e))
-
-def validate_inputs(main_window):
-    """
-    Validates user input fields in the General Settings tab.
-    Ensures all required fields have valid values.
-    """
-    trigger_key = main_window.trigger_key_input.text().strip()
-    if not trigger_key:
-        raise ValueError("Trigger key cannot be empty.")
-
-    try:
-        min_delay = float(main_window.min_delay_input.text().strip())
-        max_delay = float(main_window.max_delay_input.text().strip())
-        post_delay = float(main_window.post_shot_delay_input.text().strip())
-    except ValueError:
-        raise ValueError("Delay values must be valid numbers.")
-
-    if min_delay < 0 or max_delay < 0 or post_delay < 0:
-        raise ValueError("Delay values must be non-negative.")
-    if min_delay > max_delay:
-        raise ValueError("Minimum delay cannot be greater than maximum delay.")
+def populate_settings(main_window, frame):
+    """Populate the settings frame with configuration options."""
+    # Settings container
+    settings = ctk.CTkScrollableFrame(
+        frame,
+        fg_color="transparent"
+    )
+    settings.pack(fill="both", expand=True, padx=40, pady=40)
     
-def reset_to_defaults(main_window):
-    """
-    Resets all settings in the General Settings tab to their default values
-    as defined in ConfigManager.DEFAULT_CONFIG, then сохраняет их.
-    """
-    defaults = ConfigManager.DEFAULT_CONFIG['Settings']
+    # Page title with improved styling
+    title_frame = ctk.CTkFrame(settings, fg_color="transparent")
+    title_frame.pack(fill="x", pady=(0, 40))
+    
+    # Title with accent color
+    title_label = ctk.CTkLabel(
+        title_frame,
+        text="⚙️ Settings",
+        font=ctk.CTkFont(size=36, weight="bold"),
+        text_color=("#1f2937", "#ffffff")
+    )
+    title_label.pack(side="left")
+    
+    # Subtitle
+    subtitle_label = ctk.CTkLabel(
+        title_frame,
+        text="Configure your CS2 bot preferences",
+        font=ctk.CTkFont(size=16),
+        text_color=("#64748b", "#94a3b8")
+    )
+    subtitle_label.pack(side="left", padx=(20, 0), pady=(10, 0))
+    
+    # Settings sections with improved spacing
+    create_trigger_config_section(main_window, settings)
+    create_timing_settings_section(main_window, settings)
+    
+    # Action buttons with enhanced design
+    actions_frame = ctk.CTkFrame(
+        settings,
+        corner_radius=20,
+        fg_color=("#ffffff", "#1a1b23"),
+        border_width=2,
+        border_color=("#e2e8f0", "#2d3748")
+    )
+    actions_frame.pack(fill="x", pady=(40, 0))
+    
+    actions_content = ctk.CTkFrame(actions_frame, fg_color="transparent")
+    actions_content.pack(fill="x", padx=40, pady=40)
+    
+    # Header
+    header_frame = ctk.CTkFrame(actions_content, fg_color="transparent")
+    header_frame.pack(fill="x", pady=(0, 30))
+    
+    ctk.CTkLabel(
+        header_frame,
+        text="💾 Configuration Management",
+        font=ctk.CTkFont(size=24, weight="bold"),
+        text_color=("#1f2937", "#ffffff")
+    ).pack(side="left")
+    
+    ctk.CTkLabel(
+        header_frame,
+        text="Save, reset, or manage your configuration",
+        font=ctk.CTkFont(size=14),
+        text_color=("#64748b", "#94a3b8")
+    ).pack(side="right")
+    
+    # Buttons with improved layout
+    buttons_frame = ctk.CTkFrame(actions_content, fg_color="transparent")
+    buttons_frame.pack(fill="x")
+    
+    # Primary actions (left side)
+    primary_frame = ctk.CTkFrame(buttons_frame, fg_color="transparent")
+    primary_frame.pack(side="left")
+    
+    save_btn = ctk.CTkButton(
+        primary_frame,
+        text="💾 Save Settings",
+        command=main_window.save_settings,
+        width=160,
+        height=50,
+        corner_radius=16,
+        fg_color=("#22c55e", "#16a34a"),
+        hover_color=("#16a34a", "#15803d"),
+        font=ctk.CTkFont(size=16, weight="bold"),
+        border_width=2,
+        border_color=("#16a34a", "#15803d")
+    )
+    save_btn.pack(side="left", padx=(0, 15))
+    
+    reset_btn = ctk.CTkButton(
+        primary_frame,
+        text="🔄 Reset Defaults",
+        command=main_window.reset_to_defaults,
+        width=160,
+        height=50,
+        corner_radius=16,
+        fg_color=("#6b7280", "#4b5563"),
+        hover_color=("#4b5563", "#374151"),
+        font=ctk.CTkFont(size=16, weight="bold"),
+        border_width=2,
+        border_color=("#4b5563", "#374151")
+    )
+    reset_btn.pack(side="left")
+    
+    # Secondary actions (right side)
+    secondary_frame = ctk.CTkFrame(buttons_frame, fg_color="transparent")
+    secondary_frame.pack(side="right")
+    
+    config_btn = ctk.CTkButton(
+        secondary_frame,
+        text="📁 Open Config",
+        command=main_window.open_config_directory,
+        width=140,
+        height=50,
+        corner_radius=16,
+        fg_color=("#3b82f6", "#2563eb"),
+        hover_color=("#2563eb", "#1d4ed8"),
+        font=ctk.CTkFont(size=16, weight="bold"),
+        border_width=2,
+        border_color=("#2563eb", "#1d4ed8")
+    )
+    config_btn.pack(side="left", padx=(0, 15))
+    
+    import_btn = ctk.CTkButton(
+        secondary_frame,
+        text="📤 Share/Import",
+        command=main_window.show_share_import_dialog,
+        width=140,
+        height=50,
+        corner_radius=16,
+        fg_color=("#8b5cf6", "#7c3aed"),
+        hover_color=("#7c3aed", "#6d28d9"),
+        font=ctk.CTkFont(size=16, weight="bold"),
+        border_width=2,
+        border_color=("#7c3aed", "#6d28d9")
+    )
+    import_btn.pack(side="left")
 
-    main_window.trigger_key_input.setText(defaults.get('TriggerKey', ''))
-    main_window.toggle_mode_checkbox.setChecked(defaults.get('ToggleMode', False))
-    main_window.min_delay_input.setText(str(defaults.get('ShotDelayMin', 0.01)))
-    main_window.max_delay_input.setText(str(defaults.get('ShotDelayMax', 0.1)))
-    main_window.post_shot_delay_input.setText(str(defaults.get('PostShotDelay', 0.1)))
-    main_window.attack_teammates_checkbox.setChecked(defaults.get('AttackOnTeammates', False))
+def create_trigger_config_section(main_window, parent):
+    """Create trigger configuration section."""
+    section = ctk.CTkFrame(
+        parent,
+        corner_radius=20,
+        fg_color=("#ffffff", "#1a1b23"),
+        border_width=2,
+        border_color=("#e2e8f0", "#2d3748")
+    )
+    section.pack(fill="x", pady=(0, 30))
+    
+    # Section header
+    header = ctk.CTkFrame(section, fg_color="transparent")
+    header.pack(fill="x", padx=40, pady=(40, 30))
+    
+    ctk.CTkLabel(
+        header,
+        text="🎯 Trigger Configuration",
+        font=ctk.CTkFont(size=24, weight="bold"),
+        text_color=("#1f2937", "#ffffff")
+    ).pack(side="left")
+    
+    ctk.CTkLabel(
+        header,
+        text="Control how the trigger responds",
+        font=ctk.CTkFont(size=14),
+        text_color=("#64748b", "#94a3b8")
+    ).pack(side="right")
+    
+    # Settings items with improved layout
+    settings_list = [
+        ("Trigger Key", "entry", "trigger_key", "Key to activate trigger (e.g., 'x' or 'x1' for mouse button 4)"),
+        ("Toggle Mode", "checkbox", "toggle_mode", "Enable toggle mode instead of hold mode"),
+        ("Attack Teammates", "checkbox", "attack_teammates", "Allow triggering on teammates")
+    ]
+    
+    for i, (label_text, widget_type, key, description) in enumerate(settings_list):
+        item_frame = create_setting_item(
+            section, 
+            label_text, 
+            description, 
+            widget_type, 
+            key, 
+            main_window,
+            is_last=(i == len(settings_list) - 1)
+        )
 
-    save_general_settings(main_window)
+def create_timing_settings_section(main_window, parent):
+    """Create timing settings section."""
+    section = ctk.CTkFrame(
+        parent,
+        corner_radius=20,
+        fg_color=("#ffffff", "#1a1b23"),
+        border_width=2,
+        border_color=("#e2e8f0", "#2d3748")
+    )
+    section.pack(fill="x", pady=(0, 30))
+    
+    # Section header
+    header = ctk.CTkFrame(section, fg_color="transparent")
+    header.pack(fill="x", padx=40, pady=(40, 30))
+    
+    ctk.CTkLabel(
+        header,
+        text="⏱️ Timing Settings",
+        font=ctk.CTkFont(size=24, weight="bold"),
+        text_color=("#1f2937", "#ffffff")
+    ).pack(side="left")
+    
+    ctk.CTkLabel(
+        header,
+        text="Fine-tune shooting delays",
+        font=ctk.CTkFont(size=14),
+        text_color=("#64748b", "#94a3b8")
+    ).pack(side="right")
+    
+    # Settings items with improved layout
+    settings_list = [
+        ("Min Shot Delay", "entry", "min_delay", "Minimum delay between shots (seconds)"),
+        ("Max Shot Delay", "entry", "max_delay", "Maximum delay between shots (seconds)"),
+        ("Post Shot Delay", "entry", "post_delay", "Delay after shooting (seconds)")
+    ]
+    
+    for i, (label_text, widget_type, key, description) in enumerate(settings_list):
+        item_frame = create_setting_item(
+            section, 
+            label_text, 
+            description, 
+            widget_type, 
+            key, 
+            main_window,
+            is_last=(i == len(settings_list) - 1)
+        )
+
+def create_setting_item(parent, label_text, description, widget_type, key, main_window, is_last=False):
+    """Create a standardized setting item with improved styling."""
+    item_frame = ctk.CTkFrame(parent, fg_color="transparent")
+    item_frame.pack(fill="x", padx=40, pady=(0, 30 if not is_last else 40))
+    
+    # Main container with hover effect background
+    container = ctk.CTkFrame(
+        item_frame,
+        corner_radius=12,
+        fg_color=("#f8fafc", "#252830"),
+        border_width=1,
+        border_color=("#e2e8f0", "#374151")
+    )
+    container.pack(fill="x", pady=(0, 0))
+    
+    content_frame = ctk.CTkFrame(container, fg_color="transparent")
+    content_frame.pack(fill="x", padx=25, pady=25)
+    
+    # Left side - Label and description
+    label_frame = ctk.CTkFrame(content_frame, fg_color="transparent")
+    label_frame.pack(side="left", fill="x", expand=True)
+    
+    # Setting name
+    ctk.CTkLabel(
+        label_frame,
+        text=label_text,
+        font=ctk.CTkFont(size=16, weight="bold"),
+        text_color=("#1f2937", "#ffffff"),
+        anchor="w"
+    ).pack(fill="x", pady=(0, 4))
+    
+    # Description
+    ctk.CTkLabel(
+        label_frame,
+        text=description,
+        font=ctk.CTkFont(size=13),
+        text_color=("#64748b", "#94a3b8"),
+        anchor="w",
+        wraplength=400
+    ).pack(fill="x")
+    
+    # Right side - Widget
+    widget_frame = ctk.CTkFrame(content_frame, fg_color="transparent")
+    widget_frame.pack(side="right", padx=(30, 0))
+    
+    if widget_type == "entry":
+        widget = ctk.CTkEntry(
+            widget_frame,
+            width=220,
+            height=45,
+            corner_radius=12,
+            border_width=2,
+            border_color=("#d1d5db", "#374151"),
+            fg_color=("#ffffff", "#1f2937"),
+            text_color=("#1f2937", "#ffffff"),
+            font=ctk.CTkFont(size=14)
+        )
+        widget.pack()
+        
+        # Set values based on key
+        if key == "trigger_key":
+            main_window.trigger_key_entry = widget
+            widget.insert(0, main_window.bot.config.get('Settings', {}).get('TriggerKey', ''))
+        elif key == "min_delay":
+            main_window.min_delay_entry = widget
+            widget.insert(0, str(main_window.bot.config.get('Settings', {}).get('ShotDelayMin', 0.01)))
+        elif key == "max_delay":
+            main_window.max_delay_entry = widget
+            widget.insert(0, str(main_window.bot.config.get('Settings', {}).get('ShotDelayMax', 0.03)))
+        elif key == "post_delay":
+            main_window.post_shot_delay_entry = widget
+            widget.insert(0, str(main_window.bot.config.get('Settings', {}).get('PostShotDelay', 0.1)))
+    
+    elif widget_type == "checkbox":
+        if key == "toggle_mode":
+            main_window.toggle_mode_var = ctk.BooleanVar(value=main_window.bot.config.get('Settings', {}).get('ToggleMode', False))
+            widget = ctk.CTkCheckBox(
+                widget_frame,
+                text="",
+                variable=main_window.toggle_mode_var,
+                width=30,
+                height=30,
+                corner_radius=8,
+                border_width=2,
+                fg_color=("#D5006D", "#E91E63"),
+                hover_color=("#B8004A", "#C2185B"),
+                checkmark_color="#ffffff"
+            )
+        elif key == "attack_teammates":
+            main_window.attack_teammates_var = ctk.BooleanVar(value=main_window.bot.config.get('Settings', {}).get('AttackOnTeammates', False))
+            widget = ctk.CTkCheckBox(
+                widget_frame,
+                text="",
+                variable=main_window.attack_teammates_var,
+                width=30,
+                height=30,
+                corner_radius=8,
+                border_width=2,
+                fg_color=("#D5006D", "#E91E63"),
+                hover_color=("#B8004A", "#C2185B"),
+                checkmark_color="#ffffff"
+            )
+        
+        widget.pack()
+    
+    return item_frame

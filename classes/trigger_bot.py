@@ -15,7 +15,7 @@ logger = Logger.get_logger()
 MAIN_LOOP_SLEEP = 0.05
 
 class CS2TriggerBot:
-    VERSION = "v1.2.4.5"
+    VERSION = "v1.2.4.6"
 
     def __init__(self, offsets: dict, client_data: dict) -> None:
         """
