@@ -47,9 +47,10 @@ class MainWindow:
         # Create main window with better proportions
         self.root = ctk.CTk()
         self.root.title(f"CS2 TriggerBot {CS2TriggerBot.VERSION}")
-        self.root.geometry("1100x800")
+        self.root.geometry("1300x700")
         self.root.resizable(True, True)
-        self.root.minsize(900, 700)
+        self.root.minsize(1300, 700)
+        self.root.state('zoomed')
         
         # Set window icon
         self.root.iconbitmap(Utility.resource_path('src/img/icon.ico'))
@@ -77,9 +78,7 @@ class MainWindow:
         self.create_main_content()
 
     def create_modern_header(self):
-        """Create a sleek modern header with gradient --
-
-like appearance."""
+        """Create a sleek modern header with gradient like appearance."""
         # Main header container
         header_container = ctk.CTkFrame(
             self.root, 

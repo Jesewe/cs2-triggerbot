@@ -24,18 +24,22 @@ CS2 TriggerBot is an automated tool designed for Counter-Strike 2 that assists w
 
 ## Features
 
-- **Automatic Trigger**: Fires your weapon when an enemy is detected under your crosshair.
-- **Configurable Trigger Key**: Configure a keyboard key or mouse button (`x1` or `x2`) as the trigger via the GUI or `config.json` file.
-- **Configurable Delays**: Set minimum, maximum, and post-shot delays for more natural shooting behavior.
-- **Toggle Mode**: Enable this mode to keep the bot active after pressing the trigger key once, without holding it.
-- **Attack Teammates Option**: Toggle friendly fire with a checkbox in the GUI.
-- **Offsets and Client Data**: Automatically fetches the latest offsets and client data from remote sources.
-- **Logging**: Detailed logs are saved in `%LOCALAPPDATA%\Requests\ItsJesewe\crashes\tb_logs.log`.
-- **Update Checker**: Automatically checks for updates from the GitHub repository.
-- **GUI Interface**: Control the bot's behavior and configuration using the included graphical interface.
-- **Dynamic Config Update**: Automatically detects and applies changes to the `config.json` file without restarting the bot.
-- **Share/Import Settings**: Export your settings to share with others or import settings from a file.
-- **Reset to Defaults**: Restore all settings to their default values via the GUI.
+- **Automatic Trigger**: Fires when an enemy is detected under your crosshair.
+- **Configurable Trigger Key**: Set a keyboard key (e.g., `x`, `c`) or mouse button (`x1`, `x2`) via the GUI or `config.json`.
+- **Toggle Mode**: Activate the bot with a single key press instead of holding (configurable in the GUI).
+- **Configurable Delays**: Adjust minimum (`ShotDelayMin`), maximum (`ShotDelayMax`), and post-shot (`PostShotDelay`) delays for natural shooting behavior.
+- **Attack Teammates Option**: Toggle friendly fire via a checkbox in the GUI or `config.json`.
+- **Automatic Offset Fetching**: Retrieves the latest offsets and client data from remote sources on startup.
+- **Graphical User Interface (GUI)**:
+  - **Dashboard**: Monitor bot status, offset updates, and version info.
+  - **Settings Tab**: Configure trigger settings and delays with real-time validation.
+  - **Logs Tab**: View real-time logs from `%LOCALAPPDATA%\Requests\ItsJesewe\crashes\tb_logs.log`.
+  - **FAQ Tab**: Access answers to common questions.
+- **Dynamic Config Updates**: Detects and applies changes to `config.json` without restarting, thanks to `file_watcher.py`.
+- **Share/Import Settings**: Export settings as a compressed code or import from others via the GUI.
+- **Reset to Defaults**: Restore default settings with one click in the GUI.
+- **Update Checker**: Alerts you to new versions via GitHub releases.
+- **Logging**: Detailed logs saved to `%LOCALAPPDATA%\Requests\ItsJesewe\crashes\tb_logs.log` and a detailed version at `tb_detailed_logs.log`.
 
 ## Installation
 
@@ -86,18 +90,26 @@ Example `config.json`:
 }
 ```
 
+### Configuration Options
+
 - **TriggerKey**: The key or mouse button (`x`, `x1`, or `x2`) to activate the bot.
-- **ToggleMode**: If `true`, pressing the `TriggerKey` once activates the bot, and pressing it again deactivates it.
+- **ToggleMode**: `true` enables toggle mode; `false` requires holding the key.
 - **ShotDelayMin** and **ShotDelayMax**: Control the delay between shots to simulate natural behavior.
-- **PostShotDelay**: Set a delay after each shot for more controlled firing.
-- **AttackOnTeammates**: Set to `true` to enable friendly fire.
+- **PostShotDelay**: Delay after each shot (seconds).
+- **AttackOnTeammates**: `true` to enable friendly fire.
+
+**GUI Configuration:** Use the **Settings** tab to modify these values interactively. Changes are saved instantly and applied dynamically if `config.json` is edited externally.
 
 ## Usage
 
-1. Launch Counter-Strike 2.
-2. Run the TriggerBot using the command mentioned above or by launching the GUI version.
-3. Adjust settings like `Trigger Key`, `Toggle Mode`, `Shot Delay`, `Post Shot Delay`, `Attack Teammates`, or use `Share/Import Settings` and `Reset to Defaults` from the GUI.
-4. The bot will automatically start functioning when the game is active.
+1. **Launch Counter-Strike 2:** Ensure the game is running.
+2. **Start the Bot:** Run `main.py` or the executable, then click **Start Bot** in the Dashboard tab.
+3. **Configure Settings:** Adjust trigger key, delays, and other options in the **Settings** tab.
+4. **Monitor Activity:** Check the **Logs** tab for real-time updates or the **Dashboard** for status.
+5. **Toggle the Bot:** Use the configured trigger key to activate/deactivate (toggle mode) or hold to fire (hold mode).
+6. **Advanced Features:**
+   - **Share/Import:** Export/import settings via the Settings tab.
+   - **FAQ:** Refer to the FAQ tab for help.
 
 ## Troubleshooting
 
