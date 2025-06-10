@@ -7,7 +7,7 @@ PyQt6==6.9.0
 PyQt6_sip==13.10.0
 python_dateutil==2.9.0.post0
 pywin32==310
-Requests==2.32.3
+Requests==2.32.4
 watchdog==6.0.0
 PyGetWindow==0.0.9
 orjson==3.10.18
