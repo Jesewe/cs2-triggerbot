@@ -15,8 +15,6 @@ logger = Logger.get_logger()
 MAIN_LOOP_SLEEP = 0.05
 
 class CS2TriggerBot:
-    VERSION = "v1.2.4.6"
-
     def __init__(self, offsets: dict, client_data: dict) -> None:
         """
         Initialize the TriggerBot with offsets, configuration, and client data.
@@ -50,8 +48,16 @@ class CS2TriggerBot:
         self.shot_delay_max = settings['ShotDelayMax']
         self.post_shot_delay = settings['PostShotDelay']
         self.attack_on_teammates = settings['AttackOnTeammates']
+        
+        # Determine if the trigger key is a mouse button
+        self.mouse_button_map = {
+            "mouse3": Button.middle,
+            "mouse4": Button.x1,
+            "mouse5": Button.x2,
+        }
+
         # Check if the trigger key is a mouse button
-        self.is_mouse_trigger = self.trigger_key in ["x1", "x2"]
+        self.is_mouse_trigger = self.trigger_key in self.mouse_button_map
 
     def initialize_offsets(self) -> None:
         """Load memory offsets."""
@@ -64,7 +70,7 @@ class CS2TriggerBot:
             self.m_iHealth = classes["C_BaseEntity"]["fields"]["m_iHealth"]
             self.m_iTeamNum = classes["C_BaseEntity"]["fields"]["m_iTeamNum"]
             self.m_iIDEntIndex = classes["C_CSPlayerPawnBase"]["fields"]["m_iIDEntIndex"]
-            logger.info("Offsets have been initialized.")
+            logger.info("Offsets initialized successfully.")
         except KeyError as e:
             logger.error(f"Offset initialization error: Missing key {e}")
 
@@ -110,7 +116,11 @@ class CS2TriggerBot:
 
     def on_mouse_click(self, x, y, button, pressed) -> None:
         """Handle mouse click events."""
-        if self.is_mouse_trigger and button == Button[self.trigger_key]:
+        if not self.is_mouse_trigger:
+            return
+
+        expected_btn = self.mouse_button_map.get(self.trigger_key)
+        if button == expected_btn:
             if self.toggle_mode and pressed:
                 self.toggle_state = not self.toggle_state
                 self.play_toggle_sound(self.toggle_state)
@@ -187,7 +197,10 @@ class CS2TriggerBot:
                         time.sleep(self.post_shot_delay)
         except Exception as e:
             # Log any exceptions that may occur during the process
-            logger.error(f"Error in fire logic: {e}")
+            if "Could not read memory at" in str(e):
+                logger.error("Game was updated, new offsets are required. Please wait for the offsets update.")
+            else:
+                logger.error(f"Error in fire logic: {e}")
 
     def start(self) -> None:
         """Start the TriggerBot."""

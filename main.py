@@ -2,7 +2,7 @@ import sys
 
 from classes.logger import Logger
 from gui.main_window import MainWindow
-from classes.trigger_bot import CS2TriggerBot
+from classes.config_manager import ConfigManager
 
 def main():
     # Set up logging for the application.
@@ -10,7 +10,7 @@ def main():
     logger = Logger.get_logger()
 
     # Log the loaded version.
-    logger.info("Loaded version: %s", CS2TriggerBot.VERSION)
+    logger.info("Loaded version: %s", ConfigManager.VERSION)
 
     try:
         # Create and run the main application window.

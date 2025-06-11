@@ -4,118 +4,125 @@ from classes.logger import Logger
 
 def populate_logs(main_window, frame):
     """Populate the logs frame with a text widget to display logs."""
-    # Clear any existing widgets in the frame to prevent duplication
+    # Clear existing widgets to prevent duplication
     for widget in frame.winfo_children():
         widget.destroy()
 
-    # Container for all logs UI elements
+    # Container for all logs UI elements with padding
     logs_container = ctk.CTkFrame(
         frame,
         fg_color="transparent"
     )
-    logs_container.pack(fill="both", expand=True, padx=20, pady=20)
+    logs_container.pack(fill="both", expand=True, padx=24, pady=24)
 
-    # Header section
+    # Header section with fixed height
     header_frame = ctk.CTkFrame(
         logs_container,
         fg_color="transparent",
-        height=80
+        height=90
     )
-    header_frame.pack(fill="x", pady=(0, 24))
+    header_frame.pack(fill="x", pady=(0, 28))
     header_frame.pack_propagate(False)
 
-    # Title label
-    title_label = ctk.CTkLabel(
-        header_frame,
-        text="📋 Application Logs",
-        font=ctk.CTkFont(size=28, weight="bold"),
-        text_color=("#1a1a1a", "#ffffff")
-    )
-    title_label.pack(side="left", pady=20)
+    # Container for title and subtitle
+    title_container = ctk.CTkFrame(header_frame, fg_color="transparent")
+    title_container.pack(side="left", fill="y")
 
-    # Subtitle label
+    # Title label with bold styling
+    title_label = ctk.CTkLabel(
+        title_container,
+        text="📋 Application Logs",
+        font=("Chivo", 32, "bold"),
+        text_color=("#1f2937", "#f9fafb")
+    )
+    title_label.pack(anchor="w", pady=(8, 0))
+
+    # Subtitle providing context
     subtitle_label = ctk.CTkLabel(
-        header_frame,
+        title_container,
         text="Real-time application logs and system events",
-        font=ctk.CTkFont(size=14),
+        font=("Gambetta", 15),
         text_color=("#6b7280", "#9ca3af")
     )
-    subtitle_label.pack(side="left", padx=(16, 0), pady=20)
+    subtitle_label.pack(anchor="w", pady=(4, 0))
 
-    # Main logs card
+    # Main card for logs display
     logs_card = ctk.CTkFrame(
         logs_container,
-        corner_radius=12,
-        fg_color=("#ffffff", "#1a1b23"),
+        corner_radius=16,
+        fg_color=("#ffffff", "#18181b"),
         border_width=1,
-        border_color=("#e5e7eb", "#2d3748")
+        border_color=("#e2e8f0", "#27272a")
     )
     logs_card.pack(fill="both", expand=True)
 
-    # Logs header bar
+    # Header bar within the logs card
     logs_header = ctk.CTkFrame(
         logs_card,
-        corner_radius=0,
-        height=50,
-        fg_color=("#f8fafc", "#262626"),
+        height=60,
+        fg_color=("#f8fafc", "#27272a"),
         border_width=0
     )
-    logs_header.pack(fill="x", padx=1, pady=(1, 0))
+    logs_header.pack(fill="x", padx=2, pady=(2, 0))
     logs_header.pack_propagate(False)
 
+    # Content frame for header elements
     header_content = ctk.CTkFrame(logs_header, fg_color="transparent")
-    header_content.pack(fill="both", expand=True, padx=20, pady=12)
+    header_content.pack(fill="both", expand=True, padx=24, pady=16)
 
+    # Logs section title
     logs_title = ctk.CTkLabel(
         header_content,
         text="System Logs",
-        font=ctk.CTkFont(size=16, weight="bold"),
-        text_color=("#374151", "#e5e7eb")
+        font=("Chivo", 18, "bold"),
+        text_color=("#1f2937", "#f1f5f9")
     )
     logs_title.pack(side="left")
 
-    # Status indicator
+    # Status indicator frame
     status_frame = ctk.CTkFrame(header_content, fg_color="transparent")
     status_frame.pack(side="right")
 
+    # Status dot indicating live updates
     status_dot = ctk.CTkLabel(
         status_frame,
         text="●",
-        font=ctk.CTkFont(size=12),
-        text_color=("#10b981", "#10b981")
+        font=("Chivo", 14),
+        text_color=("#059669", "#10b981")
     )
     status_dot.pack(side="left", padx=(0, 8))
 
+    # Status text "Live"
     status_text = ctk.CTkLabel(
         status_frame,
         text="Live",
-        font=ctk.CTkFont(size=12, weight="bold"),
-        text_color=("#10b981", "#10b981")
+        font=("Chivo", 14, "bold"),
+        text_color=("#059669", "#10b981")
     )
     status_text.pack(side="left")
 
-    # Logs content area
+    # Content area for log text
     logs_content = ctk.CTkFrame(
         logs_card,
         corner_radius=0,
         fg_color="transparent"
     )
-    logs_content.pack(fill="both", expand=True, padx=1, pady=(0, 1))
+    logs_content.pack(fill="both", expand=True, padx=2, pady=(0, 2))
 
-    # Text widget for logs
+    # Text widget to display logs
     main_window.log_text = ctk.CTkTextbox(
         logs_content,
         corner_radius=0,
         border_width=0,
-        font=ctk.CTkFont(family="JetBrains Mono", size=11),
-        fg_color=("#fafafa", "#0a0e14"),
-        text_color=("#2d3748", "#cbd5e0"),
+        font=("Chivo", 13),
+        fg_color=("#fcfcfd", "#0f0f11"),
+        text_color=("#1f2937", "#e2e8f0"),
         state="disabled",
         wrap="word"
     )
-    main_window.log_text.pack(fill="both", expand=True, padx=16, pady=16)
+    main_window.log_text.pack(fill="both", expand=True, padx=20, pady=20)
 
-    # Initial load of existing logs
+    # Load existing logs and set initial position
     _load_logs_safely(main_window)
     if os.path.exists(Logger.LOG_FILE):
         main_window.last_log_position = os.path.getsize(Logger.LOG_FILE)
@@ -126,7 +133,7 @@ def _load_logs_safely(main_window):
     """Safely load logs with duplicate prevention and proper error handling."""
     logger = Logger.get_logger()
     try:
-        # If log file doesn't exist, show welcome message once
+        # Display welcome message if log file doesn’t exist
         if not os.path.exists(Logger.LOG_FILE):
             welcome_msg = (
                 "=== Application Logs ===\n"
@@ -138,11 +145,11 @@ def _load_logs_safely(main_window):
             _replace_content(main_window, welcome_msg)
             return
 
-        # Read all log lines
+        # Read all log lines from the file
         with open(Logger.LOG_FILE, 'r', encoding='utf-8') as log_file:
             raw_lines = log_file.read().splitlines()
 
-        # Determine already displayed lines
+        # Get currently displayed lines to avoid duplicates
         displayed = main_window.log_text.get("1.0", "end-1c").splitlines()
         # Filter out duplicates
         new_lines = [line for line in raw_lines if line not in displayed]
@@ -150,16 +157,16 @@ def _load_logs_safely(main_window):
         if new_lines:
             main_window.log_text.configure(state="normal")
             if not displayed:
-                # First time load: insert everything
+                # Initial load: replace all content
                 main_window.log_text.delete("1.0", "end")
                 main_window.log_text.insert("1.0", "\n".join(new_lines) + "\n")
             else:
-                # Subsequent updates: append only new entries
+                # Append new lines only
                 main_window.log_text.insert("end", "\n".join(new_lines) + "\n")
             main_window.log_text.see("end")
             main_window.log_text.configure(state="disabled")
         elif not displayed:
-            # File exists but empty
+            # Display message if log file is empty
             empty_msg = (
                 "=== Application Logs ===\n"
                 "Log file exists but is empty.\n"
@@ -183,6 +190,7 @@ def _load_logs_safely(main_window):
 
 def _replace_content(main_window, text):
     """Helper to replace the entire content of the log widget."""
+    # Enable widget, clear content, insert new text, and disable again
     main_window.log_text.configure(state="normal")
     main_window.log_text.delete("1.0", "end")
     main_window.log_text.insert("1.0", text)
@@ -190,6 +198,7 @@ def _replace_content(main_window, text):
 
 def _show_error_message(main_window, error_msg):
     """Display error message in the logs text area."""
+    # Format error message with guidance
     error_display = (
         "=== Application Logs ===\n"
         "❌ Error Loading Logs\n\n"

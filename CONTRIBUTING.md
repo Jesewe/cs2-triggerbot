@@ -1,8 +1,9 @@
 # Contributing to CS2 TriggerBot
 
-Thank you for your interest in contributing to the CS2 TriggerBot project! This guide will help you get started with contributing, from setting up the development environment to submitting pull requests.
+Thank you for your interest in contributing to the CS2 TriggerBot project. This guide will assist you from setting up the development environment to submitting pull requests.
 
 ## Table of Contents
+
 - [Code of Conduct](#code-of-conduct)
 - [Getting Started](#getting-started)
 - [Development Setup](#development-setup)
@@ -15,89 +16,103 @@ Thank you for your interest in contributing to the CS2 TriggerBot project! This 
 
 ## Code of Conduct
 
-By participating in this project, you agree to abide by the project's [Code of Conduct](CODE_OF_CONDUCT.md). Please be respectful, considerate, and open to constructive feedback.
+By participating in this project, you agree to abide by the [Code of Conduct](CODE_OF_CONDUCT.md). Please be respectful, considerate, and open to constructive feedback.
 
 ## Getting Started
 
 1. **Fork the Repository**: Create a personal fork of the repository on GitHub.
-2. **Clone Your Fork**: Clone your fork to your local development environment.
+2. **Clone Your Fork**: Clone your fork to your local environment:
+
    ```bash
    git clone https://github.com/Jesewe/cs2-triggerbot.git
    cd cs2-triggerbot
    ```
-3. **Set Up a Remote**: Add the original repository as an upstream remote to stay updated with the latest changes.
+
+3. **Add Upstream Remote**: Stay updated with the original repository:
+
    ```bash
    git remote add upstream https://github.com/Jesewe/cs2-triggerbot.git
    ```
 
 ## Development Setup
 
-1. **Install Python**: Ensure you have Python 3.8 or later installed.
-2. **Install Dependencies**: Install the required Python packages.
+1. **Install Python**: Ensure you have Python version **≥ 3.8** and **< 3.12.5** installed.
+2. **Install Dependencies**: Install required packages:
+
    ```bash
    pip install -r requirements.txt
    ```
-3. **Run the Application**: You can start the application for testing and development with:
+
+3. **Run the Application**: Launch the application for testing and development:
+
    ```bash
    python main.py
    ```
 
 ### Testing Changes
-- Run the application to ensure any changes you make are functioning as expected.
-- Check logs in `%LOCALAPPDATA%\Requests\ItsJesewe\crashes\tb_logs.log` for debugging information.
+
+- Execute the application to verify your modifications.
+- Review logs at `%LOCALAPPDATA%\Requests\ItsJesewe\crashes\tb_logs.log` for debugging.
 
 ## Coding Standards
 
-Please follow these guidelines to ensure consistency and readability in the codebase:
+Adhere to the following guidelines for consistency and readability:
 
-- **PEP 8 Style Guide**: Follow the [PEP 8](https://www.python.org/dev/peps/pep-0008/) style guide for Python code.
-- **Naming Conventions**: Use clear and descriptive names for variables, functions, and classes.
-- **Error Handling**: Handle exceptions gracefully and log errors to help users debug issues.
-- **Code Comments**: Include comments for complex or critical sections of code to explain their purpose.
-- **Modularization**: Break down larger functions into smaller, reusable functions when possible.
+- **PEP 8**: Follow the [PEP 8 style guide](https://www.python.org/dev/peps/pep-0008/).
+- **Naming**: Use clear, descriptive names for variables, functions, and classes.
+- **Error Handling**: Handle exceptions gracefully and log errors appropriately.
+- **Documentation**: Comment complex or critical sections to explain intent.
+- **Modularity**: Decompose large functions into smaller, reusable units.
 
 ### GUI Development
-- **PyQt6**: Use `PyQt6` for any updates or improvements related to the graphical interface.
-- **Consistent Styling**: Follow the existing CSS styles for GUI components in the `MainWindow` class.
+
+- **customtkinter**: Use `customtkinter` for any enhancements or changes to the graphical interface.
 
 ### Logging
-- **Logging Format**: Use the format defined in the `Logger` class for consistency in log entries.
-- **Log Levels**: Use appropriate log levels (`INFO`, `WARNING`, `ERROR`) based on the severity of the message.
+
+- **Format**: Use the `Logger` class format for log entries.
+- **Levels**: Apply appropriate log levels (`INFO`, `WARNING`, `ERROR`) based on severity.
 
 ## Submitting Issues
 
-Before opening a new issue, please:
-1. Search for existing issues to avoid duplicates.
-2. Clearly describe the problem, including steps to reproduce, expected behavior, and any relevant logs or screenshots.
+Before submitting a new issue:
+
+1. Search existing issues to avoid duplicates.
+2. Provide a clear problem description, steps to reproduce, expected behavior, and relevant logs or screenshots.
 
 ## Pull Request Process
 
-1. **Create a New Branch**: Use a descriptive branch name that indicates the purpose of the changes.
+1. **Create a Branch**: Use a descriptive branch name:
+
    ```bash
    git checkout -b feature/your-feature
    ```
 
-2. **Commit Your Changes**: Make sure each commit message is clear and concise.
+2. **Commit Changes**: Ensure each commit message is concise and descriptive:
+
    ```bash
-   git commit -m "Brief description of your changes"
+   git commit -m "Brief description of changes"
    ```
 
-3. **Push to Your Fork**: Push your changes to your fork on GitHub.
+3. **Push to Fork**:
+
    ```bash
    git push origin feature/your-feature
    ```
 
-4. **Submit a Pull Request**: Go to the main repository on GitHub and submit a pull request from your branch. Make sure to provide a detailed description of your changes, including:
-   - The purpose of the changes.
-   - Any potential impact on existing functionality.
-   - How you tested the changes.
+4. **Open a Pull Request**: On GitHub, submit a PR to the main repository, including:
 
-### Pull Request Review
-- **Code Review**: Pull requests will be reviewed for quality, functionality, and adherence to the coding standards.
-- **Changes Requested**: You may be asked to make changes before the pull request can be merged. Please address feedback promptly.
+   - Purpose of your changes.
+   - Potential impact on existing functionality.
+   - Testing steps and results.
+
+### Review Process
+
+- **Code Review**: PRs are reviewed for quality, functionality, and adherence to standards.
+- **Feedback**: Address requested changes promptly.
 
 ## Feature Requests and Feedback
 
-If you have ideas for new features or improvements, please open an issue with the **Feature Request** label in the [Issue](https://github.com/Jesewe/cs2-triggerbot/issues) tab.
+For new ideas or improvements, open an issue labeled **Feature Request** in the [Issues tab](https://github.com/Jesewe/cs2-triggerbot/issues).
 
-Thank you for contributing to CS2 TriggerBot and helping make this project better!
+We appreciate your contributions to CS2 TriggerBot and your efforts in improving this project!

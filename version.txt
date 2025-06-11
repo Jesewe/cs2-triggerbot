@@ -20,12 +20,12 @@ VSVersionInfo(
                     [
                         StringStruct(u'CompanyName', u'Jesewe'),
                         StringStruct(u'FileDescription', u'CS2 Triggerbot'),
-                        StringStruct(u'FileVersion', u'1.2.4.4'),
+                        StringStruct(u'FileVersion', u'1.2.4.6'),
                         StringStruct(u'InternalName', u'CS2 Triggerbot'),
                         StringStruct(u'LegalCopyright', u'(C) 2025 Jesewe. MIT License'),
-                        StringStruct(u'OriginalFilename', u'CS2 Triggerbot.exe'),
+                        StringStruct(u'OriginalFilename', u'CS2.Triggerbot.exe'),
                         StringStruct(u'ProductName', u'CS2 Triggerbot'),
-                        StringStruct(u'ProductVersion', u'1.2.4.4')
+                        StringStruct(u'ProductVersion', u'1.2.4.6')
                     ]
                 )
             ]

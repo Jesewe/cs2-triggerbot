@@ -2,52 +2,49 @@ import customtkinter as ctk
 
 def populate_faq(main_window, frame):
     """Populate the FAQ frame with questions and answers."""
+    # Scrollable container for FAQ content
     faq_container = ctk.CTkScrollableFrame(
         frame,
         fg_color="transparent"
     )
     faq_container.pack(fill="both", expand=True, padx=40, pady=40)
     
-    # Page title with subtitle
+    # Frame for page title and subtitle
     title_frame = ctk.CTkFrame(faq_container, fg_color="transparent")
     title_frame.pack(fill="x", pady=(0, 40))
     
+    # FAQ title with icon
     ctk.CTkLabel(
         title_frame,
         text="❓ Frequently Asked Questions",
-        font=ctk.CTkFont(size=32, weight="bold"),
+        font=("Chivo", 32, "bold"),
         text_color=("#1f2937", "#E0E0E0")
     ).pack(anchor="w")
     
+    # Subtitle providing context
     ctk.CTkLabel(
         title_frame,
         text="Find answers to common questions about TriggerBot usage and configuration",
-        font=ctk.CTkFont(size=16),
+        font=("Gambetta", 16),
         text_color=("#6b7280", "#9ca3af")
     ).pack(anchor="w", pady=(8, 0))
     
-    # FAQ items
+    # List of FAQ items
     faqs = [
         ("What is a TriggerBot?", "A TriggerBot automatically shoots when your crosshair is positioned over an enemy player, providing enhanced reaction times in competitive gameplay. It works by detecting enemy pixels and triggering mouse clicks."),
-        
         ("Is this tool safe to use?", "This tool is provided for educational and research purposes only. Using automation tools in online games may violate terms of service and could result in account penalties. Always check game rules before use."),
-        
-        ("How do I configure the trigger key?", "Navigate to Settings and enter your preferred key in the Trigger Key field. You can use keyboard keys (e.g., 'x', 'c', 'v') or mouse buttons (e.g., 'x1' for mouse button 4, 'x2' for mouse button 5)."),
-        
-        ("What are the delay settings for?", "Delay settings add realistic timing variations to make the bot behavior less detectable. Min/Max delays control shot timing randomization, while Post Shot Delay adds a pause after each shot to simulate human reaction time."),
-        
-        ("Can I use this on FACEIT or ESEA?", "No, using automation tools on anti-cheat protected platforms like FACEIT, ESEA, or VAC-secured servers is strictly prohibited and will result in permanent bans. Use only on casual servers or offline practice."),
-        
-        ("How do I update the offsets?", "Offsets are automatically fetched from the server when the application starts. The dashboard shows the last update timestamp for your reference. Manual refresh is available in Settings if needed."),
-        
-        ("Why isn't the bot triggering?", "Common issues include: incorrect trigger key binding, game not in focus, enemy not clearly visible in crosshair, or game resolution/settings changed. Check Settings and ensure proper configuration."),
-
-        ("What should I do if the app crashes?", "Try restarting the application first. If crashes persist, check that you have the latest version, ensure your system meets requirements, and verify no antivirus is blocking the application."),
-
+        ("How do I configure the trigger key?", "Navigate to Settings and enter your preferred key in the Trigger Key field. You can use keyboard keys (e.g., 'x', 'c', 'v') or mouse buttons (e.g., 'mouse4' for mouse button 4, 'mouse5' for mouse button 5)."),
+        ("What are the delay settings for?", "Delay settings give the bot a more natural feel by adding timing differences. You can set minimum and maximum delays to randomize how quickly it shoots. Plus, the Post Shot Delay adds a short pause after each shot, making it seem like a real person is reacting."),
+        ("Can I use this on FACEIT or ESEA?", "No, you can't use automation tools on anti-cheat platforms like FACEIT, ESEA, or VAC-secured servers. Doing so will get you a permanent ban. Stick to casual servers or practice offline instead."),
+        ("How do I update the offsets?", "When you start the app, it automatically gets the latest offsets from the server. You can see when it was last updated on the dashboard. If you want to refresh it manually, just go to Settings."),
+        ("Why isn't the bot triggering?", "Here are some usual problems: the trigger key might be set wrong, the game window isn't focused, you might not see the enemy in your crosshair, or your game settings might have changed. Take a look at your Settings to make sure everything's set up right."),
+        ("What should I do if the app crashes?", "First, try restarting the app. If it's still crashing, make sure you have the latest version, check that your system meets the requirements, and see if any antivirus is blocking the app."),
         ("Is there a hotkey to toggle the bot on/off?", "Yes, you can set a toggle hotkey in Settings. This allows you to quickly enable/disable the triggerbot during gameplay without alt-tabbing to the application.")
     ]
     
+    # Create FAQ cards
     for i, (question, answer) in enumerate(faqs):
+        # Card for each FAQ item
         faq_card = ctk.CTkFrame(
             faq_container,
             corner_radius=12,
@@ -57,11 +54,11 @@ def populate_faq(main_window, frame):
         )
         faq_card.pack(fill="x", pady=(0, 16))
         
-        # Question header
+        # Frame for question header
         question_frame = ctk.CTkFrame(faq_card, fg_color="transparent")
         question_frame.pack(fill="x", padx=24, pady=(20, 10))
         
-        # Question number badge
+        # Number badge for question
         number_badge = ctk.CTkFrame(
             question_frame,
             width=30,
@@ -72,10 +69,11 @@ def populate_faq(main_window, frame):
         number_badge.pack(side="left", padx=(0, 12))
         number_badge.pack_propagate(False)
         
+        # Number inside badge
         ctk.CTkLabel(
             number_badge,
             text=str(i+1),
-            font=ctk.CTkFont(size=12, weight="bold"),
+            font=("Chivo", 12, "bold"),
             text_color="white"
         ).place(relx=0.5, rely=0.5, anchor="center")
         
@@ -83,27 +81,28 @@ def populate_faq(main_window, frame):
         question_label = ctk.CTkLabel(
             question_frame,
             text=question,
-            font=ctk.CTkFont(size=16, weight="bold"),
+            font=("Chivo", 16, "bold"),
             text_color=("#1f2937", "#E0E0E0"),
             anchor="w"
         )
         question_label.pack(side="left", fill="x", expand=True)
         
-        # Answer
+        # Frame for answer text
         answer_frame = ctk.CTkFrame(faq_card, fg_color="transparent")
         answer_frame.pack(fill="x", padx=66, pady=(0, 20))
         
+        # Answer text with wrapping
         ctk.CTkLabel(
             answer_frame,
             text=answer,
-            font=ctk.CTkFont(size=14),
+            font=("Gambetta", 14),
             text_color=("#4b5563", "#9ca3af"),
             anchor="w",
             wraplength=750,
             justify="left"
         ).pack(fill="x")
     
-    # Footer with additional help
+    # Footer with additional help information
     footer_frame = ctk.CTkFrame(
         faq_container,
         corner_radius=12,
@@ -113,16 +112,18 @@ def populate_faq(main_window, frame):
     )
     footer_frame.pack(fill="x", pady=(30, 0))
     
+    # Footer title
     ctk.CTkLabel(
         footer_frame,
         text="💡 Still have questions?",
-        font=ctk.CTkFont(size=16, weight="bold"),
+        font=("Chivo", 16, "bold"),
         text_color=("#1f2937", "#E0E0E0")
     ).pack(pady=(20, 5))
     
+    # Footer guidance
     ctk.CTkLabel(
         footer_frame,
         text="Check the documentation or visit github issues for additional support and tips.",
-        font=ctk.CTkFont(size=14),
+        font=("Gambetta", 14),
         text_color=("#6b7280", "#9ca3af")
     ).pack(pady=(0, 20))

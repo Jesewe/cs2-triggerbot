@@ -8,9 +8,6 @@ import orjson
 from packaging import version
 from dateutil.parser import parse as parse_date
 
-from PyQt6.QtWidgets import QDialog, QProgressBar, QMessageBox, QVBoxLayout
-from PyQt6.QtCore import QThread, pyqtSignal
-
 from classes.logger import Logger
 
 # Initialize the logger for consistent logging
@@ -63,18 +60,21 @@ class Utility:
 
     @staticmethod
     def check_for_updates(current_version):
-        """
-        Checks GitHub for the latest version using orjson for JSON parsing.
-        """
+        """Checks GitHub for the latest version and returns the download URL of 'CS2.Triggerbot.exe' if an update is available."""
         try:
             response = requests.get("https://api.github.com/repos/Jesewe/cs2-triggerbot/releases/latest")
             response.raise_for_status()
             data = orjson.loads(response.content)
             latest_version = data.get("tag_name")
-            update_url = data.get("html_url")
             if version.parse(latest_version) > version.parse(current_version):
-                logger.info(f"New version available: {latest_version}.")
-                return update_url
+                for asset in data.get("assets", []):
+                    if asset.get("name") == "CS2.Triggerbot.exe":
+                        download_url = asset.get("browser_download_url")
+                        if download_url:
+                            logger.info(f"New version available: {latest_version}.")
+                            return download_url
+                logger.warning("No 'CS2.Triggerbot.exe' found in the latest release assets.")
+                return None
             logger.info("No new updates available.")
             return None
         except requests.exceptions.RequestException as e:
