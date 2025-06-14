@@ -105,3 +105,27 @@ class Utility:
     def is_game_running():
         """Check if the game process is running using psutil."""
         return any(proc.info['name'] == 'cs2.exe' for proc in psutil.process_iter(attrs=['name']))
+    
+    @staticmethod
+    def extract_offsets(offsets: dict, client_data: dict) -> dict | None:
+        """Load memory offsets."""
+        try:
+            client = offsets["client.dll"]
+            dwEntityList = client["dwEntityList"]
+            dwLocalPlayerPawn = client["dwLocalPlayerPawn"]
+
+            classes = client_data["client.dll"]["classes"]
+            m_iHealth = classes["C_BaseEntity"]["fields"]["m_iHealth"]
+            m_iTeamNum = classes["C_BaseEntity"]["fields"]["m_iTeamNum"]
+            m_iIDEntIndex = classes["C_CSPlayerPawnBase"]["fields"]["m_iIDEntIndex"]
+            logger.info("Offsets initialized successfully.")
+            return {
+                "dwEntityList": dwEntityList,
+                "dwLocalPlayerPawn": dwLocalPlayerPawn,
+                "m_iHealth": m_iHealth,
+                "m_iTeamNum": m_iTeamNum,
+                "m_iIDEntIndex": m_iIDEntIndex
+            }
+        except KeyError as e:
+            logger.error(f"Offset initialization error: Missing key {e}")
+            return None
