@@ -8,9 +8,6 @@ import orjson
 from packaging import version
 from dateutil.parser import parse as parse_date
 
-from PyQt6.QtWidgets import QDialog, QProgressBar, QMessageBox, QVBoxLayout
-from PyQt6.QtCore import QThread, pyqtSignal
-
 from classes.logger import Logger
 
 # Initialize the logger for consistent logging
@@ -63,18 +60,21 @@ class Utility:
 
     @staticmethod
     def check_for_updates(current_version):
-        """
-        Checks GitHub for the latest version using orjson for JSON parsing.
-        """
+        """Checks GitHub for the latest version and returns the download URL of 'CS2.Triggerbot.exe' if an update is available."""
         try:
             response = requests.get("https://api.github.com/repos/Jesewe/cs2-triggerbot/releases/latest")
             response.raise_for_status()
             data = orjson.loads(response.content)
             latest_version = data.get("tag_name")
-            update_url = data.get("html_url")
             if version.parse(latest_version) > version.parse(current_version):
-                logger.info(f"New version available: {latest_version}.")
-                return update_url
+                for asset in data.get("assets", []):
+                    if asset.get("name") == "CS2.Triggerbot.exe":
+                        download_url = asset.get("browser_download_url")
+                        if download_url:
+                            logger.info(f"New version available: {latest_version}.")
+                            return download_url
+                logger.warning("No 'CS2.Triggerbot.exe' found in the latest release assets.")
+                return None
             logger.info("No new updates available.")
             return None
         except requests.exceptions.RequestException as e:
@@ -83,54 +83,6 @@ class Utility:
         except Exception as e:
             logger.error(f"An unexpected error occurred during update check: {e}")
             return None
-
-    @staticmethod
-    def get_latest_exe_download_url():
-        """
-        Retrieves the direct download URL for the 'CS2.Triggerbot.exe' asset
-        from the latest GitHub release, parsing JSON with orjson.
-        """
-        try:
-            response = requests.get("https://api.github.com/repos/Jesewe/cs2-triggerbot/releases/latest")
-            response.raise_for_status()
-            data = orjson.loads(response.content)
-            for asset in data.get("assets", []):
-                if asset.get("name") == "CS2.Triggerbot.exe":
-                    return asset.get("browser_download_url")
-            logger.error("Executable asset not found in the latest release.")
-            return None
-        except Exception as e:
-            logger.error(f"Error getting update asset URL: {e}")
-            return None
-
-    @staticmethod
-    def fetch_last_offset_update(last_update_label):
-        """
-        Fetches the timestamp of the latest commit to the offsets repository.
-        """
-        try:
-            response = requests.get("https://api.github.com/repos/a2x/cs2-dumper/commits/main")
-            response.raise_for_status()
-            commit_data = orjson.loads(response.content)
-            commit_timestamp = commit_data["commit"]["committer"]["date"]
-
-            last_update_dt = parse_date(commit_timestamp)
-            formatted_timestamp = last_update_dt.strftime("%m/%d/%Y %H:%M:%S")
-            last_update_label.setText(f"Last offsets update: {formatted_timestamp} (UTC)")
-            last_update_label.setStyleSheet("font-size: 16px; color: #ffa420; font-weight: bold;")
-        except requests.exceptions.HTTPError as e:
-            if response.status_code == 403:
-                last_update_label.setText("Request limit exceeded. Please try again later.")
-                last_update_label.setStyleSheet("font-size: 16px; color: #0bda51; font-weight: bold;")
-                logger.error(f"Offset update fetch failed: {e} (403 Forbidden)")
-            else:
-                last_update_label.setText("Error fetching last offsets update. Please check your internet connection or try again later.")
-                last_update_label.setStyleSheet("font-size: 16px; color: #0bda51; font-weight: bold;")
-                logger.error(f"Offset update fetch failed: {e}")
-        except Exception as e:
-            last_update_label.setText("Error fetching last offsets update. Please check your internet connection or try again later.")
-            last_update_label.setStyleSheet("font-size: 16px; color: #0bda51; font-weight: bold;")
-            logger.error(f"Offset update fetch failed: {e}")
 
     @staticmethod
     def resource_path(relative_path):
@@ -153,3 +105,26 @@ class Utility:
     def is_game_running():
         """Check if the game process is running using psutil."""
         return any(proc.info['name'] == 'cs2.exe' for proc in psutil.process_iter(attrs=['name']))
+    
+    @staticmethod
+    def extract_offsets(offsets: dict, client_data: dict) -> dict | None:
+        """Load memory offsets."""
+        try:
+            client = offsets["client.dll"]
+            dwEntityList = client["dwEntityList"]
+            dwLocalPlayerPawn = client["dwLocalPlayerPawn"]
+
+            classes = client_data["client.dll"]["classes"]
+            m_iHealth = classes["C_BaseEntity"]["fields"]["m_iHealth"]
+            m_iTeamNum = classes["C_BaseEntity"]["fields"]["m_iTeamNum"]
+            m_iIDEntIndex = classes["C_CSPlayerPawnBase"]["fields"]["m_iIDEntIndex"]
+            return {
+                "dwEntityList": dwEntityList,
+                "dwLocalPlayerPawn": dwLocalPlayerPawn,
+                "m_iHealth": m_iHealth,
+                "m_iTeamNum": m_iTeamNum,
+                "m_iIDEntIndex": m_iIDEntIndex
+            }
+        except KeyError as e:
+            logger.error(f"Offset initialization error: Missing key {e}")
+            return None

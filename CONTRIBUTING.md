@@ -4,13 +4,13 @@ Thank you for your interest in contributing to the CS2 TriggerBot project. This 
 
 ## Table of Contents
 
-* [Code of Conduct](#code-of-conduct)
-* [Getting Started](#getting-started)
-* [Development Setup](#development-setup)
-* [Coding Standards](#coding-standards)
-* [Submitting Issues](#submitting-issues)
-* [Pull Request Process](#pull-request-process)
-* [Feature Requests and Feedback](#feature-requests-and-feedback)
+- [Code of Conduct](#code-of-conduct)
+- [Getting Started](#getting-started)
+- [Development Setup](#development-setup)
+- [Coding Standards](#coding-standards)
+- [Submitting Issues](#submitting-issues)
+- [Pull Request Process](#pull-request-process)
+- [Feature Requests and Feedback](#feature-requests-and-feedback)
 
 ---
 
@@ -27,6 +27,7 @@ By participating in this project, you agree to abide by the [Code of Conduct](CO
    git clone https://github.com/Jesewe/cs2-triggerbot.git
    cd cs2-triggerbot
    ```
+
 3. **Add Upstream Remote**: Stay updated with the original repository:
 
    ```bash
@@ -41,6 +42,7 @@ By participating in this project, you agree to abide by the [Code of Conduct](CO
    ```bash
    pip install -r requirements.txt
    ```
+
 3. **Run the Application**: Launch the application for testing and development:
 
    ```bash
@@ -49,27 +51,27 @@ By participating in this project, you agree to abide by the [Code of Conduct](CO
 
 ### Testing Changes
 
-* Execute the application to verify your modifications.
-* Review logs at `%LOCALAPPDATA%\Requests\ItsJesewe\crashes\tb_logs.log` for debugging.
+- Execute the application to verify your modifications.
+- Review logs at `%LOCALAPPDATA%\Requests\ItsJesewe\crashes\tb_logs.log` for debugging.
 
 ## Coding Standards
 
 Adhere to the following guidelines for consistency and readability:
 
-* **PEP 8**: Follow the [PEP 8 style guide](https://www.python.org/dev/peps/pep-0008/).
-* **Naming**: Use clear, descriptive names for variables, functions, and classes.
-* **Error Handling**: Handle exceptions gracefully and log errors appropriately.
-* **Documentation**: Comment complex or critical sections to explain intent.
-* **Modularity**: Decompose large functions into smaller, reusable units.
+- **PEP 8**: Follow the [PEP 8 style guide](https://www.python.org/dev/peps/pep-0008/).
+- **Naming**: Use clear, descriptive names for variables, functions, and classes.
+- **Error Handling**: Handle exceptions gracefully and log errors appropriately.
+- **Documentation**: Comment complex or critical sections to explain intent.
+- **Modularity**: Decompose large functions into smaller, reusable units.
 
 ### GUI Development
 
-* **customtkinter**: Use `customtkinter` for any enhancements or changes to the graphical interface.
+- **customtkinter**: Use `customtkinter` for any enhancements or changes to the graphical interface.
 
 ### Logging
 
-* **Format**: Use the `Logger` class format for log entries.
-* **Levels**: Apply appropriate log levels (`INFO`, `WARNING`, `ERROR`) based on severity.
+- **Format**: Use the `Logger` class format for log entries.
+- **Levels**: Apply appropriate log levels (`INFO`, `WARNING`, `ERROR`) based on severity.
 
 ## Submitting Issues
 
@@ -85,26 +87,29 @@ Before submitting a new issue:
    ```bash
    git checkout -b feature/your-feature
    ```
+
 2. **Commit Changes**: Ensure each commit message is concise and descriptive:
 
    ```bash
    git commit -m "Brief description of changes"
    ```
+
 3. **Push to Fork**:
 
    ```bash
    git push origin feature/your-feature
    ```
+
 4. **Open a Pull Request**: On GitHub, submit a PR to the main repository, including:
 
-   * Purpose of your changes.
-   * Potential impact on existing functionality.
-   * Testing steps and results.
+   - Purpose of your changes.
+   - Potential impact on existing functionality.
+   - Testing steps and results.
 
 ### Review Process
 
-* **Code Review**: PRs are reviewed for quality, functionality, and adherence to standards.
-* **Feedback**: Address requested changes promptly.
+- **Code Review**: PRs are reviewed for quality, functionality, and adherence to standards.
+- **Feedback**: Address requested changes promptly.
 
 ## Feature Requests and Feedback
 

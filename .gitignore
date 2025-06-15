@@ -1,3 +1,8 @@
 /gui/__pycache__/
 /classes/__pycache__/
 /output/
+/dist/
+/build/
+*.spec
+*.bat
+/__pycache__/

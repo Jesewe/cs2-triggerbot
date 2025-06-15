@@ -12,6 +12,10 @@ class ConfigManager:
     Provides methods to load and save configuration settings, 
     with caching for efficiency and default configuration management.
     """
+    # Application version
+    VERSION = "v1.2.5"
+    # Directory where the update files are stored
+    UPDATE_DIRECTORY = os.path.expanduser(r'~\AppData\Local\Requests\ItsJesewe\Update')
     # Directory where the configuration file is stored
     CONFIG_DIRECTORY = os.path.expanduser(r'~\AppData\Local\Requests\ItsJesewe')
     # Full path to the configuration file
@@ -38,8 +42,6 @@ class ConfigManager:
         Loads the configuration from the configuration file.
         - Creates the configuration directory and file with default settings if they do not exist.
         - Caches the configuration to avoid redundant file reads.
-        Returns:
-            dict: The configuration settings.
         """
         # Return cached configuration if available.
         if cls._config_cache is not None:
@@ -90,9 +92,6 @@ class ConfigManager:
         """
         Saves the configuration to the configuration file.
         Updates the cache with the new configuration.
-        Args:
-            config (dict): The configuration settings to save.
-            log_info (bool): Whether to log a success message after saving.
         """
         cls._config_cache = config
         try:
