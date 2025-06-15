@@ -118,7 +118,6 @@ class Utility:
             m_iHealth = classes["C_BaseEntity"]["fields"]["m_iHealth"]
             m_iTeamNum = classes["C_BaseEntity"]["fields"]["m_iTeamNum"]
             m_iIDEntIndex = classes["C_CSPlayerPawnBase"]["fields"]["m_iIDEntIndex"]
-            logger.info("Offsets initialized successfully.")
             return {
                 "dwEntityList": dwEntityList,
                 "dwLocalPlayerPawn": dwLocalPlayerPawn,

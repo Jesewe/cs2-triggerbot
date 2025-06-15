@@ -28,7 +28,7 @@ class CS2TriggerBot:
         self.toggle_state = False 
         self.update_config(self.config)
 
-        # Initialize offsets and configuration settings
+        # Initialize configuration settings
         self.load_configuration()
 
         # Setup listeners
