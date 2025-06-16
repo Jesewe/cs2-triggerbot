@@ -760,14 +760,14 @@ del "%~f0" 2>nul
             overlay_settings["enable_box"] = self.enable_box_var.get()
         if hasattr(self, 'box_line_thickness_slider'):
             overlay_settings["box_line_thickness"] = self.box_line_thickness_slider.get()
-        if hasattr(self, 'box_color_combo'):
-            overlay_settings["box_color_hex"] = COLOR_CHOICES.get(self.box_color_combo.get(), "#FFA500")
+        if hasattr(self, 'box_color_hex_combo'):
+            overlay_settings["box_color_hex"] = COLOR_CHOICES.get(self.box_color_hex_combo.get(), "#FFA500")
         if hasattr(self, 'draw_snaplines_var'):
             overlay_settings["draw_snaplines"] = self.draw_snaplines_var.get()
-        if hasattr(self, 'snaplines_color_combo'):
-            overlay_settings["snaplines_color_hex"] = COLOR_CHOICES.get(self.snaplines_color_combo.get(), "#FFFFFF")
-        if hasattr(self, 'text_color_combo'):
-            overlay_settings["text_color_hex"] = COLOR_CHOICES.get(self.text_color_combo.get(), "#FFFFFF")
+        if hasattr(self, 'snaplines_color_hex_combo'):
+            overlay_settings["snaplines_color_hex"] = COLOR_CHOICES.get(self.snaplines_color_hex_combo.get(), "#FFFFFF")
+        if hasattr(self, 'text_color_hex_combo'):
+            overlay_settings["text_color_hex"] = COLOR_CHOICES.get(self.text_color_hex_combo.get(), "#FFFFFF")
         if hasattr(self, 'draw_health_numbers_var'):
             overlay_settings["draw_health_numbers"] = self.draw_health_numbers_var.get()
         if hasattr(self, 'draw_nicknames_var'):
@@ -776,8 +776,8 @@ del "%~f0" 2>nul
             overlay_settings["use_transliteration"] = self.use_transliteration_var.get()
         if hasattr(self, 'draw_teammates_var'):
             overlay_settings["draw_teammates"] = self.draw_teammates_var.get()
-        if hasattr(self, 'teammate_color_combo'):
-            overlay_settings["teammate_color_hex"] = COLOR_CHOICES.get(self.teammate_color_combo.get(), "#00FFFF")
+        if hasattr(self, 'teammate_color_hex_combo'):
+            overlay_settings["teammate_color_hex"] = COLOR_CHOICES.get(self.teammate_color_hex_combo.get(), "#00FFFF")
         if hasattr(self, 'enable_minimap_var'):
             overlay_settings["enable_minimap"] = self.enable_minimap_var.get()
         if hasattr(self, 'minimap_size_entry'):
@@ -872,18 +872,18 @@ del "%~f0" 2>nul
         overlay_settings = self.triggerbot.config["Overlay"]
         if hasattr(self, 'enable_box_var'):
             self.enable_box_var.set(overlay_settings["enable_box"])
-        if hasattr(self, 'box_line_thickness_slider') and hasattr(self, 'box_line_thickness_slider'):
+        if hasattr(self, 'box_line_thickness_slider'):
             self.box_line_thickness_slider.set(overlay_settings["box_line_thickness"])
             if hasattr(self, 'box_line_thickness_value_label'):
                 self.box_line_thickness_value_label.configure(text=f"{overlay_settings['box_line_thickness']:.1f}")
-        if hasattr(self, 'box_color_combo'):
-            self.box_color_combo.set(Utility.get_color_name_from_hex(overlay_settings["box_color_hex"]))
+        if hasattr(self, 'box_color_hex_combo'):
+            self.box_color_hex_combo.set(Utility.get_color_name_from_hex(overlay_settings["box_color_hex"]))
         if hasattr(self, 'draw_snaplines_var'):
             self.draw_snaplines_var.set(overlay_settings["draw_snaplines"])
-        if hasattr(self, 'snaplines_color_combo'):
-            self.snaplines_color_combo.set(Utility.get_color_name_from_hex(overlay_settings["snaplines_color_hex"]))
-        if hasattr(self, 'text_color_combo'):
-            self.text_color_combo.set(Utility.get_color_name_from_hex(overlay_settings["text_color_hex"]))
+        if hasattr(self, 'snaplines_color_hex_combo'):
+            self.snaplines_color_hex_combo.set(Utility.get_color_name_from_hex(overlay_settings["snaplines_color_hex"]))
+        if hasattr(self, 'text_color_hex_combo'):
+            self.text_color_hex_combo.set(Utility.get_color_name_from_hex(overlay_settings["text_color_hex"]))
         if hasattr(self, 'draw_health_numbers_var'):
             self.draw_health_numbers_var.set(overlay_settings["draw_health_numbers"])
         if hasattr(self, 'draw_nicknames_var'):
@@ -892,8 +892,8 @@ del "%~f0" 2>nul
             self.use_transliteration_var.set(overlay_settings["use_transliteration"])
         if hasattr(self, 'draw_teammates_var'):
             self.draw_teammates_var.set(overlay_settings["draw_teammates"])
-        if hasattr(self, 'teammate_color_combo'):
-            self.teammate_color_combo.set(Utility.get_color_name_from_hex(overlay_settings["teammate_color_hex"]))
+        if hasattr(self, 'teammate_color_hex_combo'):
+            self.teammate_color_hex_combo.set(Utility.get_color_name_from_hex(overlay_settings["teammate_color_hex"]))
         if hasattr(self, 'enable_minimap_var'):
             self.enable_minimap_var.set(overlay_settings["enable_minimap"])
         if hasattr(self, 'minimap_size_entry'):

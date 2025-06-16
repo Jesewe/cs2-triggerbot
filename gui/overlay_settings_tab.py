@@ -436,40 +436,84 @@ def create_setting_item(parent, label_text, description, widget_type, key, main_
         main_window.__setattr__(f"{key}_entry", widget)
 
     elif widget_type == "slider":
-        widget = ctk.CTkSlider(
+        # Create a container for the slider and value display
+        slider_container = ctk.CTkFrame(
             widget_frame,
+            fg_color="transparent"
+        )
+        slider_container.pack()
+        
+        # Create a frame for the value label with background
+        value_frame = ctk.CTkFrame(
+            slider_container,
+            corner_radius=8,
+            fg_color=("#e2e8f0", "#374151"),
+            width=60,
+            height=35
+        )
+        value_frame.pack(side="right", padx=(15, 0))
+        value_frame.pack_propagate(False)
+        
+        # Value label with improved styling
+        value_label = ctk.CTkLabel(
+            value_frame,
+            text=f"{main_window.overlay.config['Overlay'][key]:.1f}",
+            font=("Chivo", 14, "bold"),
+            text_color=("#1f2937", "#ffffff")
+        )
+        value_label.pack(expand=True)
+        
+        # Enhanced slider with custom styling
+        widget = ctk.CTkSlider(
+            slider_container,
             from_=0.5,
             to=5.0,
             number_of_steps=9,
-            corner_radius=8,
-            border_width=2,
-            fg_color=("#D5006D", "#E91E63"),
-            hover_color=("#B8004A", "#C2185B"),
+            width=200,
+            height=20,
+            corner_radius=10,
+            button_corner_radius=10,
+            border_width=0,
+            fg_color=("#e2e8f0", "#374151"),
+            progress_color=("#D5006D", "#E91E63"),
+            button_color=("#ffffff", "#ffffff"),
+            button_hover_color=("#f8fafc", "#f8fafc"),
             command=lambda e: update_slider_value(e, key, main_window)
         )
         widget.set(main_window.overlay.config["Overlay"][key])
-        value_label = ctk.CTkLabel(widget_frame, text=f"{main_window.overlay.config['Overlay'][key]:.1f}")
-        value_label.pack(side="right", padx=5)
-        widget.pack()
+        widget.pack(side="left")
+        
+        # Store references for later use
         widget.value_label = value_label
         main_window.__setattr__(f"{key}_slider", widget)
         main_window.__setattr__(f"{key}_value_label", value_label)
 
     elif widget_type == "combo":
+        # Enhanced ComboBox with improved styling
         widget = ctk.CTkComboBox(
             widget_frame,
             values=list(COLOR_CHOICES.keys()),
-            corner_radius=8,
+            width=180,
+            height=45,
+            corner_radius=12,
             border_width=2,
-            fg_color=("#D5006D", "#E91E63"),
+            border_color=("#d1d5db", "#374151"),
+            fg_color=("#ffffff", "#1f2937"),
+            text_color=("#1f2937", "#ffffff"),
+            font=("Chivo", 14),
+            dropdown_font=("Chivo", 13),
             button_color=("#D5006D", "#E91E63"),
             button_hover_color=("#B8004A", "#C2185B"),
-            border_color=("#d1d5db", "#374151"),
-            text_color=("#1f2937", "#ffffff"),
-            command=lambda e: main_window.save_settings(show_message=False),
-            width=150
+            dropdown_fg_color=("#ffffff", "#1a1b23"),
+            dropdown_hover_color=("#f8fafc", "#2d3748"),
+            dropdown_text_color=("#1f2937", "#ffffff"),
+            state="readonly",
+            justify="center",
+            command=lambda e: main_window.save_settings(show_message=False)
         )
         widget.set(Utility.get_color_name_from_hex(main_window.overlay.config["Overlay"][key]))
+        widget.bind("<FocusOut>", lambda e: main_window.save_settings(show_message=False))
+        widget.bind("<Return>", lambda e: main_window.save_settings(show_message=False))
         widget.pack()
         main_window.__setattr__(f"{key}_combo", widget)
 
