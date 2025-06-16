@@ -17,12 +17,17 @@ from watchdog.observers import Observer
 
 from classes.utility import Utility
 from classes.trigger_bot import CS2TriggerBot
-from classes.config_manager import ConfigManager
+from classes.esp import CS2Overlay
+from classes.bunnyhop import CS2Bunnyhop
+from classes.noflash import CS2NoFlash
+from classes.config_manager import ConfigManager, COLOR_CHOICES
 from classes.file_watcher import ConfigFileChangeHandler
 from classes.logger import Logger
 
 from gui.home_tab import populate_dashboard
-from gui.general_settings_tab import populate_settings
+from gui.general_settings_tab import populate_general_settings
+from gui.trigger_settings_tab import populate_trigger_settings
+from gui.overlay_settings_tab import populate_overlay_settings
 from gui.logs_tab import populate_logs
 from gui.faq_tab import populate_faq
 from gui.supporters_tab import populate_supporters
@@ -34,9 +39,12 @@ class MainWindow:
     def __init__(self):
         """Initialize the main application window and setup UI components."""
         # Define repository URL for reference
-        self.repo_url = "github.com/Jesewe/cs2-triggerbot"
-        # Initialize bot thread, observer, and log timer as None until set up
-        self.bot_thread = None
+        self.repo_url = "github.com/Jesewe/VioletWing"
+        # Initialize threads, observer, and log timer as None until set up
+        self.trigger_thread = None
+        self.overlay_thread = None
+        self.bunnyhop_thread = None
+        self.noflash_thread = None
         self.observer = None
         self.log_timer = None
         # Track the last position in the log file for incremental updates
@@ -46,13 +54,15 @@ class MainWindow:
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
         
-        # Fetch offsets and client data, initialize the TriggerBot instance
-        offsets, client_data = self.fetch_offsets_or_warn()
-        self.bot = CS2TriggerBot(offsets, client_data)
+        # Fetch offsets and client data
+        self.offsets, self.client_data, self.buttons_data = self.fetch_offsets_or_warn()
+
+        # Initialize feature instances
+        self.initialize_features()
         
         # Create the main window with a title and initial size
         self.root = ctk.CTk()
-        self.root.title(f"CS2 TriggerBot {ConfigManager.VERSION}")
+        self.root.title(f"VioletWing {ConfigManager.VERSION}")
         self.root.geometry("1300x700")
         self.root.resizable(True, True)
         self.root.minsize(1300, 700)
@@ -91,6 +101,18 @@ class MainWindow:
         # Bind window close event to cleanup resources
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
+    def initialize_features(self):
+        """Initialize all feature instances with fetched offsets."""
+        try:
+            self.triggerbot = CS2TriggerBot(self.offsets, self.client_data, self.buttons_data)
+            self.overlay = CS2Overlay(self.offsets, self.client_data, self.buttons_data)
+            self.bunnyhop = CS2Bunnyhop(self.offsets, self.client_data, self.buttons_data)
+            self.noflash = CS2NoFlash(self.offsets, self.client_data, self.buttons_data)
+            logger.info("All features initialized successfully.")
+        except Exception as e:
+            logger.error(f"Failed to initialize features: {e}")
+            messagebox.showerror("Initialization Error", f"Failed to initialize features: {str(e)}")
+
     def setup_ui(self):
         """Setup the modern user interface components."""
         # Create a modern header with branding and controls
@@ -120,19 +142,19 @@ class MainWindow:
         title_frame = ctk.CTkFrame(left_frame, fg_color="transparent")
         title_frame.pack(side="left")
         
-        # Main title "CS2" with accent color
+        # Main title "Violet" with accent color
         main_title = ctk.CTkLabel(
             title_frame,
-            text="CS2",
+            text="Violet",
             font=("Chivo", 28, "bold"),
             text_color="#D5006D"
         )
         main_title.pack(side="left")
         
-        # Subtitle "TriggerBot" in white
+        # Subtitle "Wing" in white
         sub_title = ctk.CTkLabel(
             title_frame,
-            text="TriggerBot",
+            text="Wing",
             font=("Chivo", 28, "bold"),
             text_color="#E0E0E0"
         )
@@ -155,7 +177,7 @@ class MainWindow:
         self.status_frame = ctk.CTkFrame(right_frame, fg_color="transparent")
         self.status_frame.pack(side="right", padx=(20, 0))
         
-        # Status dot indicating bot activity
+        # Status dot indicating client activity
         status_dot = ctk.CTkFrame(
             self.status_frame,
             width=12,
@@ -203,7 +225,7 @@ class MainWindow:
             text="GitHub",
             image=self.github_ctk_image,
             compound="left",
-            command=lambda: webbrowser.open("https://github.com/Jesewe/cs2-triggerbot"),
+            command=lambda: webbrowser.open("https://github.com/Jesewe/VioletWing"),
             height=32,
             corner_radius=16,
             fg_color="#21262d",
@@ -235,7 +257,7 @@ class MainWindow:
             text="Boosty",
             image=self.boosty_ctk_image,
             compound="left",
-            command=lambda: webbrowser.open("https://boosty.to/jesewe"),
+            command=lambda: webbrowser.open("https://boosty.to/jesewe/donate"),
             height=32,
             corner_radius=16,
             fg_color="#ff6b35",
@@ -290,7 +312,7 @@ class MainWindow:
             # Define paths for current and temporary executables
             current_exe = sys.executable
             exe_name = os.path.basename(current_exe)
-            temp_exe = os.path.join(ConfigManager.UPDATE_DIRECTORY, "new_CS2.Triggerbot.exe")
+            temp_exe = os.path.join(ConfigManager.UPDATE_DIRECTORY, "new_VioletWing.exe")
             bat_file = os.path.join(ConfigManager.UPDATE_DIRECTORY, "update.bat")
             
             # Download the new executable
@@ -303,8 +325,8 @@ class MainWindow:
             # Create a batch file to handle the update process
             with open(bat_file, 'w') as f:
                 f.write(f'''@echo off
-title CS2 TriggerBot Updater
-echo Updating CS2 TriggerBot...
+title VioletWing Updater
+echo Updating VioletWing...
 echo.
 echo Waiting for application to close...
 timeout /t 3 /nobreak >nul
@@ -365,14 +387,18 @@ del "%~f0" 2>nul
         
         # Frames for each tab
         self.dashboard_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
-        self.settings_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        self.general_settings_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        self.trigger_settings_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        self.overlay_settings_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         self.logs_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         self.faq_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         self.supporters_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         
         # Populate tab frames once during initialization
         self.populate_dashboard()
-        self.populate_settings()
+        self.populate_general_settings()
+        self.populate_trigger_settings()
+        self.populate_overlay_settings()
         self.populate_logs()
         self.populate_faq()
         self.populate_supporters()
@@ -396,7 +422,9 @@ del "%~f0" 2>nul
         # Navigation items with icons and labels
         nav_items = [
             ("Dashboard", "dashboard", "🏠"),
-            ("Settings", "settings", "⚙️"),
+            ("General Settings", "general_settings", "⚙️"),
+            ("Trigger Settings", "trigger_settings", "🔫"),
+            ("Overlay Settings", "overlay_settings", "🌍"),
             ("Logs", "logs", "📋"),
             ("FAQ", "faq", "❓"),
             ("Supporters", "supporters", "🤝")
@@ -455,7 +483,9 @@ del "%~f0" 2>nul
         
         # Hide all frames
         self.dashboard_frame.pack_forget()
-        self.settings_frame.pack_forget()
+        self.general_settings_frame.pack_forget()
+        self.trigger_settings_frame.pack_forget()
+        self.overlay_settings_frame.pack_forget()
         self.logs_frame.pack_forget()
         self.faq_frame.pack_forget()
         self.supporters_frame.pack_forget()
@@ -463,9 +493,12 @@ del "%~f0" 2>nul
         # Show the selected frame and update if necessary
         if view_key == "dashboard":
             self.dashboard_frame.pack(fill="both", expand=True)
-        elif view_key == "settings":
-            self.update_settings_fields()
-            self.settings_frame.pack(fill="both", expand=True)
+        elif view_key == "general_settings":
+            self.general_settings_frame.pack(fill="both", expand=True)
+        elif view_key == "trigger_settings":
+            self.trigger_settings_frame.pack(fill="both", expand=True)
+        elif view_key == "overlay_settings":
+            self.overlay_settings_frame.pack(fill="both", expand=True)
         elif view_key == "logs":
             self.logs_frame.pack(fill="both", expand=True)
         elif view_key == "faq":
@@ -477,9 +510,17 @@ del "%~f0" 2>nul
         """Populate the dashboard frame with controls and stats."""
         populate_dashboard(self, self.dashboard_frame)
 
-    def populate_settings(self):
-        """Populate the settings frame with configuration options."""
-        populate_settings(self, self.settings_frame)
+    def populate_general_settings(self):
+        """Populate the general settings frame with configuration options."""
+        populate_general_settings(self, self.general_settings_frame)
+
+    def populate_trigger_settings(self):
+        """Populate the trigger settings frame with configuration options."""
+        populate_trigger_settings(self, self.trigger_settings_frame)
+
+    def populate_overlay_settings(self):
+        """Populate the overlay settings frame with configuration options."""
+        populate_overlay_settings(self, self.overlay_settings_frame)
 
     def populate_logs(self):
         """Populate the logs frame with log display."""
@@ -493,40 +534,20 @@ del "%~f0" 2>nul
         """Populate the supporters frame with supporter data."""
         populate_supporters(self, self.supporters_frame)
 
-    def update_settings_fields(self):
-        """Update the settings input fields with current configuration."""
-        # Retrieve current settings
-        settings = self.bot.config.get('Settings', {})
-        # Update trigger key field
-        self.trigger_key_entry.delete(0, 'end')
-        self.trigger_key_entry.insert(0, settings.get('TriggerKey', ''))
-        # Update toggle mode checkbox
-        self.toggle_mode_var.set(settings.get('ToggleMode', False))
-        # Update attack teammates checkbox
-        self.attack_teammates_var.set(settings.get('AttackOnTeammates', False))
-        # Update minimum delay field
-        self.min_delay_entry.delete(0, 'end')
-        self.min_delay_entry.insert(0, str(settings.get('ShotDelayMin', 0.01)))
-        # Update maximum delay field
-        self.max_delay_entry.delete(0, 'end')
-        self.max_delay_entry.insert(0, str(settings.get('ShotDelayMax', 0.03)))
-        # Update post-shot delay field
-        self.post_shot_delay_entry.delete(0, 'end')
-        self.post_shot_delay_entry.insert(0, str(settings.get('PostShotDelay', 0.1)))
-
     def fetch_offsets_or_warn(self):
         """Attempt to fetch offsets; warn the user and return empty dictionaries on failure."""
         try:
-            offsets, client_data = Utility.fetch_offsets()
-            if offsets is None or client_data is None:
+            offsets, client_data, buttons_data = Utility.fetch_offsets()
+            if offsets is None or client_data is None or buttons_data is None:
                 raise ValueError("Failed to fetch offsets from the server.")
-            return offsets, client_data
+            return offsets, client_data, buttons_data
         except Exception as e:
             logger.error("Offsets fetch error: %s", e)
-            return {}, {}
+            messagebox.showerror("Offset Error", f"Failed to fetch offsets: {str(e)}")
+            return {}, {}, {}
 
-    def update_bot_status(self, status, color):
-        """Update bot status in header and dashboard."""
+    def update_client_status(self, status, color):
+        """Update client status in header and dashboard."""
         # Update header status label
         self.status_label.configure(text=status, text_color=color)
     
@@ -540,11 +561,12 @@ del "%~f0" 2>nul
         if hasattr(self, 'bot_status_label'):
             self.bot_status_label.configure(text=status, text_color=color)
 
-    def start_bot(self):
-        """Start the bot if it is not already running."""
-        # Check if bot is already active
-        if self.bot.is_running:
-            messagebox.showwarning("Bot Already Running", "The bot is already running.")
+    def start_client(self):
+        """Start selected features based on General settings."""
+        # Check if any feature is already running
+        if (self.triggerbot.is_running or self.overlay.is_running or
+                self.bunnyhop.is_running or self.noflash.is_running):
+            messagebox.showwarning("Features Running", "One or more features are already running.")
             return
 
         # Verify if the game is running
@@ -552,100 +574,331 @@ del "%~f0" 2>nul
             messagebox.showerror("Game Not Running", "Could not find cs2.exe process. Make sure the game is running.")
             return
 
-        # Clear stop event and start bot in a new thread
-        self.bot.stop_event.clear()
-        self.bot_thread = threading.Thread(target=self.bot.start, daemon=True)
-        self.bot_thread.start()
+        # Load current configuration
+        config = ConfigManager.load_config()
+        
+        # Start enabled features in separate threads
+        any_feature_started = False
+        if config["General"]["Trigger"]:
+            try:
+                self.triggerbot.config = config  # Update config
+                self.trigger_thread = threading.Thread(target=self.triggerbot.start, daemon=True)
+                self.trigger_thread.start()
+                logger.info("TriggerBot started.")
+                any_feature_started = True
+            except Exception as e:
+                logger.error(f"Failed to start TriggerBot: {e}")
+                messagebox.showerror("TriggerBot Error", f"Failed to start TriggerBot: {str(e)}")
+        
+        if config["General"]["Overlay"]:
+            try:
+                self.overlay.config = config  # Update config
+                self.overlay_thread = threading.Thread(target=self.overlay.start, daemon=True)
+                self.overlay_thread.start()
+                logger.info("Overlay started.")
+                any_feature_started = True
+            except Exception as e:
+                logger.error(f"Failed to start Overlay: {e}")
+                messagebox.showerror("Overlay Error", f"Failed to start Overlay: {str(e)}")
+        
+        if config["General"]["Bunnyhop"]:
+            try:
+                self.bunnyhop.config = config  # Update config
+                self.bunnyhop_thread = threading.Thread(target=self.bunnyhop.start, daemon=True)
+                self.bunnyhop_thread.start()
+                logger.info("Bunnyhop started.")
+                any_feature_started = True
+            except Exception as e:
+                logger.error(f"Failed to start Bunnyhop: {e}")
+                messagebox.showerror("Bunnyhop Error", f"Failed to start Bunnyhop: {str(e)}")
+        
+        if config["General"]["Noflash"]:
+            try:
+                self.noflash.config = config  # Update config
+                self.noflash_thread = threading.Thread(target=self.noflash.start, daemon=True)
+                self.noflash_thread.start()
+                logger.info("NoFlash started.")
+                any_feature_started = True
+            except Exception as e:
+                logger.error(f"Failed to start NoFlash: {e}")
+                messagebox.showerror("NoFlash Error", f"Failed to start NoFlash: {str(e)}")
+        
+        # Update UI if any feature was started
+        if any_feature_started:
+            self.update_client_status("Active", "#22c55e")
+        else:
+            logger.warning("No features enabled in General settings.")
+            messagebox.showwarning("No Features Enabled", "Please enable at least one feature in General Settings.")
 
-        # Update UI to reflect active status
-        self.update_bot_status("Active", "#22c55e")
+    def stop_client(self):
+        """Stop all running features."""
+        any_feature_running = False
+        
+        # Stop TriggerBot
+        if self.triggerbot.is_running:
+            try:
+                self.triggerbot.stop()
+                if self.trigger_thread and self.trigger_thread.is_alive():
+                    self.trigger_thread.join(timeout=2.0)
+                    if self.trigger_thread.is_alive():
+                        logger.warning("TriggerBot thread did not terminate cleanly.")
+                self.trigger_thread = None
+                logger.info("TriggerBot stopped.")
+                any_feature_running = True
+            except Exception as e:
+                logger.error(f"Failed to stop TriggerBot: {e}")
+        
+        # Stop Overlay
+        if self.overlay.is_running:
+            try:
+                self.overlay.stop()
+                if self.overlay_thread and self.overlay_thread.is_alive():
+                    self.overlay_thread.join(timeout=2.0)
+                    if self.overlay_thread.is_alive():
+                        logger.warning("Overlay thread did not terminate cleanly.")
+                self.overlay_thread = None
+                logger.info("Overlay stopped.")
+                any_feature_running = True
+            except Exception as e:
+                logger.error(f"Failed to stop Overlay: {e}")
+        
+        # Stop Bunnyhop
+        if self.bunnyhop.is_running:
+            try:
+                self.bunnyhop.stop()
+                if self.bunnyhop_thread and self.bunnyhop_thread.is_alive():
+                    self.bunnyhop_thread.join(timeout=2.0)
+                    if self.bunnyhop_thread.is_alive():
+                        logger.warning("Bunnyhop thread did not terminate cleanly.")
+                self.bunnyhop_thread = None
+                logger.info("Bunnyhop stopped.")
+                any_feature_running = True
+            except Exception as e:
+                logger.error(f"Failed to stop Bunnyhop: {e}")
+        
+        # Stop NoFlash
+        if self.noflash.is_running:
+            try:
+                self.noflash.stop()
+                if self.noflash_thread and self.noflash_thread.is_alive():
+                    self.noflash_thread.join(timeout=2.0)
+                    if self.noflash_thread.is_alive():
+                        logger.warning("NoFlash thread did not terminate cleanly.")
+                self.noflash_thread = None
+                logger.info("NoFlash stopped.")
+                any_feature_running = True
+            except Exception as e:
+                logger.error(f"Failed to stop NoFlash: {e}")
+        
+        # Update UI if any feature was running
+        if any_feature_running:
+            self.update_client_status("Inactive", "#ef4444")
 
-    def stop_bot(self):
-        """Stop the bot if it is currently running."""
-        # Check if bot is not running
-        if not self.bot.is_running:
-            messagebox.showwarning("Bot Not Started", "The bot is not running.")
-            return
-
-        # Stop the bot and wait for the thread to finish
-        self.bot.stop()
-        if hasattr(self, 'bot_thread') and self.bot_thread is not None:
-            self.bot_thread.join(timeout=2)
-            if self.bot_thread.is_alive():
-                logger.warning("Bot thread did not terminate cleanly.")
-            self.bot_thread = None
-
-        # Update UI to reflect inactive status
-        self.update_bot_status("Inactive", "#ef4444")
-
-    def save_settings(self, show_message=True):
-        """Save the configuration settings."""
+    def save_settings(self, show_message=False):
+        """Save the configuration settings and apply to all features in real-time."""
         try:
-            # Validate input fields
             self.validate_inputs()
-            
-            # Update configuration with current values
-            settings = self.bot.config['Settings']
-            settings['TriggerKey'] = self.trigger_key_entry.get().strip()
-            settings['ToggleMode'] = self.toggle_mode_var.get()
-            settings['AttackOnTeammates'] = self.attack_teammates_var.get()
-            settings['ShotDelayMin'] = float(self.min_delay_entry.get())
-            settings['ShotDelayMax'] = float(self.max_delay_entry.get())
-            settings['PostShotDelay'] = float(self.post_shot_delay_entry.get())
-            
-            # Save and apply the updated configuration
-            ConfigManager.save_config(self.bot.config)
-            self.bot.update_config(self.bot.config)
+            self.update_config_from_ui()
+            # Save to file
+            ConfigManager.save_config(self.triggerbot.config, log_info=False)
+            # Update config for all features
+            config = ConfigManager.load_config()
+            self.triggerbot.config = config
+            self.overlay.config = config
+            self.bunnyhop.config = config
+            self.noflash.config = config
+            logger.debug("Configuration updated for all features.")
             if show_message:
-                messagebox.showinfo("Settings Saved", "Configuration has been successfully saved.")
+                messagebox.showinfo("Settings Saved", "Configuration has been saved successfully.")
         except ValueError as e:
+            logger.error(f"Invalid input: {e}")
             messagebox.showerror("Invalid Input", str(e))
+        except Exception as e:
+            logger.error(f"Unexpected error during save_settings: {e}")
+            messagebox.showerror("Error", f"Unexpected error: {str(e)}")
+
+    def update_config_from_ui(self):
+        """Update the configuration from the UI elements."""
+        # Update General settings
+        general_settings = self.triggerbot.config["General"]
+        if hasattr(self, 'trigger_var'):
+            general_settings["Trigger"] = self.trigger_var.get()
+        if hasattr(self, 'overlay_var'):
+            general_settings["Overlay"] = self.overlay_var.get()
+        if hasattr(self, 'bunnyhop_var'):
+            general_settings["Bunnyhop"] = self.bunnyhop_var.get()
+        if hasattr(self, 'noflash_var'):
+            general_settings["Noflash"] = self.noflash_var.get()
+
+        # Update Trigger settings
+        trigger_settings = self.triggerbot.config["Trigger"]
+        if hasattr(self, 'trigger_key_entry'):
+            trigger_settings["TriggerKey"] = self.trigger_key_entry.get().strip()
+        if hasattr(self, 'toggle_mode_var'):
+            trigger_settings["ToggleMode"] = self.toggle_mode_var.get()
+        if hasattr(self, 'attack_teammates_var'):
+            trigger_settings["AttackOnTeammates"] = self.attack_teammates_var.get()
+        if hasattr(self, 'min_delay_entry'):
+            try:
+                trigger_settings["ShotDelayMin"] = float(self.min_delay_entry.get())
+            except ValueError:
+                pass
+        if hasattr(self, 'max_delay_entry'):
+            try:
+                trigger_settings["ShotDelayMax"] = float(self.max_delay_entry.get())
+            except ValueError:
+                pass
+        if hasattr(self, 'post_shot_delay_entry'):
+            try:
+                trigger_settings["PostShotDelay"] = float(self.post_shot_delay_entry.get())
+            except ValueError:
+                pass
+
+        # Update Overlay settings
+        overlay_settings = self.triggerbot.config["Overlay"]
+        if hasattr(self, 'enable_box_var'):
+            overlay_settings["enable_box"] = self.enable_box_var.get()
+        if hasattr(self, 'box_line_thickness_slider'):
+            overlay_settings["box_line_thickness"] = self.box_line_thickness_slider.get()
+        if hasattr(self, 'box_color_combo'):
+            overlay_settings["box_color_hex"] = COLOR_CHOICES.get(self.box_color_combo.get(), "#FFA500")
+        if hasattr(self, 'draw_snaplines_var'):
+            overlay_settings["draw_snaplines"] = self.draw_snaplines_var.get()
+        if hasattr(self, 'snaplines_color_combo'):
+            overlay_settings["snaplines_color_hex"] = COLOR_CHOICES.get(self.snaplines_color_combo.get(), "#FFFFFF")
+        if hasattr(self, 'text_color_combo'):
+            overlay_settings["text_color_hex"] = COLOR_CHOICES.get(self.text_color_combo.get(), "#FFFFFF")
+        if hasattr(self, 'draw_health_numbers_var'):
+            overlay_settings["draw_health_numbers"] = self.draw_health_numbers_var.get()
+        if hasattr(self, 'draw_nicknames_var'):
+            overlay_settings["draw_nicknames"] = self.draw_nicknames_var.get()
+        if hasattr(self, 'use_transliteration_var'):
+            overlay_settings["use_transliteration"] = self.use_transliteration_var.get()
+        if hasattr(self, 'draw_teammates_var'):
+            overlay_settings["draw_teammates"] = self.draw_teammates_var.get()
+        if hasattr(self, 'teammate_color_combo'):
+            overlay_settings["teammate_color_hex"] = COLOR_CHOICES.get(self.teammate_color_combo.get(), "#00FFFF")
+        if hasattr(self, 'enable_minimap_var'):
+            overlay_settings["enable_minimap"] = self.enable_minimap_var.get()
+        if hasattr(self, 'minimap_size_entry'):
+            try:
+                minimap_size = int(self.minimap_size_entry.get())
+                if 100 <= minimap_size <= 500:
+                    overlay_settings["minimap_size"] = minimap_size
+            except ValueError:
+                pass
 
     def validate_inputs(self):
         """Validate user input fields."""
-        # Check if trigger key is provided
-        trigger_key = self.trigger_key_entry.get().strip()
-        if not trigger_key:
-            raise ValueError("Trigger key cannot be empty.")
+        # Validate Trigger settings
+        if hasattr(self, 'trigger_key_entry'):
+            trigger_key = self.trigger_key_entry.get().strip()
+            if not trigger_key:
+                raise ValueError("Trigger key cannot be empty.")
 
         # Validate delay fields as numbers
-        try:
-            min_delay = float(self.min_delay_entry.get())
-            max_delay = float(self.max_delay_entry.get())
-            post_delay = float(self.post_shot_delay_entry.get())
-        except ValueError:
-            raise ValueError("Delay values must be valid numbers.")
+        if hasattr(self, 'min_delay_entry'):
+            try:
+                min_delay = float(self.min_delay_entry.get())
+            except ValueError:
+                raise ValueError("Minimum shot delay must be a valid number.")
+            if min_delay < 0:
+                raise ValueError("Minimum shot delay must be non-negative.")
+        else:
+            min_delay = None
 
-        # Ensure delays are non-negative and logical
-        if min_delay < 0 or max_delay < 0 or post_delay < 0:
-            raise ValueError("Delay values must be non-negative.")
-        if min_delay > max_delay:
-            raise ValueError("Minimum delay cannot be greater than maximum delay.")
+        if hasattr(self, 'max_delay_entry'):
+            try:
+                max_delay = float(self.max_delay_entry.get())
+            except ValueError:
+                raise ValueError("Maximum shot delay must be a valid number.")
+            if max_delay < 0:
+                raise ValueError("Maximum shot delay must be non-negative.")
+            if min_delay is not None and min_delay > max_delay:
+                raise ValueError("Minimum delay cannot be greater than maximum delay.")
+        else:
+            max_delay = None
 
-    def reset_to_defaults(self):
-        """Reset all settings to default values."""
-        # Retrieve default settings
-        defaults = ConfigManager.DEFAULT_CONFIG['Settings']
-        
-        # Reset trigger key
-        self.trigger_key_entry.delete(0, 'end')
-        self.trigger_key_entry.insert(0, defaults.get('TriggerKey', ''))
-        
-        # Reset toggle mode and attack teammates
-        self.toggle_mode_var.set(defaults.get('ToggleMode', False))
-        self.attack_teammates_var.set(defaults.get('AttackOnTeammates', False))
-        
-        # Reset delay fields
-        self.min_delay_entry.delete(0, 'end')
-        self.min_delay_entry.insert(0, str(defaults.get('ShotDelayMin', 0.01)))
-        self.max_delay_entry.delete(0, 'end')
-        self.max_delay_entry.insert(0, str(defaults.get('ShotDelayMax', 0.03)))
-        self.post_shot_delay_entry.delete(0, 'end')
-        self.post_shot_delay_entry.insert(0, str(defaults.get('PostShotDelay', 0.1)))
-        
-        # Save without showing a message
-        self.save_settings(show_message=False)
-        messagebox.showinfo("Settings Reset", "All settings have been reset to default values.")
+        if hasattr(self, 'post_shot_delay_entry'):
+            try:
+                post_delay = float(self.post_shot_delay_entry.get())
+            except ValueError:
+                raise ValueError("Post-shot delay must be a valid number.")
+            if post_delay < 0:
+                raise ValueError("Post-shot delay must be non-negative.")
+
+        # Validate Overlay settings
+        if hasattr(self, 'minimap_size_entry'):
+            try:
+                minimap_size = int(self.minimap_size_entry.get())
+                if not (100 <= minimap_size <= 500):
+                    raise ValueError("Minimap size must be between 100 and 500.")
+            except ValueError:
+                raise ValueError("Minimap size must be a valid integer.")
+
+    def update_ui_from_config(self):
+        """Update the UI elements from the configuration."""
+        # Update General settings UI
+        general_settings = self.triggerbot.config["General"]
+        if hasattr(self, 'trigger_var'):
+            self.trigger_var.set(general_settings["Trigger"])
+        if hasattr(self, 'overlay_var'):
+            self.overlay_var.set(general_settings["Overlay"])
+        if hasattr(self, 'bunnyhop_var'):
+            self.bunnyhop_var.set(general_settings["Bunnyhop"])
+        if hasattr(self, 'noflash_var'):
+            self.noflash_var.set(general_settings["Noflash"])
+
+        # Update Trigger settings UI
+        trigger_settings = self.triggerbot.config["Trigger"]
+        if hasattr(self, 'trigger_key_entry'):
+            self.trigger_key_entry.delete(0, "end")
+            self.trigger_key_entry.insert(0, trigger_settings["TriggerKey"])
+        if hasattr(self, 'toggle_mode_var'):
+            self.toggle_mode_var.set(trigger_settings["ToggleMode"])
+        if hasattr(self, 'attack_teammates_var'):
+            self.attack_teammates_var.set(trigger_settings["AttackOnTeammates"])
+        if hasattr(self, 'min_delay_entry'):
+            self.min_delay_entry.delete(0, "end")
+            self.min_delay_entry.insert(0, str(trigger_settings["ShotDelayMin"]))
+        if hasattr(self, 'max_delay_entry'):
+            self.max_delay_entry.delete(0, "end")
+            self.max_delay_entry.insert(0, str(trigger_settings["ShotDelayMax"]))
+        if hasattr(self, 'post_shot_delay_entry'):
+            self.post_shot_delay_entry.delete(0, "end")
+            self.post_shot_delay_entry.insert(0, str(trigger_settings["PostShotDelay"]))
+
+        # Update Overlay settings UI
+        overlay_settings = self.triggerbot.config["Overlay"]
+        if hasattr(self, 'enable_box_var'):
+            self.enable_box_var.set(overlay_settings["enable_box"])
+        if hasattr(self, 'box_line_thickness_slider') and hasattr(self, 'box_line_thickness_slider'):
+            self.box_line_thickness_slider.set(overlay_settings["box_line_thickness"])
+            if hasattr(self, 'box_line_thickness_value_label'):
+                self.box_line_thickness_value_label.configure(text=f"{overlay_settings['box_line_thickness']:.1f}")
+        if hasattr(self, 'box_color_combo'):
+            self.box_color_combo.set(Utility.get_color_name_from_hex(overlay_settings["box_color_hex"]))
+        if hasattr(self, 'draw_snaplines_var'):
+            self.draw_snaplines_var.set(overlay_settings["draw_snaplines"])
+        if hasattr(self, 'snaplines_color_combo'):
+            self.snaplines_color_combo.set(Utility.get_color_name_from_hex(overlay_settings["snaplines_color_hex"]))
+        if hasattr(self, 'text_color_combo'):
+            self.text_color_combo.set(Utility.get_color_name_from_hex(overlay_settings["text_color_hex"]))
+        if hasattr(self, 'draw_health_numbers_var'):
+            self.draw_health_numbers_var.set(overlay_settings["draw_health_numbers"])
+        if hasattr(self, 'draw_nicknames_var'):
+            self.draw_nicknames_var.set(overlay_settings["draw_nicknames"])
+        if hasattr(self, 'use_transliteration_var'):
+            self.use_transliteration_var.set(overlay_settings["use_transliteration"])
+        if hasattr(self, 'draw_teammates_var'):
+            self.draw_teammates_var.set(overlay_settings["draw_teammates"])
+        if hasattr(self, 'teammate_color_combo'):
+            self.teammate_color_combo.set(Utility.get_color_name_from_hex(overlay_settings["teammate_color_hex"]))
+        if hasattr(self, 'enable_minimap_var'):
+            self.enable_minimap_var.set(overlay_settings["enable_minimap"])
+        if hasattr(self, 'minimap_size_entry'):
+            self.minimap_size_entry.delete(0, "end")
+            self.minimap_size_entry.insert(0, str(overlay_settings["minimap_size"]))
 
     def open_config_directory(self):
         """Open the configuration directory in the file explorer."""
@@ -653,181 +906,11 @@ del "%~f0" 2>nul
         if platform.system() == "Windows":
             os.startfile(path)
 
-    def show_share_import_dialog(self):
-        """Show modern share/import dialog for configuration sharing."""
-        dialog = ctk.CTkToplevel(self.root)
-        dialog.title("Share/Import Settings")
-        dialog.geometry("600x500")
-        dialog.transient(self.root)
-        dialog.grab_set()
-        dialog.resizable(False, False)
-
-        # Center the dialog relative to the main window
-        self.root.update_idletasks()
-        root_x = self.root.winfo_rootx()
-        root_y = self.root.winfo_rooty()
-        root_w = self.root.winfo_width()
-        root_h = self.root.winfo_height()
-        dialog_w = 600
-        dialog_h = 500
-        x = root_x + (root_w // 2) - (dialog_w // 2)
-        y = root_y + (root_h // 2) - (dialog_h // 2)
-        dialog.geometry(f"{dialog_w}x{dialog_h}+{x}+{y}")
-        
-        # Main frame for dialog content
-        main_frame = ctk.CTkFrame(dialog, fg_color="transparent")
-        main_frame.pack(fill="both", expand=True, padx=30, pady=30)
-        
-        # Dialog title
-        ctk.CTkLabel(
-            main_frame,
-            text="🔗 Share/Import Configuration",
-            font=("Chivo", 24, "bold"),
-            text_color=("#1f2937", "#E0E0E0")
-        ).pack(pady=(0, 20))
-        
-        # Description of dialog purpose
-        ctk.CTkLabel(
-            main_frame,
-            text="Generate a shareable code for your settings or import settings from a code",
-            font=("Gambetta", 14),
-            text_color=("#6b7280", "#9ca3af")
-        ).pack(pady=(0, 30))
-        
-        # Text area for displaying or entering codes
-        text_frame = ctk.CTkFrame(
-            main_frame,
-            corner_radius=12,
-            fg_color=("#f8fafc", "#0d1117"),
-            border_width=1,
-            border_color=("#e5e7eb", "#30363d")
-        )
-        text_frame.pack(fill="both", expand=True, pady=(0, 30))
-        
-        self.share_import_text = ctk.CTkTextbox(
-            text_frame,
-            corner_radius=12,
-            border_width=0,
-            state="disabled",
-            font=("Chivo", 12),
-            fg_color="transparent"
-        )
-        self.share_import_text.pack(fill="both", expand=True, padx=15, pady=15)
-        
-        # Buttons frame for actions
-        buttons_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
-        buttons_frame.pack(fill="x")
-        
-        # Generate code button
-        ctk.CTkButton(
-            buttons_frame,
-            text="📤 Generate Code",
-            command=self.export_settings,
-            width=140,
-            height=40,
-            corner_radius=10,
-            fg_color="#22c55e",
-            hover_color="#16a34a",
-            font=("Chivo", 14, "bold")
-        ).pack(side="left", padx=(0, 10))
-        
-        # Import settings button
-        ctk.CTkButton(
-            buttons_frame,
-            text="📥 Import Settings",
-            command=lambda: self.import_settings(dialog),
-            width=140,
-            height=40,
-            corner_radius=10,
-            fg_color="#3b82f6",
-            hover_color="#2563eb",
-            font=("Chivo", 14, "bold")
-        ).pack(side="left", padx=(0, 10))
-        
-        # Close dialog button
-        ctk.CTkButton(
-            buttons_frame,
-            text="❌ Close",
-            command=dialog.destroy,
-            width=100,
-            height=40,
-            corner_radius=10,
-            fg_color="#6b7280",
-            hover_color="#4b5563",
-            font=("Chivo", 14, "bold")
-        ).pack(side="right")
-
-    def export_settings(self):
-        """Export settings to a shareable code."""
-        # Collect current settings into a dictionary
-        settings = {
-            'TriggerKey': self.trigger_key_entry.get(),
-            'ToggleMode': self.toggle_mode_var.get(),
-            'ShotDelayMin': float(self.min_delay_entry.get()),
-            'ShotDelayMax': float(self.max_delay_entry.get()),
-            'PostShotDelay': float(self.post_shot_delay_entry.get()),
-            'AttackOnTeammates': self.attack_teammates_var.get()
-        }
-        
-        # Serialize, compress, and encode the settings
-        json_bytes = orjson.dumps(settings)
-        compressed = zlib.compress(json_bytes)
-        encoded = base64.b64encode(compressed).decode()
-        code = f"TB-{encoded}"
-        
-        # Display and copy the code to clipboard
-        self.share_import_text.configure(state="normal")
-        self.share_import_text.delete("1.0", "end")
-        self.share_import_text.insert("1.0", code)
-        self.share_import_text.configure(state="disabled")
-        self.root.clipboard_clear()
-        self.root.clipboard_append(code)
-        
-        messagebox.showinfo("Code Generated", "Settings code has been generated and copied to clipboard!")
-
-    def import_settings(self, dialog):
-        """Import settings from a provided code."""
-        # Enable text box to read the code
-        self.share_import_text.configure(state="normal")
-        code = self.share_import_text.get("1.0", "end-1c").strip()
-        self.share_import_text.configure(state="disabled")
-        
-        # Validate code prefix
-        if not code.startswith("TB-"):
-            messagebox.showerror("Invalid Code", "Invalid code format. Must start with 'TB-'")
-            return
-        
-        try:
-            # Decode, decompress, and deserialize the settings
-            encoded = code[3:]
-            compressed = base64.b64decode(encoded)
-            json_bytes = zlib.decompress(compressed)
-            settings = orjson.loads(json_bytes)
-            
-            # Update UI fields with imported settings
-            self.trigger_key_entry.delete(0, 'end')
-            self.trigger_key_entry.insert(0, settings.get('TriggerKey', ''))
-            self.toggle_mode_var.set(settings.get('ToggleMode', False))
-            self.attack_teammates_var.set(settings.get('AttackOnTeammates', False))
-            self.min_delay_entry.delete(0, 'end')
-            self.min_delay_entry.insert(0, str(settings.get('ShotDelayMin', 0.01)))
-            self.max_delay_entry.delete(0, 'end')
-            self.max_delay_entry.insert(0, str(settings.get('ShotDelayMax', 0.03)))
-            self.post_shot_delay_entry.delete(0, 'end')
-            self.post_shot_delay_entry.insert(0, str(settings.get('PostShotDelay', 0.1)))
-            
-            # Save settings and close dialog
-            self.save_settings(show_message=False)
-            dialog.destroy()
-            messagebox.showinfo("Import Successful", "Settings have been imported and saved successfully!")
-        except Exception as e:
-            messagebox.showerror("Import Error", f"Error importing settings: {str(e)}")
-
     def init_config_watcher(self):
         """Initialize file watcher for configuration changes."""
         try:
             # Set up a watcher for config file changes
-            event_handler = ConfigFileChangeHandler(self.bot)
+            event_handler = ConfigFileChangeHandler(self)
             self.observer = Observer()
             self.observer.schedule(event_handler, path=ConfigManager.CONFIG_DIRECTORY, recursive=False)
             self.observer.start()
@@ -897,18 +980,12 @@ del "%~f0" 2>nul
     def cleanup(self):
         """Cleanup resources before closing the application."""
         try:
+            # Stop all running features
+            self.stop_client()
+            
             # Stop the file watcher if it exists
             if hasattr(self, 'observer') and self.observer:
                 self.observer.stop()
                 self.observer.join()
         except Exception as e:
-            logger.error("Error stopping observer: %s", e)
-
-        # Stop the bot if it’s running
-        if self.bot.is_running:
-            self.bot.stop()
-            if hasattr(self, 'bot_thread') and self.bot_thread is not None:
-                self.bot_thread.join(timeout=2)
-                if self.bot_thread.is_alive():
-                    logger.warning("Bot thread did not terminate cleanly.")
-                self.bot_thread = None
+            logger.error("Error during cleanup: %s", e)
