@@ -1,8 +1,9 @@
 import sys
 
 from classes.logger import Logger
-from gui.main_window import MainWindow
 from classes.config_manager import ConfigManager
+
+from gui.main_window import MainWindow
 
 def main():
     # Set up logging for the application.

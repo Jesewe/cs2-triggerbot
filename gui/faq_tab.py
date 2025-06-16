@@ -24,7 +24,7 @@ def populate_faq(main_window, frame):
     # Subtitle providing context
     ctk.CTkLabel(
         title_frame,
-        text="Find answers to common questions about TriggerBot usage and configuration",
+        text="Find answers to common questions about TriggerBot, Overlay, Bunnyhop, and NoFlash usage and configuration",
         font=("Gambetta", 16),
         text_color=("#6b7280", "#9ca3af")
     ).pack(anchor="w", pady=(8, 0))
@@ -32,14 +32,21 @@ def populate_faq(main_window, frame):
     # List of FAQ items
     faqs = [
         ("What is a TriggerBot?", "A TriggerBot automatically shoots when your crosshair is positioned over an enemy player, providing enhanced reaction times in competitive gameplay. It works by detecting enemy pixels and triggering mouse clicks."),
+        ("What does the Overlay (ESP) feature do?", "The Overlay (ESP) feature displays visual information on the game screen, such as enemy bounding boxes, snaplines, health numbers, nicknames, and a minimap, helping you track opponents and teammates effectively."),
+        ("What is the Bunnyhop feature?", "The Bunnyhop feature automates the process of bunny hopping in Counter-Strike 2, allowing continuous jumping to maintain speed and improve movement control without manual input."),
+        ("What is the NoFlash feature?", "The NoFlash feature reduces or eliminates the effect of flashbangs in Counter-Strike 2, ensuring you maintain visibility and can continue playing effectively even when flashed."),
         ("Is this tool safe to use?", "This tool is provided for educational and research purposes only. Using automation tools in online games may violate terms of service and could result in account penalties. Always check game rules before use."),
-        ("How do I configure the trigger key?", "Navigate to Settings and enter your preferred key in the Trigger Key field. You can use keyboard keys (e.g., 'x', 'c', 'v') or mouse buttons (e.g., 'mouse4' for mouse button 4, 'mouse5' for mouse button 5)."),
-        ("What are the delay settings for?", "Delay settings give the bot a more natural feel by adding timing differences. You can set minimum and maximum delays to randomize how quickly it shoots. Plus, the Post Shot Delay adds a short pause after each shot, making it seem like a real person is reacting."),
-        ("Can I use this on FACEIT or ESEA?", "No, you can't use automation tools on anti-cheat platforms like FACEIT, ESEA, or VAC-secured servers. Doing so will get you a permanent ban. Stick to casual servers or practice offline instead."),
-        ("How do I update the offsets?", "When you start the app, it automatically gets the latest offsets from the server. You can see when it was last updated on the dashboard. If you want to refresh it manually, just go to Settings."),
-        ("Why isn't the bot triggering?", "Here are some usual problems: the trigger key might be set wrong, the game window isn't focused, you might not see the enemy in your crosshair, or your game settings might have changed. Take a look at your Settings to make sure everything's set up right."),
-        ("What should I do if the app crashes?", "First, try restarting the app. If it's still crashing, make sure you have the latest version, check that your system meets the requirements, and see if any antivirus is blocking the app."),
-        ("Is there a hotkey to toggle the bot on/off?", "Yes, you can set a toggle hotkey in Settings. This allows you to quickly enable/disable the triggerbot during gameplay without alt-tabbing to the application.")
+        ("How do I configure the trigger key?", "Navigate to the Trigger Settings tab and enter your preferred key in the Trigger Key field. You can use keyboard keys (e.g., 'x', 'c', 'v') or mouse buttons (e.g., 'mouse4' for mouse button 4, 'mouse5' for mouse button 5)."),
+        ("What are the delay settings for?", "Delay settings in the Trigger Settings tab give the TriggerBot a more natural feel by adding timing differences. You can set minimum and maximum delays to randomize how quickly it shoots, and the Post Shot Delay adds a pause after each shot to mimic human reaction times."),
+        ("How do I customize the Overlay (ESP) settings?", "In the Overlay Settings tab, you can enable or disable features like bounding boxes, snaplines, health numbers, nicknames, and the minimap. You can also adjust colors, line thickness, and minimap size to suit your preferences."),
+        ("Can I use these features on FACEIT or ESEA?", "No, automation tools like TriggerBot, Overlay, Bunnyhop, or NoFlash are not allowed on anti-cheat platforms like FACEIT, ESEA, or VAC-secured servers. Using them will likely result in a permanent ban. Stick to casual servers or offline practice."),
+        ("How do I update the offsets?", "The app automatically fetches the latest offsets from the server on startup. You can check the last update time on the Dashboard."),
+        ("Why isn't the TriggerBot triggering?", "Common issues include: incorrect trigger key configuration, the game window not being focused, the crosshair not being on an enemy, or changed game settings. Verify your settings in the Trigger Settings tab."),
+        ("Why isn't the Overlay (ESP) displaying?", "Ensure the Overlay feature is enabled in General Settings and that the game is running. Check the Overlay Settings tab to confirm visibility options (e.g., bounding boxes, snaplines) are enabled. Also, verify that your game is in a compatible mode (e.g., windowed or borderless)."),
+        ("Why doesn't Bunnyhop work consistently?", "Bunnyhop may fail if the game window is not focused, the Bunnyhop feature is disabled in General Settings, or your timing settings interfere. Check the General Settings tab and ensure consistent key inputs."),
+        ("Why is NoFlash not working?", "Ensure NoFlash is enabled in General Settings. It may not work if the game’s anti-cheat detects memory modifications or if the offsets are outdated. Restart the app to refresh offsets and verify game compatibility."),
+        ("What should I do if the app crashes?", "Try restarting the app, ensuring you have the latest version, and checking system requirements. Verify that no antivirus is blocking the app. Check the Logs tab for error details."),
+        ("Is there a hotkey to toggle features on/off?", "Yes, you can set a toggle hotkey for the TriggerBot in the Trigger Settings tab. Other features like Overlay, Bunnyhop, and NoFlash can be toggled via General Settings, but they don’t have individual hotkeys.")
     ]
     
     # Create FAQ cards

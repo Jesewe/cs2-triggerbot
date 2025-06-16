@@ -33,7 +33,7 @@ def populate_dashboard(main_window, frame):
     # Subtitle providing context
     subtitle_label = ctk.CTkLabel(
         title_frame,
-        text="Monitor and control your CS2 bot",
+        text="Monitor and control your CS2 client",
         font=("Gambetta", 16),
         text_color=("#64748b", "#94a3b8")
     )
@@ -47,7 +47,7 @@ def populate_dashboard(main_window, frame):
     status_card, main_window.bot_status_label = create_stat_card(
         main_window,
         stats_frame,
-        "🤖 Bot Status",
+        "🔮 Status",
         "Inactive",
         "#ef4444",
         "Current operational state"
@@ -93,7 +93,7 @@ def populate_dashboard(main_window, frame):
     # Control center title
     ctk.CTkLabel(
         control_header,
-        text="🎮 Bot Control Center",
+        text="🎮 Control Center",
         font=("Chivo", 24, "bold"),
         text_color=("#1f2937", "#ffffff")
     ).pack(side="left")
@@ -105,8 +105,8 @@ def populate_dashboard(main_window, frame):
     # Start button with play icon
     start_button = ctk.CTkButton(
         control_buttons,
-        text="▶  Start Bot",
-        command=main_window.start_bot,
+        text="▶  Start Client",
+        command=main_window.start_client,
         width=180,
         height=60,
         corner_radius=16,
@@ -121,8 +121,8 @@ def populate_dashboard(main_window, frame):
     # Stop button with stop icon
     stop_button = ctk.CTkButton(
         control_buttons,
-        text="⏹  Stop Bot",
-        command=main_window.stop_bot,
+        text="⏹  Stop Client",
+        command=main_window.stop_client,
         width=180,
         height=60,
         corner_radius=16,
@@ -167,8 +167,8 @@ def populate_dashboard(main_window, frame):
     # List of guide steps
     steps = [
         ("1", "Launch CS2", "Open Counter-Strike 2 and ensure it's running"),
-        ("2", "Configure Settings", "Set your trigger key and adjust delays in Settings"),
-        ("3", "Start Bot", "Click the Start Bot button to activate"),
+        ("2", "Configure Settings", "Set your trigger settings or overlay settings"),
+        ("3", "Start Client", "Click the Start Client button to activate"),
         ("4", "Monitor Logs", "Check the Logs tab for activity and status updates")
     ]
     
@@ -308,13 +308,13 @@ def fetch_last_update(main_window):
     # Run fetch in a separate thread
     threading.Thread(target=update_callback, daemon=True).start()
 
-def update_bot_status(self, status, color):
-    """Update the bot status indicators across the dashboard."""
+def update_client_status(self, status, color):
+    """Update the client status indicators across the dashboard."""
     # Update header status label
     self.status_label.configure(text=status, text_color=color)
     # Update dashboard status label
-    self.bot_status_label.configure(text=status, text_color=color)
-    
+    self.bot_status_label.configure(text=status, text_color=color)  # Исправлено с client_status_label
+
     # Update status dot color in header
     for widget in self.status_frame.winfo_children():
         if isinstance(widget, ctk.CTkFrame) and widget.cget("width") == 12:
@@ -322,5 +322,5 @@ def update_bot_status(self, status, color):
             break
     
     # Ensure dashboard status updates if widget exists
-    if hasattr(self, 'bot_status_label') and self.bot_status_label.winfo_exists():
+    if hasattr(self, 'bot_status_label') and self.bot_status_label.winfo_exists():  # Исправлено с client_status_label
         self.bot_status_label.configure(text=status, text_color=color)

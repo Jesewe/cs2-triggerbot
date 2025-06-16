@@ -16,13 +16,14 @@ logger = Logger.get_logger()
 MAIN_LOOP_SLEEP = 0.05
 
 class CS2TriggerBot:
-    def __init__(self, offsets: dict, client_data: dict) -> None:
+    def __init__(self, offsets: dict, client_data: dict, buttons_data: dict) -> None:
         """
         Initialize the TriggerBot with offsets, configuration, and client data.
         """
         # Load the configuration settings
         self.config = ConfigManager.load_config()
-        self.memory_manager = MemoryManager(offsets, client_data)
+        self.memory_manager = MemoryManager(offsets, client_data, buttons_data)
+        self.memory_manager.config = self.config  # Pass configuration to MemoryManager
         self.is_running, self.stop_event = False, threading.Event()
         self.trigger_active = False
         self.toggle_state = False 
@@ -39,7 +40,7 @@ class CS2TriggerBot:
 
     def load_configuration(self) -> None:
         """Load and apply configuration settings."""
-        settings = self.config['Settings']
+        settings = self.config['Trigger']
         self.trigger_key = settings['TriggerKey']
         self.toggle_mode = settings['ToggleMode']
         self.shot_delay_min = settings['ShotDelayMin']
@@ -60,6 +61,7 @@ class CS2TriggerBot:
     def update_config(self, config):
         """Update the configuration settings."""
         self.config = config
+        self.memory_manager.config = self.config
         self.load_configuration()
 
     def play_toggle_sound(self, state: bool) -> None:
