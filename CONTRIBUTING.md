@@ -1,6 +1,6 @@
-# Contributing to CS2 TriggerBot
+# Contributing to VioletWing
 
-Thank you for your interest in contributing to the CS2 TriggerBot project. This guide will assist you from setting up the development environment to submitting pull requests.
+Thank you for your interest in contributing to the VioletWing project. This guide outlines the process for setting up your development environment, contributing code, and submitting changes.
 
 ## Table of Contents
 
@@ -16,34 +16,34 @@ Thank you for your interest in contributing to the CS2 TriggerBot project. This 
 
 ## Code of Conduct
 
-By participating in this project, you agree to abide by the [Code of Conduct](CODE_OF_CONDUCT.md). Please be respectful, considerate, and open to constructive feedback.
+By participating, you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md). Be respectful, inclusive, and open to constructive feedback.
 
 ## Getting Started
 
-1. **Fork the Repository**: Create a personal fork of the repository on GitHub.
-2. **Clone Your Fork**: Clone your fork to your local environment:
+1. **Fork the Repository**: Create a personal fork on GitHub.
+2. **Clone Your Fork**: Clone your fork locally:
 
    ```bash
-   git clone https://github.com/Jesewe/cs2-triggerbot.git
-   cd cs2-triggerbot
+   git clone https://github.com/Jesewe/VioletWing.git
+   cd VioletWing
    ```
 
-3. **Add Upstream Remote**: Stay updated with the original repository:
+3. **Add Upstream Remote**: Sync with the original repository:
 
    ```bash
-   git remote add upstream https://github.com/Jesewe/cs2-triggerbot.git
+   git remote add upstream https://github.com/Jesewe/VioletWing.git
    ```
 
 ## Development Setup
 
-1. **Install Python**: Ensure you have Python version **≥ 3.8** and **< 3.12.5** installed.
+1. **Install Python**: Use Python **≥ 3.8** and **< 3.12.5**.
 2. **Install Dependencies**: Install required packages:
 
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Run the Application**: Launch the application for testing and development:
+3. **Run the Application**: Test the application:
 
    ```bash
    python main.py
@@ -51,68 +51,95 @@ By participating in this project, you agree to abide by the [Code of Conduct](CO
 
 ### Testing Changes
 
-- Execute the application to verify your modifications.
-- Review logs at `%LOCALAPPDATA%\Requests\ItsJesewe\crashes\tb_logs.log` for debugging.
+- Run the application to validate changes.
+- Check logs at `%LOCALAPPDATA%\Requests\ItsJesewe\crashes\vw_logs.log` or `vw_detailed_logs.log` for debugging.
+- Test in Counter-Strike 2 (casual or offline modes) to ensure TriggerBot, Overlay, Bunnyhop, and NoFlash features work as expected.
 
 ## Coding Standards
 
-Adhere to the following guidelines for consistency and readability:
+Follow these guidelines for consistent, high-quality code:
 
-- **PEP 8**: Follow the [PEP 8 style guide](https://www.python.org/dev/peps/pep-0008/).
-- **Naming**: Use clear, descriptive names for variables, functions, and classes.
-- **Error Handling**: Handle exceptions gracefully and log errors appropriately.
-- **Documentation**: Comment complex or critical sections to explain intent.
-- **Modularity**: Decompose large functions into smaller, reusable units.
+- **PEP 8**: Adhere to the [PEP 8 style guide](https://www.python.org/dev/peps/pep-0008/).
+- **Naming**: Use descriptive, meaningful names for variables, functions, and classes (e.g., `trigger_key` instead of `tk`).
+- **Error Handling**: Implement robust exception handling and log errors using the `Logger` class.
+- **Documentation**: Add docstrings for functions and comments for complex logic.
+- **Modularity**: Break down large functions into smaller, reusable components.
 
 ### GUI Development
 
-- **customtkinter**: Use `customtkinter` for any enhancements or changes to the graphical interface.
+- **Customtkinter**: Use `customtkinter` for GUI enhancements.
+- **Consistency**: Match the existing UI theme (colors, fonts: Chivo, Gambetta) and layout (e.g., scrollable frames, card designs).
+- **Responsiveness**: Ensure GUI elements adapt to different window sizes.
+
+### Feature-Specific Guidelines
+
+- **TriggerBot**: Ensure compatibility with offset updates from [cs2-dumper](https://github.com/a2x/cs2-dumper).
+- **Overlay (ESP)**: Test visual elements (bounding boxes, snaplines, minimap) in various game resolutions.
+- **Bunnyhop**: Verify smooth movement automation across different surfaces.
+- **NoFlash**: Confirm flashbang mitigation without affecting game performance.
 
 ### Logging
 
-- **Format**: Use the `Logger` class format for log entries.
-- **Levels**: Apply appropriate log levels (`INFO`, `WARNING`, `ERROR`) based on severity.
+- **Format**: Follow the `Logger` class format for log entries.
+- **Levels**: Use appropriate levels (`INFO`, `WARNING`, `ERROR`) based on context.
+- **Location**: Logs are saved to `%LOCALAPPDATA%\Requests\ItsJesewe\crashes\`.
 
 ## Submitting Issues
 
-Before submitting a new issue:
+Before opening an issue:
 
 1. Search existing issues to avoid duplicates.
-2. Provide a clear problem description, steps to reproduce, expected behavior, and relevant logs or screenshots.
+2. Include:
+   - A clear description of the problem or bug.
+   - Steps to reproduce.
+   - Expected vs. actual behavior.
+   - Screenshots or log excerpts (from `vw_logs.log` or `vw_detailed_logs.log`).
+
+Use the [Issues tab](https://github.com/Jesewe/VioletWing/issues) and select the appropriate template (e.g., Bug Report).
 
 ## Pull Request Process
 
-1. **Create a Branch**: Use a descriptive branch name:
+1. **Create a Branch**: Use a descriptive name:
 
    ```bash
-   git checkout -b feature/your-feature
+   git checkout -b feature/add-new-feature
    ```
 
-2. **Commit Changes**: Ensure each commit message is concise and descriptive:
+2. **Commit Changes**: Write clear, concise commit messages:
 
    ```bash
-   git commit -m "Brief description of changes"
+   git commit -m "Add bunnyhop timing adjustment in settings"
    ```
 
 3. **Push to Fork**:
 
    ```bash
-   git push origin feature/your-feature
+   git push origin feature/add-new-feature
    ```
 
-4. **Open a Pull Request**: On GitHub, submit a PR to the main repository, including:
+4. **Open a Pull Request**: Submit a PR to the main repository, including:
 
-   - Purpose of your changes.
-   - Potential impact on existing functionality.
-   - Testing steps and results.
+   - Purpose of the changes (e.g., “Adds NoFlash toggle to General Settings”).
+   - Impact on existing features (e.g., “No changes to TriggerBot”).
+   - Testing details (e.g., “Tested in CS2 casual mode, 1920x1080”).
+   - Screenshots for GUI changes.
 
 ### Review Process
 
-- **Code Review**: PRs are reviewed for quality, functionality, and adherence to standards.
-- **Feedback**: Address requested changes promptly.
+- PRs are reviewed for code quality, functionality, and adherence to standards.
+- Respond to feedback promptly and make requested changes.
+- PRs may require rebasing if the upstream repository updates:
+
+  ```bash
+  git fetch upstream
+  git rebase upstream/main
+  git push --force
+  ```
 
 ## Feature Requests and Feedback
 
-For new ideas or improvements, open an issue labeled **Feature Request** in the [Issues tab](https://github.com/Jesewe/cs2-triggerbot/issues).
+Submit new ideas or improvements via the [Issues tab](https://github.com/Jesewe/VioletWing/issues) with the **Feature Request** label. Include:
 
-We appreciate your contributions to CS2 TriggerBot and your efforts in improving this project!
+- Description of the feature (e.g., “Add customizable snapline colors for Overlay”).
+- Use case or benefit.
+- Any mockups or examples (optional).

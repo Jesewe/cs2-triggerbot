@@ -1,8 +1,9 @@
 import sys
 
 from classes.logger import Logger
-from gui.main_window import MainWindow
 from classes.config_manager import ConfigManager
+
+from gui.main_window import MainWindow
 
 def main():
     # Set up logging for the application.
@@ -17,12 +18,12 @@ def main():
         window = MainWindow()
         window.run()
     except KeyboardInterrupt:
-        logger.info("Application interrupted by user")
+        logger.debug("Application interrupted by user")
     except Exception as e:
         logger.error("Unexpected error: %s", e)
         sys.exit(1)
     finally:
-        logger.info("Application shutting down")
+        logger.debug("Application shutting down")
 
 if __name__ == "__main__":
     main()

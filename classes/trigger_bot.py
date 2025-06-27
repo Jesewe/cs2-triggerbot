@@ -16,13 +16,14 @@ logger = Logger.get_logger()
 MAIN_LOOP_SLEEP = 0.05
 
 class CS2TriggerBot:
-    def __init__(self, offsets: dict, client_data: dict) -> None:
+    def __init__(self, offsets: dict, client_data: dict, buttons_data: dict) -> None:
         """
         Initialize the TriggerBot with offsets, configuration, and client data.
         """
         # Load the configuration settings
         self.config = ConfigManager.load_config()
-        self.memory_manager = MemoryManager(offsets, client_data)
+        self.memory_manager = MemoryManager(offsets, client_data, buttons_data)
+        self.memory_manager.config = self.config  # Pass configuration to MemoryManager
         self.is_running, self.stop_event = False, threading.Event()
         self.trigger_active = False
         self.toggle_state = False 
@@ -39,7 +40,7 @@ class CS2TriggerBot:
 
     def load_configuration(self) -> None:
         """Load and apply configuration settings."""
-        settings = self.config['Settings']
+        settings = self.config['Trigger']
         self.trigger_key = settings['TriggerKey']
         self.toggle_mode = settings['ToggleMode']
         self.shot_delay_min = settings['ShotDelayMin']
@@ -60,7 +61,9 @@ class CS2TriggerBot:
     def update_config(self, config):
         """Update the configuration settings."""
         self.config = config
+        self.memory_manager.config = self.config
         self.load_configuration()
+        logger.debug("TriggerBot configuration updated.")
 
     def play_toggle_sound(self, state: bool) -> None:
         """Play a sound when the toggle key is pressed."""
@@ -120,7 +123,6 @@ class CS2TriggerBot:
             return
         # Set the running flag to True and log that the TriggerBot has started
         self.is_running = True
-        logger.info("TriggerBot started.")
 
         # Define local variables for utility functions
         is_game_active = Utility.is_game_active
@@ -162,17 +164,15 @@ class CS2TriggerBot:
                 logger.error(f"Unexpected error in main loop: {e}", exc_info=True)
 
     def stop(self) -> None:
-        """
-        Stops the TriggerBot and cleans up resources.
-        Also stops the keyboard and mouse listeners.
-        """
-        # Set the running flag to False and signal the stop event
+        """Stops the TriggerBot and cleans up resources."""
         self.is_running = False
         self.stop_event.set()
-        # Stop the keyboard and mouse listeners
-        if self.keyboard_listener.running:
-            self.keyboard_listener.stop()
-        if self.mouse_listener.running:
-            self.mouse_listener.stop()
-        # Log that the TriggerBot has stopped
-        logger.info(f"TriggerBot stopped.")
+        time.sleep(0.1)
+        try:
+            if self.keyboard_listener.running:
+                self.keyboard_listener.stop()
+            if self.mouse_listener.running:
+                self.mouse_listener.stop()
+            logger.debug(f"TriggerBot stopped.")
+        except Exception as e:
+            logger.error(f"Error stopping TriggerBot: {e}")
