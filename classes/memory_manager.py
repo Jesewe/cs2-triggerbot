@@ -55,7 +55,7 @@ class MemoryManager:
         try:
             # Attempt to attach to the cs2.exe process
             self.pm = pymem.Pymem("cs2.exe")
-            logger.info("Successfully attached to cs2.exe process.")
+            logger.debug("Successfully attached to cs2.exe process.")
             return True
         except pymem.exception.ProcessNotFound:
             # Log an error if the process is not found
@@ -72,7 +72,7 @@ class MemoryManager:
             # Attempt to retrieve the client.dll module
             client_module = pymem.process.module_from_name(self.pm.process_handle, "client.dll")
             self.client_base = client_module.lpBaseOfDll
-            logger.info("client.dll module found and base address retrieved.")
+            logger.debug("client.dll module found and base address retrieved.")
             return True
         except pymem.exception.ModuleNotFoundError:
             # Log an error if the module is not found
@@ -102,7 +102,6 @@ class MemoryManager:
             self.m_hPlayerPawn = extracted["m_hPlayerPawn"]
             self.m_flFlashDuration = extracted["m_flFlashDuration"]
             self.m_pBoneArray = extracted["m_pBoneArray"]
-            logger.info("Offsets initialized successfully.")
         else:
             logger.error("Failed to initialize offsets from extracted data.")
 
@@ -145,6 +144,24 @@ class MemoryManager:
             else:
                 logger.error(f"Error in fire logic: {e}")
             return None
+        
+    def write_float(self, address: int, value: float) -> None:
+        """Write a float to memory."""
+        try:
+            self.pm.write_float(address, value)
+            logger.debug(f"Wrote float {value} to address {hex(address)}")
+        except Exception as e:
+            logger.error(f"Failed to write float at address {hex(address)}: {e}")
+            raise
+
+    def write_int(self, address: int, value: int) -> None:
+        """Write an integer to memory."""
+        try:
+            self.pm.write_int(address, value)
+            logger.debug(f"Wrote int {value} to address {hex(address)}")
+        except Exception as e:
+            logger.error(f"Failed to write int at address {hex(address)}: {e}")
+            raise
 
     def read_vec3(self, address: int) -> dict | None:
         """

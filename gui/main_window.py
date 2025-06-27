@@ -562,26 +562,19 @@ del "%~f0" 2>nul
             self.bot_status_label.configure(text=status, text_color=color)
 
     def start_client(self):
-        """Start selected features based on General settings."""
-        # Check if any feature is already running
-        if (self.triggerbot.is_running or self.overlay.is_running or
-                self.bunnyhop.is_running or self.noflash.is_running):
-            messagebox.showwarning("Features Running", "One or more features are already running.")
-            return
-
-        # Verify if the game is running
+        """Start selected features based on General settings, ensuring no duplicates."""
         if not Utility.is_game_running():
             messagebox.showerror("Game Not Running", "Could not find cs2.exe process. Make sure the game is running.")
             return
 
-        # Load current configuration
         config = ConfigManager.load_config()
-        
-        # Start enabled features in separate threads
         any_feature_started = False
-        if config["General"]["Trigger"]:
+
+        # Start TriggerBot
+        if config["General"]["Trigger"] and not getattr(self.triggerbot, 'is_running', False):
             try:
-                self.triggerbot.config = config  # Update config
+                self.triggerbot.config = config
+                self.triggerbot.is_running = True
                 self.trigger_thread = threading.Thread(target=self.triggerbot.start, daemon=True)
                 self.trigger_thread.start()
                 logger.info("TriggerBot started.")
@@ -589,10 +582,12 @@ del "%~f0" 2>nul
             except Exception as e:
                 logger.error(f"Failed to start TriggerBot: {e}")
                 messagebox.showerror("TriggerBot Error", f"Failed to start TriggerBot: {str(e)}")
-        
-        if config["General"]["Overlay"]:
+
+        # Start Overlay
+        if config["General"]["Overlay"] and not getattr(self.overlay, 'is_running', False):
             try:
-                self.overlay.config = config  # Update config
+                self.overlay.config = config
+                self.overlay.is_running = True
                 self.overlay_thread = threading.Thread(target=self.overlay.start, daemon=True)
                 self.overlay_thread.start()
                 logger.info("Overlay started.")
@@ -600,10 +595,12 @@ del "%~f0" 2>nul
             except Exception as e:
                 logger.error(f"Failed to start Overlay: {e}")
                 messagebox.showerror("Overlay Error", f"Failed to start Overlay: {str(e)}")
-        
-        if config["General"]["Bunnyhop"]:
+
+        # Start Bunnyhop
+        if config["General"]["Bunnyhop"] and not getattr(self.bunnyhop, 'is_running', False):
             try:
-                self.bunnyhop.config = config  # Update config
+                self.bunnyhop.config = config
+                self.bunnyhop.is_running = True
                 self.bunnyhop_thread = threading.Thread(target=self.bunnyhop.start, daemon=True)
                 self.bunnyhop_thread.start()
                 logger.info("Bunnyhop started.")
@@ -611,10 +608,12 @@ del "%~f0" 2>nul
             except Exception as e:
                 logger.error(f"Failed to start Bunnyhop: {e}")
                 messagebox.showerror("Bunnyhop Error", f"Failed to start Bunnyhop: {str(e)}")
-        
-        if config["General"]["Noflash"]:
+
+        # Start NoFlash
+        if config["General"]["Noflash"] and not getattr(self.noflash, 'is_running', False):
             try:
-                self.noflash.config = config  # Update config
+                self.noflash.config = config
+                self.noflash.is_running = True
                 self.noflash_thread = threading.Thread(target=self.noflash.start, daemon=True)
                 self.noflash_thread.start()
                 logger.info("NoFlash started.")
@@ -622,8 +621,7 @@ del "%~f0" 2>nul
             except Exception as e:
                 logger.error(f"Failed to start NoFlash: {e}")
                 messagebox.showerror("NoFlash Error", f"Failed to start NoFlash: {str(e)}")
-        
-        # Update UI if any feature was started
+
         if any_feature_started:
             self.update_client_status("Active", "#22c55e")
         else:
@@ -631,11 +629,11 @@ del "%~f0" 2>nul
             messagebox.showwarning("No Features Enabled", "Please enable at least one feature in General Settings.")
 
     def stop_client(self):
-        """Stop all running features."""
-        any_feature_running = False
-        
+        """Stop all running features and ensure threads are terminated."""
+        features_stopped = False
+
         # Stop TriggerBot
-        if self.triggerbot.is_running:
+        if self.triggerbot and getattr(self.triggerbot, 'is_running', False):
             try:
                 self.triggerbot.stop()
                 if self.trigger_thread and self.trigger_thread.is_alive():
@@ -643,13 +641,14 @@ del "%~f0" 2>nul
                     if self.trigger_thread.is_alive():
                         logger.warning("TriggerBot thread did not terminate cleanly.")
                 self.trigger_thread = None
+                self.triggerbot.is_running = False
                 logger.info("TriggerBot stopped.")
-                any_feature_running = True
+                features_stopped = True
             except Exception as e:
                 logger.error(f"Failed to stop TriggerBot: {e}")
-        
+
         # Stop Overlay
-        if self.overlay.is_running:
+        if self.overlay and getattr(self.overlay, 'is_running', False):
             try:
                 self.overlay.stop()
                 if self.overlay_thread and self.overlay_thread.is_alive():
@@ -657,13 +656,14 @@ del "%~f0" 2>nul
                     if self.overlay_thread.is_alive():
                         logger.warning("Overlay thread did not terminate cleanly.")
                 self.overlay_thread = None
+                self.overlay.is_running = False
                 logger.info("Overlay stopped.")
-                any_feature_running = True
+                features_stopped = True
             except Exception as e:
                 logger.error(f"Failed to stop Overlay: {e}")
-        
+
         # Stop Bunnyhop
-        if self.bunnyhop.is_running:
+        if self.bunnyhop and getattr(self.bunnyhop, 'is_running', False):
             try:
                 self.bunnyhop.stop()
                 if self.bunnyhop_thread and self.bunnyhop_thread.is_alive():
@@ -671,13 +671,14 @@ del "%~f0" 2>nul
                     if self.bunnyhop_thread.is_alive():
                         logger.warning("Bunnyhop thread did not terminate cleanly.")
                 self.bunnyhop_thread = None
+                self.bunnyhop.is_running = False
                 logger.info("Bunnyhop stopped.")
-                any_feature_running = True
+                features_stopped = True
             except Exception as e:
                 logger.error(f"Failed to stop Bunnyhop: {e}")
-        
+
         # Stop NoFlash
-        if self.noflash.is_running:
+        if self.noflash and getattr(self.noflash, 'is_running', False):
             try:
                 self.noflash.stop()
                 if self.noflash_thread and self.noflash_thread.is_alive():
@@ -685,29 +686,79 @@ del "%~f0" 2>nul
                     if self.noflash_thread.is_alive():
                         logger.warning("NoFlash thread did not terminate cleanly.")
                 self.noflash_thread = None
+                self.noflash.is_running = False
                 logger.info("NoFlash stopped.")
-                any_feature_running = True
+                features_stopped = True
             except Exception as e:
                 logger.error(f"Failed to stop NoFlash: {e}")
-        
-        # Update UI if any feature was running
-        if any_feature_running:
+
+        if features_stopped:
             self.update_client_status("Inactive", "#ef4444")
 
     def save_settings(self, show_message=False):
-        """Save the configuration settings and apply to all features in real-time."""
+        """Save the configuration settings and apply to relevant features in real-time."""
         try:
             self.validate_inputs()
+            old_config = ConfigManager.load_config()
             self.update_config_from_ui()
-            # Save to file
-            ConfigManager.save_config(self.triggerbot.config, log_info=False)
-            # Update config for all features
-            config = ConfigManager.load_config()
-            self.triggerbot.config = config
-            self.overlay.config = config
-            self.bunnyhop.config = config
-            self.noflash.config = config
-            logger.debug("Configuration updated for all features.")
+            new_config = ConfigManager.load_config()
+            ConfigManager.save_config(new_config, log_info=False)
+
+            # Define features and their threads
+            features = {
+                "Trigger": (self.triggerbot, "trigger_thread"),
+                "Overlay": (self.overlay, "overlay_thread"),
+                "Bunnyhop": (self.bunnyhop, "bunnyhop_thread"),
+                "Noflash": (self.noflash, "noflash_thread")
+            }
+
+            any_feature_running = False
+
+            # Handle enabling/disabling and config updates
+            for feature_name, (feature, thread_name) in features.items():
+                old_enabled = old_config["General"].get(feature_name, False)
+                new_enabled = new_config["General"].get(feature_name, False)
+                is_running = getattr(feature, 'is_running', False)
+
+                if old_enabled != new_enabled:
+                    if new_enabled and not is_running:
+                        # Start the feature
+                        try:
+                            feature.config = new_config
+                            feature.is_running = True
+                            thread = threading.Thread(target=feature.start, daemon=True)
+                            thread.start()
+                            setattr(self, thread_name, thread)
+                            logger.info(f"{feature_name} started.")
+                            any_feature_running = True
+                        except Exception as e:
+                            logger.error(f"Failed to start {feature_name}: {e}")
+                    elif not new_enabled and is_running:
+                        # Stop the feature
+                        try:
+                            feature.stop()
+                            thread = getattr(self, thread_name)
+                            if thread and thread.is_alive():
+                                thread.join(timeout=2.0)
+                                if thread.is_alive():
+                                    logger.warning(f"{feature_name} thread did not terminate cleanly.")
+                            setattr(self, thread_name, None)
+                            feature.is_running = False
+                            logger.info(f"{feature_name} stopped.")
+                        except Exception as e:
+                            logger.error(f"Failed to stop {feature_name}: {e}")
+                if is_running:
+                    # Update config for running features
+                    feature.update_config(new_config)
+                    logger.debug(f"Configuration updated for {feature_name}.")
+                    any_feature_running = True
+
+            # Update UI status
+            if any_feature_running:
+                self.update_client_status("Active", "#22c55e")
+            else:
+                self.update_client_status("Inactive", "#ef4444")
+
             if show_message:
                 messagebox.showinfo("Settings Saved", "Configuration has been saved successfully.")
         except ValueError as e:
@@ -716,6 +767,88 @@ del "%~f0" 2>nul
         except Exception as e:
             logger.error(f"Unexpected error during save_settings: {e}")
             messagebox.showerror("Error", f"Unexpected error: {str(e)}")
+
+    def restart_affected_features(self, old_config, new_config):
+        """Restart only features affected by configuration changes."""
+        any_feature_running = False
+
+        # Helper to check if config section has changed
+        def config_changed(section):
+            return old_config.get(section, {}) != new_config.get(section, {})
+
+        # Restart TriggerBot if its config changed and it's running
+        if self.triggerbot.is_running and (config_changed("Trigger") or config_changed("General")):
+            try:
+                self.triggerbot.stop()
+                if self.trigger_thread and self.trigger_thread.is_alive():
+                    self.trigger_thread.join(timeout=2.0)
+                self.trigger_thread = None
+                if new_config["General"]["Trigger"]:
+                    self.triggerbot = CS2TriggerBot(self.offsets, self.client_data, self.buttons_data)
+                    self.triggerbot.config = new_config
+                    self.trigger_thread = threading.Thread(target=self.triggerbot.start, daemon=True)
+                    self.trigger_thread.start()
+                    logger.info("TriggerBot restarted with new configuration.")
+            except Exception as e:
+                logger.error(f"Failed to restart TriggerBot: {e}")
+            any_feature_running = True
+
+        # Restart Overlay if its config changed and it's running
+        if self.overlay.is_running and (config_changed("Overlay") or config_changed("General")):
+            try:
+                self.overlay.stop()
+                if self.overlay_thread and self.overlay_thread.is_alive():
+                    self.overlay_thread.join(timeout=2.0)
+                self.overlay_thread = None
+                if new_config["General"]["Overlay"]:
+                    self.overlay = CS2Overlay(self.offsets, self.client_data, self.buttons_data)
+                    self.overlay.config = new_config
+                    self.overlay_thread = threading.Thread(target=self.overlay.start, daemon=True)
+                    self.overlay_thread.start()
+                    logger.info("Overlay restarted with new configuration.")
+            except Exception as e:
+                logger.error(f"Failed to restart Overlay: {e}")
+            any_feature_running = True
+
+        # Restart Bunnyhop if its config changed and it's running
+        if self.bunnyhop.is_running and (config_changed("Bunnyhop") or config_changed("General")):
+            try:
+                self.bunnyhop.stop()
+                if self.bunnyhop_thread and self.bunnyhop_thread.is_alive():
+                    self.bunnyhop_thread.join(timeout=2.0)
+                self.bunnyhop_thread = None
+                if new_config["General"]["Bunnyhop"]:
+                    self.bunnyhop = CS2Bunnyhop(self.offsets, self.client_data, self.buttons_data)
+                    self.bunnyhop.config = new_config
+                    self.bunnyhop_thread = threading.Thread(target=self.bunnyhop.start, daemon=True)
+                    self.bunnyhop_thread.start()
+                    logger.info("Bunnyhop restarted with new configuration.")
+            except Exception as e:
+                logger.error(f"Failed to restart Bunnyhop: {e}")
+            any_feature_running = True
+
+        # Restart NoFlash if its config changed and it's running
+        if self.noflash.is_running and (config_changed("Noflash") or config_changed("General")):
+            try:
+                self.noflash.stop()
+                if self.noflash_thread and self.noflash_thread.is_alive():
+                    self.noflash_thread.join(timeout=2.0)
+                self.noflash_thread = None
+                if new_config["General"]["Noflash"]:
+                    self.noflash = CS2NoFlash(self.offsets, self.client_data, self.buttons_data)
+                    self.noflash.config = new_config
+                    self.noflash_thread = threading.Thread(target=self.noflash.start, daemon=True)
+                    self.noflash_thread.start()
+                    logger.info("NoFlash restarted with new configuration.")
+            except Exception as e:
+                logger.error(f"Failed to restart NoFlash: {e}")
+            any_feature_running = True
+
+        # Update UI status
+        if any_feature_running:
+            self.update_client_status("Active", "#22c55e")
+        else:
+            self.update_client_status("Inactive", "#ef4444")
 
     def update_config_from_ui(self):
         """Update the configuration from the UI elements."""
@@ -939,7 +1072,7 @@ del "%~f0" 2>nul
                                     self.root.after(0, lambda logs=new_logs: self.update_log_display(logs))
                 except Exception as e:
                     logger.error(f"Error in log update thread: {e}")
-                time.sleep(1)
+                time.sleep(0.1)  # Уменьшено время ожидания для большей отзывчивости
 
         # Start log update thread
         self.log_timer = threading.Thread(target=update_logs, daemon=True)

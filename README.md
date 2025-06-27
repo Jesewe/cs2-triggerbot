@@ -47,8 +47,6 @@ VioletWing is an automated tool designed for Counter-Strike 2 that enhances game
   - **FAQ Tab**: Answers to common questions about all features.
   - **Supporters Tab**: Lists contributors and supporters.
 - **Dynamic Config Updates**: Applies `config.json` changes without restarting via `file_watcher.py`.
-- **Share/Import Settings**: Export/import settings as compressed code via GUI.
-- **Reset to Defaults**: Restore default settings with one click.
 - **Update Checker**: Notifies of new versions via GitHub releases.
 - **Logging**: Saves logs to `%LOCALAPPDATA%\Requests\ItsJesewe\crashes\vw_logs.log` and `vw_detailed_logs.log`.
 
@@ -87,24 +85,9 @@ Install by cloning the repository or downloading a pre-built executable from rel
 
 ### Option 2: Download Pre-Built Executable
 
-Download the latest executable from the [Releases](https://github.com/jesewe/VioletWing/releases) page and run it directly.
+Download the latest executable from the [Releases](https://github.com/Jesewe/VioletWing/releases) page and run it directly.
 
 **Note:** Requires Python >= 3.8 and < 3.12.5.
-
-## Usage
-
-1. **Launch Counter-Strike 2**: Ensure the game is running.
-2. **Start the Bot**: Run `main.py` or the executable, then click **Start Bot** in the Dashboard.
-3. **Configure Settings**: Adjust settings in the **General**, **Trigger**, or **Overlay** tabs.
-4. **Monitor Activity**: View status in the **Dashboard** or logs in the **Logs** tab.
-5. **Use Features**:
-   - **TriggerBot**: Activate with the trigger key (toggle or hold mode).
-   - **Overlay**: View ESP elements if enabled.
-   - **Bunnyhop**: Jump automatically if enabled.
-   - **NoFlash**: Maintain visibility during flashbangs if enabled.
-6. **Advanced Features**:
-   - **Share/Import**: Export/import settings via the Settings tab.
-   - **FAQ**: Check the FAQ tab for guidance.
 
 ## Troubleshooting
 

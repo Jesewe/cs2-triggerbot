@@ -109,7 +109,6 @@ class Entity:
             self.head_pos2d = head2d
             return True
         except Exception as e:
-            logger.error(f"Failed to convert world to screen: {e}")
             return False
 
 class CS2Overlay:
@@ -150,6 +149,7 @@ class CS2Overlay:
         self.config = config
         self.memory_manager.config = self.config
         self.load_configuration()
+        logger.debug("Overlay configuration updated.")
 
     def iterate_entities(self) -> Iterator[Entity]:
         """Iterate over game entities and yield Entity objects."""
@@ -327,7 +327,7 @@ class CS2Overlay:
             return
 
         self.is_running = True
-        logger.info("Overlay started.")
+        self.stop_event.clear()
 
         try:
             overlay.overlay_init("Counter-Strike 2", fps=TARGET_FPS)
@@ -386,4 +386,9 @@ class CS2Overlay:
         """Stop the Overlay and clean up resources."""
         self.is_running = False
         self.stop_event.set()
-        logger.info("Overlay stopped.")
+        time.sleep(0.1)
+        try:
+            overlay.overlay_close()
+            logger.debug("Overlay stopped.")
+        except Exception as e:
+            logger.error(f"Error stopping Overlay: {e}")

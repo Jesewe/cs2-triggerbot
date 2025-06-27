@@ -26,6 +26,12 @@ class CS2NoFlash:
         self.stop_event = threading.Event()
         self.local_player_address: Optional[int] = None
 
+    def update_config(self, config):
+        """Update the configuration settings."""
+        self.config = config
+        self.memory_manager.config = self.config
+        logger.debug("NoFlash configuration updated.")
+
     def initialize_local_player(self) -> bool:
         """Initialize the local player address."""
         if self.memory_manager.dwLocalPlayerPawn is None or self.memory_manager.m_flFlashDuration is None:
@@ -33,7 +39,6 @@ class CS2NoFlash:
             return False
         try:
             self.local_player_address = self.memory_manager.client_base + self.memory_manager.dwLocalPlayerPawn
-            logger.info(f"Local player address set to {hex(self.local_player_address)}")
             return True
         except Exception as e:
             logger.error(f"Error setting local player address: {e}")
@@ -58,7 +63,6 @@ class CS2NoFlash:
             return
 
         self.is_running = True
-        logger.info("NoFlash started.")
 
         is_game_active = Utility.is_game_active
         sleep = time.sleep
@@ -82,4 +86,5 @@ class CS2NoFlash:
         """Stop the NoFlash and clean up resources."""
         self.is_running = False
         self.stop_event.set()
-        logger.info("NoFlash stopped.")
+        
+        logger.debug("NoFlash stopped.")

@@ -31,6 +31,17 @@ class CS2Bunnyhop:
         self.stop_event = threading.Event()
         self.force_jump_address: Optional[int] = None
 
+    def load_configuration(self):
+        """Load and apply configuration settings."""
+        self.bunnyhop_enabled = self.config.get("General", {}).get("Bunnyhop", False)
+
+    def update_config(self, config):
+        """Update the configuration settings."""
+        self.config = config
+        self.memory_manager.config = self.config
+        self.load_configuration()
+        logger.debug("Bunnyhop configuration updated.")
+
     def initialize_force_jump(self) -> bool:
         """Initialize the force jump address."""
         if self.memory_manager.dwForceJump is None:
@@ -38,7 +49,6 @@ class CS2Bunnyhop:
             return False
         try:
             self.force_jump_address = self.memory_manager.client_base + self.memory_manager.dwForceJump
-            logger.info(f"Force jump address set to {hex(self.force_jump_address)}")
             return True
         except Exception as e:
             logger.error(f"Error setting force jump address: {e}")
@@ -48,11 +58,9 @@ class CS2Bunnyhop:
         """Perform a single jump action."""
         try:
             if not is_jumping:
-                time.sleep(0.01)
                 self.memory_manager.write_int(self.force_jump_address, FORCE_JUMP_ACTIVE)
                 return True
             else:
-                time.sleep(0.01)
                 self.memory_manager.write_int(self.force_jump_address, FORCE_JUMP_INACTIVE)
                 return False
         except Exception as e:
@@ -69,7 +77,6 @@ class CS2Bunnyhop:
             return
 
         self.is_running = True
-        logger.info("Bunnyhop started.")
 
         is_game_active = Utility.is_game_active
         sleep = time.sleep
@@ -96,4 +103,4 @@ class CS2Bunnyhop:
         """Stop the Bunnyhop and clean up resources."""
         self.is_running = False
         self.stop_event.set()
-        logger.info("Bunnyhop stopped.")
+        logger.debug("Bunnyhop stopped.")
