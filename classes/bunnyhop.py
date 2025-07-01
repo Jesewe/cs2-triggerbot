@@ -19,14 +19,13 @@ KEY_SPACE = 0x20
 
 class CS2Bunnyhop:
     """Manages the Bunnyhop functionality for Counter-Strike 2."""
-    def __init__(self, offsets: dict, client_data: dict, buttons_data: dict) -> None:
+    def __init__(self, memory_manager: MemoryManager) -> None:
         """
-        Initialize the Bunnyhop with offsets, client data, and buttons data.
+        Initialize the Bunnyhop with a shared MemoryManager instance.
         """
         # Load the configuration settings
         self.config = ConfigManager.load_config()
-        self.memory_manager = MemoryManager(offsets, client_data, buttons_data)
-        self.memory_manager.config = self.config  # Pass configuration to MemoryManager
+        self.memory_manager = memory_manager
         self.is_running = False
         self.stop_event = threading.Event()
         self.force_jump_address: Optional[int] = None
@@ -38,7 +37,6 @@ class CS2Bunnyhop:
     def update_config(self, config):
         """Update the configuration settings."""
         self.config = config
-        self.memory_manager.config = self.config
         self.load_configuration()
         logger.debug("Bunnyhop configuration updated.")
 
@@ -69,9 +67,6 @@ class CS2Bunnyhop:
 
     def start(self) -> None:
         """Start the Bunnyhop."""
-        if not self.memory_manager.initialize():
-            logger.error("Failed to initialize memory manager.")
-            return
         if not self.initialize_force_jump():
             logger.error("Failed to initialize force jump address.")
             return
@@ -93,7 +88,7 @@ class CS2Bunnyhop:
 
                 sleep(MAIN_LOOP_SLEEP)
             except KeyboardInterrupt:
-                logger.info("Bunnyhop stopped by user.")
+                logger.debug("Bunnyhop stopped by user.")
                 self.stop()
             except Exception as e:
                 logger.error(f"Unexpected error in main loop: {e}", exc_info=True)

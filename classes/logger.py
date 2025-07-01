@@ -66,7 +66,7 @@ class Logger:
 
         # Detailed formatter with enhanced error context
         detailed_formatter = logging.Formatter(
-            fmt='[%(asctime)s.%(msecs)03d %(levelname)-8s] {%(name)s:%(module)s:%(funcName)s:%(lineno)d} [PID:%(process)d TID:%(thread)d] %(message)s%(exc_info)s',
+            fmt='[%(asctime)s.%(msecs)03d %(levelname)-8s] {%(name)s:%(module)s:%(funcName)s:%(lineno)d} [PID:%(process)d TID:%(thread)d] %(message)s',
             datefmt='%Y-%m-%d %H:%M:%S'
         )
         try:

@@ -14,14 +14,13 @@ NOFLASH_LOOP_SLEEP = 0.1
 
 class CS2NoFlash:
     """Manages the NoFlash functionality for Counter-Strike 2."""
-    def __init__(self, offsets: dict, client_data: dict, buttons_data: dict) -> None:
+    def __init__(self, memory_manager: MemoryManager) -> None:
         """
-        Initialize the NoFlash with offsets, client data, and buttons data.
+        Initialize the NoFlash with a shared MemoryManager instance.
         """
         # Load the configuration settings
         self.config = ConfigManager.load_config()
-        self.memory_manager = MemoryManager(offsets, client_data, buttons_data)
-        self.memory_manager.config = self.config  # Pass configuration to MemoryManager
+        self.memory_manager = memory_manager
         self.is_running = False
         self.stop_event = threading.Event()
         self.local_player_address: Optional[int] = None
@@ -29,7 +28,6 @@ class CS2NoFlash:
     def update_config(self, config):
         """Update the configuration settings."""
         self.config = config
-        self.memory_manager.config = self.config
         logger.debug("NoFlash configuration updated.")
 
     def initialize_local_player(self) -> bool:
@@ -55,9 +53,6 @@ class CS2NoFlash:
 
     def start(self) -> None:
         """Start the NoFlash."""
-        if not self.memory_manager.initialize():
-            logger.error("Failed to initialize memory manager.")
-            return
         if not self.initialize_local_player():
             logger.error("Failed to initialize local player address.")
             return
@@ -76,7 +71,7 @@ class CS2NoFlash:
                 self.disable_flash()
                 sleep(NOFLASH_LOOP_SLEEP)
             except KeyboardInterrupt:
-                logger.info("NoFlash stopped by user.")
+                logger.debug("NoFlash stopped by user.")
                 self.stop()
             except Exception as e:
                 logger.error(f"Unexpected error in main loop: {e}", exc_info=True)

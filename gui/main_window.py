@@ -23,6 +23,7 @@ from classes.noflash import CS2NoFlash
 from classes.config_manager import ConfigManager, COLOR_CHOICES
 from classes.file_watcher import ConfigFileChangeHandler
 from classes.logger import Logger
+from classes.memory_manager import MemoryManager
 
 from gui.home_tab import populate_dashboard
 from gui.general_settings_tab import populate_general_settings
@@ -56,6 +57,9 @@ class MainWindow:
         
         # Fetch offsets and client data
         self.offsets, self.client_data, self.buttons_data = self.fetch_offsets_or_warn()
+
+        # Create a single MemoryManager instance
+        self.memory_manager = MemoryManager(self.offsets, self.client_data, self.buttons_data)
 
         # Initialize feature instances
         self.initialize_features()
@@ -102,12 +106,12 @@ class MainWindow:
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def initialize_features(self):
-        """Initialize all feature instances with fetched offsets."""
+        """Initialize all feature instances with the shared MemoryManager."""
         try:
-            self.triggerbot = CS2TriggerBot(self.offsets, self.client_data, self.buttons_data)
-            self.overlay = CS2Overlay(self.offsets, self.client_data, self.buttons_data)
-            self.bunnyhop = CS2Bunnyhop(self.offsets, self.client_data, self.buttons_data)
-            self.noflash = CS2NoFlash(self.offsets, self.client_data, self.buttons_data)
+            self.triggerbot = CS2TriggerBot(self.memory_manager)
+            self.overlay = CS2Overlay(self.memory_manager)
+            self.bunnyhop = CS2Bunnyhop(self.memory_manager)
+            self.noflash = CS2NoFlash(self.memory_manager)
             logger.info("All features initialized successfully.")
         except Exception as e:
             logger.error(f"Failed to initialize features: {e}")
@@ -567,6 +571,11 @@ del "%~f0" 2>nul
             messagebox.showerror("Game Not Running", "Could not find cs2.exe process. Make sure the game is running.")
             return
 
+        # Initialize the MemoryManager once before starting any features
+        if not self.memory_manager.initialize():
+            messagebox.showerror("Initialization Error", "Failed to initialize memory manager. Please check the logs for details.")
+            return
+
         config = ConfigManager.load_config()
         any_feature_started = False
 
@@ -640,12 +649,14 @@ del "%~f0" 2>nul
                     self.trigger_thread.join(timeout=2.0)
                     if self.trigger_thread.is_alive():
                         logger.warning("TriggerBot thread did not terminate cleanly.")
+                    else:
+                        logger.info("TriggerBot thread terminated successfully.")
                 self.trigger_thread = None
                 self.triggerbot.is_running = False
-                logger.info("TriggerBot stopped.")
+                logger.debug("TriggerBot stopped.")
                 features_stopped = True
             except Exception as e:
-                logger.error(f"Failed to stop TriggerBot: {e}")
+                logger.error(f"Failed to stop TriggerBot: {e}", exc_info=True)
 
         # Stop Overlay
         if self.overlay and getattr(self.overlay, 'is_running', False):
@@ -655,12 +666,14 @@ del "%~f0" 2>nul
                     self.overlay_thread.join(timeout=2.0)
                     if self.overlay_thread.is_alive():
                         logger.warning("Overlay thread did not terminate cleanly.")
+                    else:
+                        logger.info("Overlay thread terminated successfully.")
                 self.overlay_thread = None
                 self.overlay.is_running = False
-                logger.info("Overlay stopped.")
+                logger.debug("Overlay stopped.")
                 features_stopped = True
             except Exception as e:
-                logger.error(f"Failed to stop Overlay: {e}")
+                logger.error(f"Failed to stop Overlay: {e}", exc_info=True)
 
         # Stop Bunnyhop
         if self.bunnyhop and getattr(self.bunnyhop, 'is_running', False):
@@ -670,12 +683,14 @@ del "%~f0" 2>nul
                     self.bunnyhop_thread.join(timeout=2.0)
                     if self.bunnyhop_thread.is_alive():
                         logger.warning("Bunnyhop thread did not terminate cleanly.")
+                    else:
+                        logger.info("Bunnyhop thread terminated successfully.")
                 self.bunnyhop_thread = None
                 self.bunnyhop.is_running = False
-                logger.info("Bunnyhop stopped.")
+                logger.debug("Bunnyhop stopped.")
                 features_stopped = True
             except Exception as e:
-                logger.error(f"Failed to stop Bunnyhop: {e}")
+                logger.error(f"Failed to stop Bunnyhop: {e}", exc_info=True)
 
         # Stop NoFlash
         if self.noflash and getattr(self.noflash, 'is_running', False):
@@ -685,15 +700,19 @@ del "%~f0" 2>nul
                     self.noflash_thread.join(timeout=2.0)
                     if self.noflash_thread.is_alive():
                         logger.warning("NoFlash thread did not terminate cleanly.")
+                    else:
+                        logger.info("NoFlash thread terminated successfully.")
                 self.noflash_thread = None
                 self.noflash.is_running = False
-                logger.info("NoFlash stopped.")
+                logger.debug("NoFlash stopped.")
                 features_stopped = True
             except Exception as e:
-                logger.error(f"Failed to stop NoFlash: {e}")
+                logger.error(f"Failed to stop NoFlash: {e}", exc_info=True)
 
         if features_stopped:
             self.update_client_status("Inactive", "#ef4444")
+        else:
+            logger.debug("No features were running to stop.")
 
     def save_settings(self, show_message=False):
         """Save the configuration settings and apply to relevant features in real-time."""
@@ -748,7 +767,7 @@ del "%~f0" 2>nul
                         except Exception as e:
                             logger.error(f"Failed to stop {feature_name}: {e}")
                 if is_running:
-                    # Update config for running features
+                    # Update config for running features without restarting
                     feature.update_config(new_config)
                     logger.debug(f"Configuration updated for {feature_name}.")
                     any_feature_running = True
@@ -784,7 +803,7 @@ del "%~f0" 2>nul
                     self.trigger_thread.join(timeout=2.0)
                 self.trigger_thread = None
                 if new_config["General"]["Trigger"]:
-                    self.triggerbot = CS2TriggerBot(self.offsets, self.client_data, self.buttons_data)
+                    self.triggerbot = CS2TriggerBot(self.memory_manager)
                     self.triggerbot.config = new_config
                     self.trigger_thread = threading.Thread(target=self.triggerbot.start, daemon=True)
                     self.trigger_thread.start()
@@ -801,7 +820,7 @@ del "%~f0" 2>nul
                     self.overlay_thread.join(timeout=2.0)
                 self.overlay_thread = None
                 if new_config["General"]["Overlay"]:
-                    self.overlay = CS2Overlay(self.offsets, self.client_data, self.buttons_data)
+                    self.overlay = CS2Overlay(self.memory_manager)
                     self.overlay.config = new_config
                     self.overlay_thread = threading.Thread(target=self.overlay.start, daemon=True)
                     self.overlay_thread.start()
@@ -818,7 +837,7 @@ del "%~f0" 2>nul
                     self.bunnyhop_thread.join(timeout=2.0)
                 self.bunnyhop_thread = None
                 if new_config["General"]["Bunnyhop"]:
-                    self.bunnyhop = CS2Bunnyhop(self.offsets, self.client_data, self.buttons_data)
+                    self.bunnyhop = CS2Bunnyhop(self.memory_manager)
                     self.bunnyhop.config = new_config
                     self.bunnyhop_thread = threading.Thread(target=self.bunnyhop.start, daemon=True)
                     self.bunnyhop_thread.start()
@@ -835,7 +854,7 @@ del "%~f0" 2>nul
                     self.noflash_thread.join(timeout=2.0)
                 self.noflash_thread = None
                 if new_config["General"]["Noflash"]:
-                    self.noflash = CS2NoFlash(self.offsets, self.client_data, self.buttons_data)
+                    self.noflash = CS2NoFlash(self.memory_manager)
                     self.noflash.config = new_config
                     self.noflash_thread = threading.Thread(target=self.noflash.start, daemon=True)
                     self.noflash_thread.start()
@@ -888,7 +907,7 @@ del "%~f0" 2>nul
                 pass
 
         # Update Overlay settings
-        overlay_settings = self.triggerbot.config["Overlay"]
+        overlay_settings = self.overlay.config["Overlay"]
         if hasattr(self, 'enable_box_var'):
             overlay_settings["enable_box"] = self.enable_box_var.get()
         if hasattr(self, 'box_line_thickness_slider'):
@@ -1002,7 +1021,7 @@ del "%~f0" 2>nul
             self.post_shot_delay_entry.insert(0, str(trigger_settings["PostShotDelay"]))
 
         # Update Overlay settings UI
-        overlay_settings = self.triggerbot.config["Overlay"]
+        overlay_settings = self.overlay.config["Overlay"]
         if hasattr(self, 'enable_box_var'):
             self.enable_box_var.set(overlay_settings["enable_box"])
         if hasattr(self, 'box_line_thickness_slider'):
@@ -1072,7 +1091,7 @@ del "%~f0" 2>nul
                                     self.root.after(0, lambda logs=new_logs: self.update_log_display(logs))
                 except Exception as e:
                     logger.error(f"Error in log update thread: {e}")
-                time.sleep(0.1)  # Уменьшено время ожидания для большей отзывчивости
+                time.sleep(0.1)  # Ð£Ð¼ÐµÐ½ÑŒÑˆÐµÐ½Ð¾ Ð²Ñ€ÐµÐ¼Ñ� Ð¾Ð¶Ð¸Ð´Ð°Ð½Ð¸Ñ� Ð´Ð»Ñ� Ð±Ð¾Ð»ÑŒÑˆÐµÐ¹ Ð¾Ñ‚Ð·Ñ‹Ð²Ñ‡Ð¸Ð²Ð¾Ñ�Ñ‚Ð¸
 
         # Start log update thread
         self.log_timer = threading.Thread(target=update_logs, daemon=True)

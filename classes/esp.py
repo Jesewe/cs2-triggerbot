@@ -113,13 +113,12 @@ class Entity:
 
 class CS2Overlay:
     """Manages the ESP overlay for Counter-Strike 2."""
-    def __init__(self, offsets: dict, client_data: dict, buttons_data: dict) -> None:
+    def __init__(self, memory_manager: MemoryManager) -> None:
         """
-        Initialize the Overlay with offsets, configuration, and client data.
+        Initialize the Overlay with a shared MemoryManager instance.
         """
         self.config = ConfigManager.load_config()
-        self.memory_manager = MemoryManager(offsets, client_data, buttons_data)
-        self.memory_manager.config = self.config  # Pass configuration to MemoryManager
+        self.memory_manager = memory_manager
         self.is_running = False
         self.stop_event = threading.Event()
         self.local_team = None
@@ -147,7 +146,6 @@ class CS2Overlay:
     def update_config(self, config: dict) -> None:
         """Update the configuration settings."""
         self.config = config
-        self.memory_manager.config = self.config
         self.load_configuration()
         logger.debug("Overlay configuration updated.")
 
@@ -322,10 +320,6 @@ class CS2Overlay:
 
     def start(self) -> None:
         """Start the Overlay."""
-        if not self.memory_manager.initialize():
-            logger.error("Failed to initialize memory manager.")
-            return
-
         self.is_running = True
         self.stop_event.clear()
 
@@ -342,6 +336,7 @@ class CS2Overlay:
 
         while not self.stop_event.is_set():
             try:
+                # Check if game window is active
                 if not is_game_active():
                     sleep(MAIN_LOOP_SLEEP)
                     continue
@@ -373,14 +368,14 @@ class CS2Overlay:
                 if elapsed_time < frame_time:
                     sleep(frame_time - elapsed_time)
             except KeyboardInterrupt:
-                logger.info("Overlay stopped by user.")
+                logger.debug("Overlay stopped by user.")
                 self.stop()
             except Exception as e:
                 logger.error(f"Unexpected error in main loop: {e}", exc_info=True)
                 sleep(MAIN_LOOP_SLEEP)
 
         overlay.overlay_close()
-        logger.info("Overlay loop ended.")
+        logger.debug("Overlay loop ended.")
 
     def stop(self) -> None:
         """Stop the Overlay and clean up resources."""
@@ -388,7 +383,6 @@ class CS2Overlay:
         self.stop_event.set()
         time.sleep(0.1)
         try:
-            overlay.overlay_close()
             logger.debug("Overlay stopped.")
         except Exception as e:
             logger.error(f"Error stopping Overlay: {e}")

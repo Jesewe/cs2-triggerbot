@@ -16,14 +16,13 @@ logger = Logger.get_logger()
 MAIN_LOOP_SLEEP = 0.05
 
 class CS2TriggerBot:
-    def __init__(self, offsets: dict, client_data: dict, buttons_data: dict) -> None:
+    def __init__(self, memory_manager: MemoryManager) -> None:
         """
-        Initialize the TriggerBot with offsets, configuration, and client data.
+        Initialize the TriggerBot with a shared MemoryManager instance.
         """
         # Load the configuration settings
         self.config = ConfigManager.load_config()
-        self.memory_manager = MemoryManager(offsets, client_data, buttons_data)
-        self.memory_manager.config = self.config  # Pass configuration to MemoryManager
+        self.memory_manager = memory_manager
         self.is_running, self.stop_event = False, threading.Event()
         self.trigger_active = False
         self.toggle_state = False 
@@ -61,7 +60,6 @@ class CS2TriggerBot:
     def update_config(self, config):
         """Update the configuration settings."""
         self.config = config
-        self.memory_manager.config = self.config
         self.load_configuration()
         logger.debug("TriggerBot configuration updated.")
 
@@ -119,8 +117,6 @@ class CS2TriggerBot:
 
     def start(self) -> None:
         """Start the TriggerBot."""
-        if not self.memory_manager.initialize():
-            return
         # Set the running flag to True and log that the TriggerBot has started
         self.is_running = True
 
@@ -158,7 +154,7 @@ class CS2TriggerBot:
 
                 sleep(MAIN_LOOP_SLEEP)
             except KeyboardInterrupt:
-                logger.info("TriggerBot stopped by user.")
+                logger.debug("TriggerBot stopped by user.")
                 self.stop()
             except Exception as e:
                 logger.error(f"Unexpected error in main loop: {e}", exc_info=True)
