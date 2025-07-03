@@ -1,5 +1,6 @@
-import os, zlib, base64, orjson
+import os, orjson
 from pathlib import Path
+from pyMeow import get_color, fade_color
 
 from classes.logger import Logger
 
@@ -13,7 +14,7 @@ class ConfigManager:
     with caching for efficiency and default configuration management.
     """
     # Application version
-    VERSION = "v1.2.5"
+    VERSION = "v1.2.5.1"
     # Directory where the update files are stored
     UPDATE_DIRECTORY = os.path.expanduser(r'~\AppData\Local\Requests\ItsJesewe\Update')
     # Directory where the configuration file is stored
@@ -21,15 +22,36 @@ class ConfigManager:
     # Full path to the configuration file
     CONFIG_FILE = Path(CONFIG_DIRECTORY) / 'config.json'
 
-    # Default configuration settings
+    # Default configuration settings with General, Trigger, and Overlay categories
     DEFAULT_CONFIG = {
-        "Settings": {
-            "TriggerKey": "x",              # Default trigger key
-            "ToggleMode": False,            # Whether to use toggle mode for the trigger
-            "ShotDelayMin": 0.01,           # Minimum delay between shots in seconds
-            "ShotDelayMax": 0.03,           # Maximum delay between shots in seconds
-            "AttackOnTeammates": False,     # Whether to attack teammates
-            "PostShotDelay": 0.1            # Delay after each shot
+        "General": {
+            "Trigger": False,                    # Enable or disable the trigger feature
+            "Overlay": False,                    # Enable or disable the overlay feature
+            "Bunnyhop": False,                   # Enable or disable the bunnyhop feature
+            "Noflash": False                     # Enable or disable the noflash feature
+        },
+        "Trigger": {
+            "TriggerKey": "x",                   # Key to activate the trigger
+            "ToggleMode": False,                 # Enable toggle mode for the trigger
+            "ShotDelayMin": 0.01,                # Minimum delay between shots
+            "ShotDelayMax": 0.03,                # Maximum delay between shots
+            "AttackOnTeammates": False,          # Allow attacking teammates
+            "PostShotDelay": 0.1                 # Delay after shooting before the next action
+        },
+        "Overlay": {
+            "enable_box": True,                  # Enable or disable the bounding box overlay
+            "draw_snaplines": True,              # Enable or disable snaplines in the overlay
+            "snaplines_color_hex": "#FFFFFF",  # Color of the snaplines in hexadecimal format
+            "box_line_thickness": 1.0,           # Thickness of the bounding box lines
+            "box_color_hex": "#FFA500",        # Color of the bounding box in hexadecimal format
+            "text_color_hex": "#FFFFFF",       # Color of the text in the overlay
+            "draw_health_numbers": True,         # Enable or disable health numbers in the overlay
+            "use_transliteration": False,        # Use transliteration for names in the overlay
+            "draw_nicknames": True,              # Enable or disable drawing nicknames in the overlay
+            "draw_teammates": True,              # Enable or disable drawing teammates in the overlay
+            "teammate_color_hex": "#00FFFF",   # Color for teammates in the overlay
+            "enable_minimap": False,             # Enable or disable the minimap overlay
+            "minimap_size": 200                  # Size of the minimap in pixels
         }
     }
 
@@ -50,7 +72,6 @@ class ConfigManager:
         # Ensure the configuration directory exists.
         os.makedirs(cls.CONFIG_DIRECTORY, exist_ok=True)
 
-        # Create the configuration file with default settings if it doesn't exist.
         if not Path(cls.CONFIG_FILE).exists():
             logger.info("config.json not found at %s, creating a default configuration.", cls.CONFIG_FILE)
             cls.save_config(cls.DEFAULT_CONFIG, log_info=False)
@@ -104,3 +125,25 @@ class ConfigManager:
                 logger.info("Saved configuration to %s.", cls.CONFIG_FILE)
         except IOError as e:
             logger.exception("Failed to save configuration: %s", e)
+
+COLOR_CHOICES = {
+    "Orange": "#FFA500",
+    "Red": "#FF0000",
+    "Green": "#00FF00",
+    "Blue": "#0000FF",
+    "White": "#FFFFFF",
+    "Black": "#000000",
+    "Cyan": "#00FFFF",
+    "Yellow": "#FFFF00"
+}
+
+class Colors:
+    orange = get_color("orange")
+    black = get_color("black")
+    cyan = get_color("cyan")
+    white = get_color("white")
+    grey = fade_color(get_color("#242625"), 0.7)
+    red = get_color("red")
+    green = get_color("green")
+    blue = get_color("blue")
+    yellow = get_color("yellow")

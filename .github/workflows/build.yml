@@ -6,7 +6,12 @@ on:
       tag_name:
         description: "Tag for the release"
         required: true
-        default: "v1.2.0"
+        default: "v1.0.0"
+      prerelease:
+        description: "Mark as pre-release"
+        required: false
+        default: "false"
+        type: boolean
 
 permissions:
   contents: write
@@ -31,18 +36,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Install PyMeow
+        run: |
+          curl -LO https://github.com/qb-0/pyMeow/releases/download/1.73.42/pyMeow-1.73.42.zip
+          pip install pyMeow-1.73.42.zip
+
       - name: Install PyInstaller
         run: pip install pyinstaller
 
       - name: Package Application
         run: |
-          pyinstaller --noconfirm --onefile --windowed --icon "src\img\icon.ico" --name "CS2.Triggerbot" --version-file "version.txt" --add-data "classes;classes/" --add-data "gui;gui/" --add-data "src/img/*;src/img" --add-data "src/fonts/*;src/fonts" --add-data "src/*;src" "main.py"
+          pyinstaller --noconfirm --onefile --windowed --icon "src\img\icon.ico" --name "VioletWing" --version-file "version.txt" --add-data "classes;classes/" --add-data "gui;gui/" --add-data "src/img/*;src/img" --add-data "src/fonts/*;src/fonts" --add-data "src/*;src" "main.py"
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CS2_Triggerbot
-          path: dist/CS2.Triggerbot.exe
+          name: VioletWing
+          path: dist/VioletWing.exe
 
   release:
     needs: build
@@ -55,15 +65,15 @@ jobs:
       - name: Download Build Artifact
         uses: actions/download-artifact@v4
         with:
-          name: CS2_Triggerbot
+          name: VioletWing
           path: ./artifact-download
 
       - name: Verify Downloaded Artifact
         run: |
           echo "Listing artifact-download directory:"
           ls -la ./artifact-download
-          if [ ! -f ./artifact-download/CS2.Triggerbot.exe ]; then
-            echo "Error: File CS2.Triggerbot.exe not found in artifact-download directory!"
+          if [ ! -f ./artifact-download/VioletWing.exe ]; then
+            echo "Error: File VioletWing.exe not found in artifact-download directory!"
             exit 1
           fi
 
@@ -73,21 +83,22 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.event.inputs.tag_name }}
-          name: CS2 TriggerBot - Release ${{ github.event.inputs.tag_name }}
+          name: VioletWing - ${{ github.event.inputs.prerelease == 'true' && 'Pre-release' || 'Release' }} ${{ github.event.inputs.tag_name }}
           body_path: ./ChangeLog.md
           files: |
-            ./artifact-download/CS2.Triggerbot.exe
+            ./artifact-download/VioletWing.exe
+          prerelease: ${{ github.event.inputs.prerelease }}
 
       - name: Send Telegram Notification
         if: success()
         run: |
           curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage \
           -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
-          -d text="🎉 New Release: CS2 TriggerBot ${{ github.event.inputs.tag_name }} has been published! Check it out: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.event.inputs.tag_name }}"
+          -d text="🎉 New ${{ github.event.inputs.prerelease == 'true' && 'Pre-release' || 'Release' }}: VioletWing ${{ github.event.inputs.tag_name }} has been published! Check it out: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.event.inputs.tag_name }}"
 
       - name: Send Telegram Notification on Failure
         if: failure()
         run: |
           curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage \
           -d chat_id=${{ secrets.TELEGRAM_ADMIN_CHAT_ID }} \
-          -d text="🚨 Release Failed: CS2 TriggerBot ${{ github.event.inputs.tag_name }}. Check the workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          -d text="🚨 ${{ github.event.inputs.prerelease == 'true' && 'Pre-release' || 'Release' }} Failed: VioletWing ${{ github.event.inputs.tag_name }}. Check the workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
