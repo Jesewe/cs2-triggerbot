@@ -12,4 +12,4 @@
 - Fixed a bug with the **"Start Client"** and **"Stop Client"** buttons.
 - Fixed a bug where `None` values were added to detailed logging.
 
-![Downloads](https://img.shields.io/github/downloads/Jesewe/VioletWing/v1.2.6/total?style=for-the-badge&logo=github&color=D5006D) ![Platforms](https://img.shields.io/badge/platform-Windows-blue?style=for-the-badge&color=D5006D) ![License](https://img.shields.io/github/license/jesewe/cs2-triggerbot?style=for-the-badge&color=D5006D)
+![Downloads](https://img.shields.io/github/downloads/Jesewe/VioletWing/v1.2.5.1/total?style=for-the-badge&logo=github&color=D5006D) ![Platforms](https://img.shields.io/badge/platform-Windows-blue?style=for-the-badge&color=D5006D) ![License](https://img.shields.io/github/license/jesewe/cs2-triggerbot?style=for-the-badge&color=D5006D)

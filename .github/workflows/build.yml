@@ -36,6 +36,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Install PyMeow
+        run: |
+          curl -LO https://github.com/qb-0/pyMeow/releases/download/1.73.42/pyMeow-1.73.42.zip
+          pip install pyMeow-1.73.42.zip
+
       - name: Install PyInstaller
         run: pip install pyinstaller
 
