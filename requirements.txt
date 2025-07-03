@@ -10,4 +10,4 @@ watchdog==6.0.0
 PyGetWindow==0.0.9
 orjson==3.10.18
 customtkinter==5.2.2
-pillow==11.2.1
+pillow==11.3.0
