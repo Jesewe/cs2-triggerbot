@@ -84,7 +84,8 @@ def create_bounding_box_section(main_window, parent):
     settings_list = [
         ("Enable Bounding Box", "checkbox", "enable_box", "Toggle visibility of enemy bounding boxes"),
         ("Line Thickness", "slider", "box_line_thickness", "Adjust thickness of bounding box lines (0.5-5.0)"),
-        ("Box Color", "combo", "box_color_hex", "Select color for bounding boxes")
+        ("Box Color", "combo", "box_color_hex", "Select color for bounding boxes"),
+        ("Target FPS", "slider", "target_fps", "Adjust target FPS for overlay rendering (60-420)")
     ]
 
     # Create each setting item
@@ -457,7 +458,7 @@ def create_setting_item(parent, label_text, description, widget_type, key, main_
         # Value label with improved styling
         value_label = ctk.CTkLabel(
             value_frame,
-            text=f"{main_window.overlay.config['Overlay'][key]:.1f}",
+            text=f"{main_window.overlay.config['Overlay'][key]:.0f}" if key == "target_fps" else f"{main_window.overlay.config['Overlay'][key]:.1f}",
             font=("Chivo", 14, "bold"),
             text_color=("#1f2937", "#ffffff")
         )
@@ -466,9 +467,9 @@ def create_setting_item(parent, label_text, description, widget_type, key, main_
         # Enhanced slider with custom styling
         widget = ctk.CTkSlider(
             slider_container,
-            from_=0.5,
-            to=5.0,
-            number_of_steps=9,
+            from_=0.5 if key == "box_line_thickness" else 60,
+            to=5.0 if key == "box_line_thickness" else 420,
+            number_of_steps=9 if key == "box_line_thickness" else 3,
             width=200,
             height=20,
             corner_radius=10,
@@ -522,5 +523,5 @@ def create_setting_item(parent, label_text, description, widget_type, key, main_
 def update_slider_value(event, key, main_window):
     """Update the slider value label and save settings."""
     value = main_window.__getattribute__(f"{key}_slider").get()
-    main_window.__getattribute__(f"{key}_slider").value_label.configure(text=f"{value:.1f}")
+    main_window.__getattribute__(f"{key}_slider").value_label.configure(text=f"{value:.0f}" if key == "target_fps" else f"{value:.1f}")
     main_window.save_settings(show_message=False)

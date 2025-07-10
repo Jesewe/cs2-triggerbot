@@ -14,8 +14,6 @@ from classes.utility import Utility
 logger = Logger.get_logger()
 # Define the main loop sleep time for reduced CPU usage
 MAIN_LOOP_SLEEP = 0.05
-# Target FPS for the overlay rendering
-TARGET_FPS = 60
 # Number of entities to iterate over
 ENTITY_COUNT = 64
 # Size of each entity entry in memory
@@ -35,26 +33,27 @@ class Entity:
     def _update_cache(self) -> None:
         """Update cached data with a time interval."""
         current_time = time.time()
-        if current_time - self._last_update >= 0.1:
-            try:
-                self._cached_data = {
-                    "name": self.memory_manager.read_string(self.controller_ptr + self.memory_manager.m_iszPlayerName),
-                    "health": self.memory_manager.read_int(self.pawn_ptr + self.memory_manager.m_iHealth),
-                    "team": self.memory_manager.read_int(self.pawn_ptr + self.memory_manager.m_iTeamNum),
-                    "pos": self.memory_manager.read_vec3(self.pawn_ptr + self.memory_manager.m_vOldOrigin),
-                    "dormant": bool(self.memory_manager.read_int(self.pawn_ptr + self.memory_manager.m_bDormant))
-                }
-                self._last_update = current_time
-            except Exception as e:
-                logger.error(f"Failed to update cache for entity: {e}")
-                self._cached_data = None
+        if current_time - self._last_update < 0.1:
+            return
+        try:
+            self._cached_data = {
+                "name": self.memory_manager.read_string(self.controller_ptr + self.memory_manager.m_iszPlayerName),
+                "health": self.memory_manager.read_int(self.pawn_ptr + self.memory_manager.m_iHealth),
+                "team": self.memory_manager.read_int(self.pawn_ptr + self.memory_manager.m_iTeamNum),
+                "pos": self.memory_manager.read_vec3(self.pawn_ptr + self.memory_manager.m_vOldOrigin),
+                "dormant": bool(self.memory_manager.read_int(self.pawn_ptr + self.memory_manager.m_bDormant))
+            }
+            self._last_update = current_time
+        except Exception as e:
+            logger.error(f"Failed to update cache for entity: {e}")
+            self._cached_data = None
 
     @property
     def name(self) -> str:
         """Get the entity's name, optionally transliterated."""
         self._update_cache()
-        if self._cached_data and self._cached_data.get("name"):
-            return Utility.transliterate(self._cached_data["name"]) if self.memory_manager.config["Overlay"]["use_transliteration"] else self._cached_data["name"]
+        if self._cached_data and (name := self._cached_data.get("name")):
+            return Utility.transliterate(name) if self.memory_manager.config["Overlay"]["use_transliteration"] else name
         return ""
 
     @property
@@ -92,23 +91,22 @@ class Entity:
             return {"x": 0.0, "y": 0.0, "z": 0.0}
 
     @staticmethod
-    def validate_screen_position(pos: Dict[str, float]) -> bool:
+    def validate_screen_position(pos: Dict[str, float], screen_width: float, screen_height: float) -> bool:
         """Validate if a screen position is within bounds."""
-        screen_width = overlay.get_screen_width()
-        screen_height = overlay.get_screen_height()
         return 0 <= pos["x"] <= screen_width and 0 <= pos["y"] <= screen_height
 
-    def world_to_screen(self, view_matrix: list) -> bool:
+    def world_to_screen(self, view_matrix: list, screen_width: float, screen_height: float) -> bool:
         """Convert world coordinates to screen coordinates."""
         try:
             pos2d = overlay.world_to_screen(view_matrix, self.pos, 1)
             head2d = overlay.world_to_screen(view_matrix, self.bone_pos(6), 1)
-            if not self.validate_screen_position(pos2d) or not self.validate_screen_position(head2d):
+            if not (self.validate_screen_position(pos2d, screen_width, screen_height) and 
+                    self.validate_screen_position(head2d, screen_width, screen_height)):
                 return False
             self.pos2d = pos2d
             self.head_pos2d = head2d
             return True
-        except Exception as e:
+        except Exception:
             return False
 
 class CS2Overlay:
@@ -122,6 +120,8 @@ class CS2Overlay:
         self.is_running = False
         self.stop_event = threading.Event()
         self.local_team = None
+        self.screen_width = overlay.get_screen_width()
+        self.screen_height = overlay.get_screen_height()
         self.load_configuration()
 
     def load_configuration(self) -> None:
@@ -129,19 +129,26 @@ class CS2Overlay:
         settings = self.config['Overlay']
         self.enable_box = settings['enable_box']
         self.draw_snaplines = settings['draw_snaplines']
-        self.snaplines_color_hex = settings['snaplines_color_hex']
+        self.snaplines_color = overlay.get_color(settings['snaplines_color_hex'])
         self.box_line_thickness = settings['box_line_thickness']
-        self.box_color_hex = settings['box_color_hex']
-        self.text_color_hex = settings['text_color_hex']
+        self.box_color = overlay.get_color(settings['box_color_hex'])
+        self.text_color = overlay.get_color(settings['text_color_hex'])
         self.draw_health_numbers = settings['draw_health_numbers']
         self.use_transliteration = settings['use_transliteration']
         self.draw_nicknames = settings['draw_nicknames']
         self.draw_teammates = settings['draw_teammates']
-        self.teammate_color_hex = settings['teammate_color_hex']
+        self.teammate_color = overlay.get_color(settings['teammate_color_hex'])
         self.enable_minimap = settings['enable_minimap']
         self.minimap_size = settings['minimap_size']
+        self.target_fps = settings['target_fps']
         # Default minimap position
         self.minimap_position = "top_left"  # Options: top_left, top_right, bottom_left, bottom_right
+        self.minimap_positions = {
+            "top_left": (10, 10),
+            "top_right": (self.screen_width - self.minimap_size - 10, 10),
+            "bottom_left": (10, self.screen_height - self.minimap_size - 10),
+            "bottom_right": (self.screen_width - self.minimap_size - 10, self.screen_height - self.minimap_size - 10)
+        }
 
     def update_config(self, config: dict) -> None:
         """Update the configuration settings."""
@@ -181,109 +188,96 @@ class CS2Overlay:
                 pawn_ptr = self.memory_manager.read_longlong(list_entry_ptr + ENTITY_ENTRY_SIZE * (controller_pawn_ptr & 0x1FF))
                 if not pawn_ptr:
                     continue
+
+                yield Entity(controller_ptr, pawn_ptr, self.memory_manager)
             except Exception as e:
                 logger.error(f"Error iterating entity {i}: {e}")
                 continue
 
-            yield Entity(controller_ptr, pawn_ptr, self.memory_manager)
-
     def draw_entity(self, entity: Entity, view_matrix: list, is_teammate: bool = False) -> None:
         """Render the ESP overlay for a given entity."""
-        try:
-            if not entity.world_to_screen(view_matrix):
-                return
-            if entity.health <= 0 or entity.dormant:
-                return
+        if not entity.world_to_screen(view_matrix, self.screen_width, self.screen_height):
+            return
+        if entity.health <= 0 or entity.dormant:
+            return
 
-            head_y = entity.head_pos2d["y"]
-            pos_y = entity.pos2d["y"]
-            box_height = pos_y - head_y
-            box_width = box_height / 2
-            half_width = box_width / 2
+        head_y = entity.head_pos2d["y"]
+        pos_y = entity.pos2d["y"]
+        box_height = pos_y - head_y
+        box_width = box_height / 2
+        half_width = box_width / 2
 
-            outline_color = overlay.get_color(self.teammate_color_hex if is_teammate else self.box_color_hex)
-            text_color = overlay.get_color(self.text_color_hex)
+        outline_color = self.teammate_color if is_teammate else self.box_color
 
-            if self.draw_snaplines:
-                screen_width = overlay.get_screen_width()
-                screen_height = overlay.get_screen_height()
-                overlay.draw_line(
-                    screen_width / 2,
-                    screen_height / 2,
-                    entity.head_pos2d["x"],
-                    entity.head_pos2d["y"],
-                    overlay.get_color(self.snaplines_color_hex),
-                    2
-                )
-
-            if self.enable_box:
-                overlay.draw_rectangle(
-                    entity.head_pos2d["x"] - half_width,
-                    entity.head_pos2d["y"] - half_width / 2,
-                    box_width,
-                    box_height + half_width / 2,
-                    Colors.grey
-                )
-                overlay.draw_rectangle_lines(
-                    entity.head_pos2d["x"] - half_width,
-                    entity.head_pos2d["y"] - half_width / 2,
-                    box_width,
-                    box_height + half_width / 2,
-                    outline_color,
-                    self.box_line_thickness
-                )
-
-            if self.draw_nicknames:
-                nickname = entity.name
-                nickname_font_size = 11
-                nickname_width = overlay.measure_text(nickname, nickname_font_size)
-                overlay.draw_text(
-                    nickname,
-                    entity.head_pos2d["x"] - nickname_width // 2,
-                    entity.head_pos2d["y"] - half_width / 2 - 15,
-                    nickname_font_size,
-                    text_color
-                )
-
-            bar_width = 4
-            bar_margin = 2
-            bar_x = entity.head_pos2d["x"] - half_width - bar_width - bar_margin
-            bar_y = entity.head_pos2d["y"] - half_width / 2
-            bar_height = box_height + half_width / 2
-            overlay.draw_rectangle(
-                bar_x,
-                bar_y,
-                bar_width,
-                bar_height,
-                overlay.get_color("black")
+        if self.draw_snaplines:
+            overlay.draw_line(
+                self.screen_width / 2,
+                self.screen_height / 2,
+                entity.head_pos2d["x"],
+                entity.head_pos2d["y"],
+                self.snaplines_color,
+                2
             )
-            health_percent = max(0, min(entity.health, 100))
-            fill_height = (health_percent / 100.0) * bar_height
-            if health_percent <= 20:
-                fill_color = overlay.get_color("red")
-            elif health_percent <= 50:
-                fill_color = overlay.get_color("yellow")
-            else:
-                fill_color = overlay.get_color("green")
-            fill_y = bar_y + (bar_height - fill_height)
+
+        if self.enable_box:
             overlay.draw_rectangle(
-                bar_x,
-                fill_y,
-                bar_width,
-                fill_height,
-                fill_color
+                entity.head_pos2d["x"] - half_width,
+                entity.head_pos2d["y"] - half_width / 2,
+                box_width,
+                box_height + half_width / 2,
+                Colors.grey
             )
-            if self.draw_health_numbers:
-                health_text = f"{entity.health}"
-                overlay.draw_text(
-                    health_text,
-                    int(bar_x - 25),
-                    int(bar_y + bar_height / 2 - 5),
-                    10,
-                    text_color
-                )
-        except Exception as e:
-            logger.error(f"Error drawing entity: {e}")
+            overlay.draw_rectangle_lines(
+                entity.head_pos2d["x"] - half_width,
+                entity.head_pos2d["y"] - half_width / 2,
+                box_width,
+                box_height + half_width / 2,
+                outline_color,
+                self.box_line_thickness
+            )
+
+        if self.draw_nicknames:
+            nickname = entity.name
+            nickname_font_size = 11
+            nickname_width = overlay.measure_text(nickname, nickname_font_size)
+            overlay.draw_text(
+                nickname,
+                entity.head_pos2d["x"] - nickname_width / 2,
+                entity.head_pos2d["y"] - half_width / 2 - 15,
+                nickname_font_size,
+                self.text_color
+            )
+
+        bar_width = 4
+        bar_margin = 2
+        bar_x = entity.head_pos2d["x"] - half_width - bar_width - bar_margin
+        bar_y = entity.head_pos2d["y"] - half_width / 2
+        bar_height = box_height + half_width / 2
+        overlay.draw_rectangle(
+            bar_x,
+            bar_y,
+            bar_width,
+            bar_height,
+            Colors.black
+        )
+        health_percent = max(0, min(entity.health, 100))
+        fill_height = (health_percent / 100.0) * bar_height
+        fill_color = Colors.red if health_percent <= 20 else Colors.yellow if health_percent <= 50 else Colors.green
+        overlay.draw_rectangle(
+            bar_x,
+            bar_y + (bar_height - fill_height),
+            bar_width,
+            fill_height,
+            fill_color
+        )
+        if self.draw_health_numbers:
+            overlay.draw_text(
+                f"{entity.health}",
+                bar_x - 25,
+                bar_y + bar_height / 2 - 5,
+                10,
+                self.text_color
+            )
 
     def draw_minimap(self, entities: list[Entity], view_matrix: list) -> None:
         """Render the minimap overlay."""
@@ -293,18 +287,8 @@ class CS2Overlay:
         map_min = {"x": -4000, "y": -4000}
         map_max = {"x": 4000, "y": 4000}
         map_size = {"x": map_max["x"] - map_min["x"], "y": map_max["y"] - map_min["y"]}
-
         minimap_size = self.minimap_size
-        screen_width = overlay.get_screen_width()
-        screen_height = overlay.get_screen_height()
-
-        positions = {
-            "top_left": (10, 10),
-            "top_right": (screen_width - minimap_size - 10, 10),
-            "bottom_left": (10, screen_height - minimap_size - 10),
-            "bottom_right": (screen_width - minimap_size - 10, screen_height - minimap_size - 10)
-        }
-        minimap_x, minimap_y = positions[self.minimap_position]
+        minimap_x, minimap_y = self.minimap_positions[self.minimap_position]
 
         overlay.draw_rectangle(minimap_x, minimap_y, minimap_size, minimap_size, Colors.grey)
         overlay.draw_rectangle_lines(minimap_x, minimap_y, minimap_size, minimap_size, Colors.black, 2)
@@ -324,29 +308,26 @@ class CS2Overlay:
         self.stop_event.clear()
 
         try:
-            overlay.overlay_init("Counter-Strike 2", fps=TARGET_FPS)
+            overlay.overlay_init("Counter-Strike 2", fps=self.target_fps)
         except Exception as e:
             logger.error(f"Overlay initialization error: {e}")
             self.is_running = False
             return
 
-        frame_time = 1.0 / TARGET_FPS
+        frame_time = 1.0 / self.target_fps
         is_game_active = Utility.is_game_active
         sleep = time.sleep
 
         while not self.stop_event.is_set():
+            if not is_game_active():
+                sleep(MAIN_LOOP_SLEEP)
+                continue
+
+            start_time = time.time()
             try:
-                # Check if game window is active
-                if not is_game_active():
-                    sleep(MAIN_LOOP_SLEEP)
-                    continue
-
-                start_time = time.time()
                 view_matrix = self.memory_manager.read_floats(self.memory_manager.client_dll_base + self.memory_manager.dwViewMatrix, 16)
-
                 local_controller_ptr = self.memory_manager.read_longlong(self.memory_manager.client_dll_base + self.memory_manager.dwLocalPlayerController)
                 if local_controller_ptr:
-                    local_pawn_handle = self.memory_manager.read_longlong(local_controller_ptr + self.memory_manager.m_hPlayerPawn)
                     local_pawn_ptr = self.memory_manager.read_longlong(self.memory_manager.client_dll_base + self.memory_manager.dwLocalPlayerPawn)
                     self.local_team = self.memory_manager.read_int(local_pawn_ptr + self.memory_manager.m_iTeamNum)
 
@@ -356,12 +337,12 @@ class CS2Overlay:
                     overlay.draw_fps(0, 0)
                     self.draw_minimap(entities, view_matrix)
                     for entity in entities:
-                        is_teammate = False
                         if self.local_team is not None and entity.team == self.local_team:
                             if not self.draw_teammates:
                                 continue
-                            is_teammate = True
-                        self.draw_entity(entity, view_matrix, is_teammate)
+                            self.draw_entity(entity, view_matrix, True)
+                        else:
+                            self.draw_entity(entity, view_matrix)
                     overlay.end_drawing()
 
                 elapsed_time = time.time() - start_time
@@ -382,7 +363,4 @@ class CS2Overlay:
         self.is_running = False
         self.stop_event.set()
         time.sleep(0.1)
-        try:
-            logger.debug("Overlay stopped.")
-        except Exception as e:
-            logger.error(f"Error stopping Overlay: {e}")
+        logger.debug("Overlay stopped.")

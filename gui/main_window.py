@@ -7,9 +7,6 @@ import platform
 import customtkinter as ctk
 from tkinter import messagebox
 from PIL import Image, ImageTk
-import orjson
-import base64
-import zlib
 import requests
 import sys
 
@@ -50,7 +47,7 @@ class MainWindow:
         self.log_timer = None
         # Track the last position in the log file for incremental updates
         self.last_log_position = 0
-        
+
         # Configure CustomTkinter with a modern dark theme
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
@@ -70,6 +67,11 @@ class MainWindow:
         self.root.geometry("1300x700")
         self.root.resizable(True, True)
         self.root.minsize(1300, 700)
+
+        # Center the window on the screen
+        x = (self.root.winfo_screenwidth() // 2) - (1300 // 2)
+        y = (self.root.winfo_screenheight() // 2) - (700 // 2)
+        self.root.geometry(f"1300x700+{x}+{y}")
         
         # Set the window icon using a resource path utility
         self.root.iconbitmap(Utility.resource_path('src/img/icon.ico'))
@@ -939,6 +941,8 @@ del "%~f0" 2>nul
                     overlay_settings["minimap_size"] = minimap_size
             except ValueError:
                 pass
+        if hasattr(self, 'target_fps_slider'):
+            overlay_settings["target_fps"] = self.target_fps_slider.get()
 
     def validate_inputs(self):
         """Validate user input fields."""
@@ -987,6 +991,14 @@ del "%~f0" 2>nul
                     raise ValueError("Minimap size must be between 100 and 500.")
             except ValueError:
                 raise ValueError("Minimap size must be a valid integer.")
+            
+        if hasattr(self, 'target_fps_slider'):
+            try:
+                target_fps = float(self.target_fps_slider.get())
+                if not (60 <= target_fps <= 420):
+                    raise ValueError("Target FPS must be between 60 and 420.")
+            except ValueError:
+                raise ValueError("Target FPS must be a valid number.")
 
     def update_ui_from_config(self):
         """Update the UI elements from the configuration."""
@@ -1051,6 +1063,10 @@ del "%~f0" 2>nul
         if hasattr(self, 'minimap_size_entry'):
             self.minimap_size_entry.delete(0, "end")
             self.minimap_size_entry.insert(0, str(overlay_settings["minimap_size"]))
+        if hasattr(self, 'target_fps_slider'):
+            self.target_fps_slider.set(overlay_settings["target_fps"])
+            if hasattr(self, 'target_fps_value_label'):
+                self.target_fps_value_label.configure(text=f"{overlay_settings['target_fps']:.0f}")
 
     def open_config_directory(self):
         """Open the configuration directory in the file explorer."""
@@ -1091,7 +1107,7 @@ del "%~f0" 2>nul
                                     self.root.after(0, lambda logs=new_logs: self.update_log_display(logs))
                 except Exception as e:
                     logger.error(f"Error in log update thread: {e}")
-                time.sleep(0.1)  # Ð£Ð¼ÐµÐ½ÑŒÑˆÐµÐ½Ð¾ Ð²Ñ€ÐµÐ¼Ñ� Ð¾Ð¶Ð¸Ð´Ð°Ð½Ð¸Ñ� Ð´Ð»Ñ� Ð±Ð¾Ð»ÑŒÑˆÐµÐ¹ Ð¾Ñ‚Ð·Ñ‹Ð²Ñ‡Ð¸Ð²Ð¾Ñ�Ñ‚Ð¸
+                time.sleep(0.1) # UTF-8: Reduced waiting time for greater responsiveness
 
         # Start log update thread
         self.log_timer = threading.Thread(target=update_logs, daemon=True)

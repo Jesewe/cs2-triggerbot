@@ -39,6 +39,7 @@ class ConfigManager:
             "PostShotDelay": 0.1                 # Delay after shooting before the next action
         },
         "Overlay": {
+            "target_fps": 60,                    # Target FPS for the overlay rendering
             "enable_box": True,                  # Enable or disable the bounding box overlay
             "draw_snaplines": True,              # Enable or disable snaplines in the overlay
             "snaplines_color_hex": "#FFFFFF",  # Color of the snaplines in hexadecimal format
