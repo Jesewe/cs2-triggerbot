@@ -1,3 +1,9 @@
 [
-  {"number": 1, "title": "Test", "url": "https://github.com/Jesewe/VioletWing", "timestamp": "2025-07-12", "message": "Test message."},
+    {
+        "number": 1,
+        "title": "Test Notification",
+        "message": "This is a test notification.",
+        "url": "https://github.com/Jesewe/VioletWing",
+        "timestamp": "2025-07-12"
+    }
 ]
