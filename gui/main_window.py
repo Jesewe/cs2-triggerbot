@@ -28,6 +28,7 @@ from gui.trigger_settings_tab import populate_trigger_settings
 from gui.overlay_settings_tab import populate_overlay_settings
 from gui.logs_tab import populate_logs
 from gui.faq_tab import populate_faq
+from gui.notifications_tab import populate_notifications
 from gui.supporters_tab import populate_supporters
 
 # Cache the logger instance for consistent logging throughout the application
@@ -398,8 +399,9 @@ del "%~f0" 2>nul
         self.overlay_settings_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         self.logs_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         self.faq_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        self.notifications_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         self.supporters_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
-        
+
         # Populate tab frames once during initialization
         self.populate_dashboard()
         self.populate_general_settings()
@@ -407,6 +409,7 @@ del "%~f0" 2>nul
         self.populate_overlay_settings()
         self.populate_logs()
         self.populate_faq()
+        self.populate_notifications()
         self.populate_supporters()
         
         # Show dashboard as the default view
@@ -433,6 +436,7 @@ del "%~f0" 2>nul
             ("Overlay Settings", "overlay_settings", "🌍"),
             ("Logs", "logs", "📋"),
             ("FAQ", "faq", "❓"),
+            ("Notifications", "notifications", "🔔"),
             ("Supporters", "supporters", "🤝")
         ]
         
@@ -494,6 +498,7 @@ del "%~f0" 2>nul
         self.overlay_settings_frame.pack_forget()
         self.logs_frame.pack_forget()
         self.faq_frame.pack_forget()
+        self.notifications_frame.pack_forget()
         self.supporters_frame.pack_forget()
         
         # Show the selected frame and update if necessary
@@ -509,6 +514,8 @@ del "%~f0" 2>nul
             self.logs_frame.pack(fill="both", expand=True)
         elif view_key == "faq":
             self.faq_frame.pack(fill="both", expand=True)
+        elif view_key == "notifications":
+            self.notifications_frame.pack(fill="both", expand=True)
         elif view_key == "supporters":
             self.supporters_frame.pack(fill="both", expand=True)
 
@@ -535,6 +542,10 @@ del "%~f0" 2>nul
     def populate_faq(self):
         """Populate the FAQ frame with questions and answers."""
         populate_faq(self, self.faq_frame)
+    
+    def populate_notifications(self):
+        """Populate the notifications frame with notification settings."""
+        populate_notifications(self, self.notifications_frame)
 
     def populate_supporters(self):
         """Populate the supporters frame with supporter data."""

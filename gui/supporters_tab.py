@@ -76,7 +76,7 @@ def populate_supporters(main_window, frame):
     def fetch_supporters():
         try:
             # Fetch JSON data from GitHub with a timeout
-            response = requests.get('https://raw.githubusercontent.com/Jesewe/cs2-triggerbot/refs/heads/main/src/supporters.json', timeout=10)
+            response = requests.get('https://raw.githubusercontent.com/Jesewe/VioletWing/refs/heads/main/src/supporters.json', timeout=10)
             response.raise_for_status()
             data = orjson.loads(response.content)
             main_window.root.after(0, lambda: update_supporters_ui(data, loading_container, stats_frame))
