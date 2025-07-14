@@ -26,6 +26,7 @@ from gui.home_tab import populate_dashboard
 from gui.general_settings_tab import populate_general_settings
 from gui.trigger_settings_tab import populate_trigger_settings
 from gui.overlay_settings_tab import populate_overlay_settings
+from gui.additional_settings_tab import populate_additional_settings
 from gui.logs_tab import populate_logs
 from gui.faq_tab import populate_faq
 from gui.notifications_tab import populate_notifications
@@ -208,70 +209,36 @@ class MainWindow:
         social_frame.pack(side="right")
         
         # Load social media icons using CTkImage
-        try:
-            github_image = Image.open(Utility.resource_path('src/img/github_icon.png'))
-            self.github_ctk_image = ctk.CTkImage(light_image=github_image, dark_image=github_image, size=(24, 24))
-        except FileNotFoundError:
-            self.github_ctk_image = None
+        icons = ['github', 'telegram', 'boosty']
+        for icon in icons:
+            try:
+                image = Image.open(Utility.resource_path(f'src/img/{icon}_icon.png'))
+                setattr(self, f'{icon}_ctk_image', ctk.CTkImage(light_image=image, dark_image=image, size=(24, 24)))
+            except FileNotFoundError:
+                setattr(self, f'{icon}_ctk_image', None)
         
-        try:
-            telegram_image = Image.open(Utility.resource_path('src/img/telegram_icon.png'))
-            self.telegram_ctk_image = ctk.CTkImage(light_image=telegram_image, dark_image=telegram_image, size=(24, 24))
-        except FileNotFoundError:
-            self.telegram_ctk_image = None
+        social_buttons = [
+            ("GitHub", "github", "https://github.com/Jesewe/VioletWing", "#21262d", "#30363d", "#30363d"),
+            ("Telegram", "telegram", "https://t.me/cs2_jesewe", "#0088cc", "#006bb3", None),
+            ("Boosty", "boosty", "https://boosty.to/jesewe/donate", "#ff6b35", "#e55a2b", None)
+        ]
 
-        try:
-            boosty_image = Image.open(Utility.resource_path('src/img/boosty_icon.png'))
-            self.boosty_ctk_image = ctk.CTkImage(light_image=boosty_image, dark_image=boosty_image, size=(24, 24))
-        except FileNotFoundError:
-            self.boosty_ctk_image = None
-        
-        # GitHub button with icon and link
-        github_btn = ctk.CTkButton(
-            social_frame,
-            text="GitHub",
-            image=self.github_ctk_image,
-            compound="left",
-            command=lambda: webbrowser.open("https://github.com/Jesewe/VioletWing"),
-            height=32,
-            corner_radius=16,
-            fg_color="#21262d",
-            hover_color="#30363d",
-            border_width=1,
-            border_color="#30363d",
-            font=("Chivo", 14)
-        )
-        github_btn.pack(side="left", padx=(0, 8))
-        
-        # Telegram button with icon and link
-        telegram_btn = ctk.CTkButton(
-            social_frame,
-            text="Telegram",
-            image=self.telegram_ctk_image,
-            compound="left",
-            command=lambda: webbrowser.open("https://t.me/cs2_jesewe"),
-            height=32,
-            corner_radius=16,
-            fg_color="#0088cc",
-            hover_color="#006bb3",
-            font=("Chivo", 14)
-        )
-        telegram_btn.pack(side="left", padx=(0, 8))
-
-        # Boosty button with icon and link
-        boosty_btn = ctk.CTkButton(
-            social_frame,
-            text="Boosty",
-            image=self.boosty_ctk_image,
-            compound="left",
-            command=lambda: webbrowser.open("https://boosty.to/jesewe/donate"),
-            height=32,
-            corner_radius=16,
-            fg_color="#ff6b35",
-            hover_color="#e55a2b",
-            font=("Chivo", 14)
-        )
-        boosty_btn.pack(side="left")
+        for i, (text, icon, url, fg_color, hover_color, border_color) in enumerate(social_buttons):
+            btn = ctk.CTkButton(
+                social_frame,
+                text=text,
+                image=getattr(self, f'{icon}_ctk_image'),
+                compound="left",
+                command=lambda u=url: webbrowser.open(u),
+                height=32,
+                corner_radius=16,
+                fg_color=fg_color,
+                hover_color=hover_color,
+                border_width=1 if border_color else 0,
+                border_color=border_color,
+                font=("Chivo", 14)
+            )
+            btn.pack(side="left", padx=(0, 8) if i < len(social_buttons) - 1 else (0, 0))
 
         # Check for updates if running as an executable
         if getattr(sys, 'frozen', False):
@@ -397,6 +364,7 @@ del "%~f0" 2>nul
         self.general_settings_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         self.trigger_settings_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         self.overlay_settings_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        self.additional_settings_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         self.logs_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         self.faq_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         self.notifications_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
@@ -407,6 +375,7 @@ del "%~f0" 2>nul
         self.populate_general_settings()
         self.populate_trigger_settings()
         self.populate_overlay_settings()
+        self.populate_additional_settings()
         self.populate_logs()
         self.populate_faq()
         self.populate_notifications()
@@ -434,6 +403,7 @@ del "%~f0" 2>nul
             ("General Settings", "general_settings", "⚙️"),
             ("Trigger Settings", "trigger_settings", "🔫"),
             ("Overlay Settings", "overlay_settings", "🌍"),
+            ("Additional Settings", "additional_settings", "⚡"),
             ("Logs", "logs", "📋"),
             ("FAQ", "faq", "❓"),
             ("Notifications", "notifications", "🔔"),
@@ -496,6 +466,7 @@ del "%~f0" 2>nul
         self.general_settings_frame.pack_forget()
         self.trigger_settings_frame.pack_forget()
         self.overlay_settings_frame.pack_forget()
+        self.additional_settings_frame.pack_forget()
         self.logs_frame.pack_forget()
         self.faq_frame.pack_forget()
         self.notifications_frame.pack_forget()
@@ -510,6 +481,8 @@ del "%~f0" 2>nul
             self.trigger_settings_frame.pack(fill="both", expand=True)
         elif view_key == "overlay_settings":
             self.overlay_settings_frame.pack(fill="both", expand=True)
+        elif view_key == "additional_settings":
+            self.additional_settings_frame.pack(fill="both", expand=True)
         elif view_key == "logs":
             self.logs_frame.pack(fill="both", expand=True)
         elif view_key == "faq":
@@ -534,6 +507,10 @@ del "%~f0" 2>nul
     def populate_overlay_settings(self):
         """Populate the overlay settings frame with configuration options."""
         populate_overlay_settings(self, self.overlay_settings_frame)
+
+    def populate_additional_settings(self):
+        """Populate the additional settings frame with configuration options for Bunnyhop and NoFlash."""
+        populate_additional_settings(self, self.additional_settings_frame)
 
     def populate_logs(self):
         """Populate the logs frame with log display."""
@@ -955,6 +932,21 @@ del "%~f0" 2>nul
         if hasattr(self, 'target_fps_slider'):
             overlay_settings["target_fps"] = self.target_fps_slider.get()
 
+        # Update Bunnyhop settings
+        bunnyhop_settings = self.bunnyhop.config.get("Bunnyhop", {})
+        if hasattr(self, 'jump_key_entry'):
+            bunnyhop_settings["JumpKey"] = self.jump_key_entry.get().strip()
+        if hasattr(self, 'jump_delay_entry'):
+            try:
+                bunnyhop_settings["JumpDelay"] = float(self.jump_delay_entry.get())
+            except ValueError:
+                pass
+
+        # Update NoFlash settings
+        noflash_settings = self.noflash.config.get("NoFlash", {})
+        if hasattr(self, 'FlashSuppressionStrength_slider'):
+            noflash_settings["FlashSuppressionStrength"] = self.FlashSuppressionStrength_slider.get()
+
     def validate_inputs(self):
         """Validate user input fields."""
         # Validate Trigger settings
@@ -1010,6 +1002,26 @@ del "%~f0" 2>nul
                     raise ValueError("Target FPS must be between 60 and 420.")
             except ValueError:
                 raise ValueError("Target FPS must be a valid number.")
+            
+        # Validate Bunnyhop settings
+        if hasattr(self, 'jump_key_entry'):
+            jump_key = self.jump_key_entry.get().strip()
+            if not jump_key:
+                raise ValueError("Jump key cannot be empty.")
+
+        if hasattr(self, 'jump_delay_entry'):
+            try:
+                jump_delay = float(self.jump_delay_entry.get())
+            except ValueError:
+                raise ValueError("Jump delay must be a valid number.")
+            if jump_delay < 0.01 or jump_delay > 0.5:
+                raise ValueError("Jump delay must be between 0.01 and 0.5 seconds.")
+
+        # Validate NoFlash settings
+        if hasattr(self, 'FlashSuppressionStrength_slider'):
+            strength = self.FlashSuppressionStrength_slider.get()
+            if not (0.0 <= strength <= 1.0):
+                raise ValueError("Flash suppression strength must be between 0.0 and 1.0.")
 
     def update_ui_from_config(self):
         """Update the UI elements from the configuration."""
@@ -1078,6 +1090,22 @@ del "%~f0" 2>nul
             self.target_fps_slider.set(overlay_settings["target_fps"])
             if hasattr(self, 'target_fps_value_label'):
                 self.target_fps_value_label.configure(text=f"{overlay_settings['target_fps']:.0f}")
+
+        # Update Bunnyhop settings UI
+        bunnyhop_settings = self.bunnyhop.config.get("Bunnyhop", {})
+        if hasattr(self, 'jump_key_entry'):
+            self.jump_key_entry.delete(0, "end")
+            self.jump_key_entry.insert(0, bunnyhop_settings.get("JumpKey", "space"))
+        if hasattr(self, 'jump_delay_entry'):
+            self.jump_delay_entry.delete(0, "end")
+            self.jump_delay_entry.insert(0, str(bunnyhop_settings.get("JumpDelay", 0.01)))
+
+        # Update NoFlash settings UI
+        noflash_settings = self.noflash.config.get("NoFlash", {})
+        if hasattr(self, 'FlashSuppressionStrength_slider'):
+            self.FlashSuppressionStrength_slider.set(noflash_settings.get("FlashSuppressionStrength", 0.0))
+            if hasattr(self, 'FlashSuppressionStrength_value_label'):
+                self.FlashSuppressionStrength_value_label.configure(text=f"{noflash_settings.get('FlashSuppressionStrength', 0.0):.2f}")
 
     def open_config_directory(self):
         """Open the configuration directory in the file explorer."""

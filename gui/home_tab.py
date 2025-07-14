@@ -313,7 +313,7 @@ def update_client_status(self, status, color):
     # Update header status label
     self.status_label.configure(text=status, text_color=color)
     # Update dashboard status label
-    self.bot_status_label.configure(text=status, text_color=color)  # Исправлено с client_status_label
+    self.bot_status_label.configure(text=status, text_color=color)
 
     # Update status dot color in header
     for widget in self.status_frame.winfo_children():
@@ -322,5 +322,5 @@ def update_client_status(self, status, color):
             break
     
     # Ensure dashboard status updates if widget exists
-    if hasattr(self, 'bot_status_label') and self.bot_status_label.winfo_exists():  # Исправлено с client_status_label
+    if hasattr(self, 'bot_status_label') and self.bot_status_label.winfo_exists():
         self.bot_status_label.configure(text=status, text_color=color)

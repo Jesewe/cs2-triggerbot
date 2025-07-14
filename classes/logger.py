@@ -1,6 +1,8 @@
 import os
 import logging
 import traceback
+import sys
+import inspect
 
 class Logger:
     """
@@ -89,11 +91,142 @@ class Logger:
         return Logger._logger
 
     @staticmethod
+    def _get_caller_info():
+        """Get detailed information about the caller including file, function, and line number."""
+        frame = inspect.currentframe()
+        try:
+            # Go up the call stack to find the actual caller (skip _get_caller_info and log_exception)
+            caller_frame = frame.f_back.f_back
+            if caller_frame:
+                filename = caller_frame.f_code.co_filename
+                function_name = caller_frame.f_code.co_name
+                line_number = caller_frame.f_lineno
+                return {
+                    'filename': os.path.basename(filename),
+                    'full_path': filename,
+                    'function': function_name,
+                    'line': line_number
+                }
+        except:
+            pass
+        finally:
+            del frame
+        return None
+
+    @staticmethod
+    def _format_traceback_with_context(exc: Exception, context_lines: int = 3):
+        """Format traceback with source code context around each frame."""
+        tb_lines = []
+        tb = exc.__traceback__
+        
+        while tb is not None:
+            frame = tb.tb_frame
+            filename = frame.f_code.co_filename
+            line_number = tb.tb_lineno
+            function_name = frame.f_code.co_name
+            
+            tb_lines.append(f"  File \"{filename}\", line {line_number}, in {function_name}")
+            
+            # Try to get source code context
+            try:
+                with open(filename, 'r', encoding='utf-8') as f:
+                    source_lines = f.readlines()
+                    
+                start_line = max(0, line_number - context_lines - 1)
+                end_line = min(len(source_lines), line_number + context_lines)
+                
+                for i in range(start_line, end_line):
+                    line_content = source_lines[i].rstrip()
+                    line_num = i + 1
+                    if line_num == line_number:
+                        tb_lines.append(f"    {line_num:4d} >>> {line_content}")
+                    else:
+                        tb_lines.append(f"    {line_num:4d}     {line_content}")
+            except:
+                # If we can't read the source, just show the line
+                tb_lines.append(f"    <source unavailable>")
+            
+            tb_lines.append("")  # Empty line for readability
+            tb = tb.tb_next
+        
+        return "\n".join(tb_lines)
+
+    @staticmethod
     def log_exception(exc: Exception, context: str = None):
         """Logs an exception with detailed information including stack trace and optional context."""
         logger_instance = Logger.get_logger()
-        # Format the stack trace and exception details
-        exc_details = f"\nException Type: {type(exc).__name__}\nException Message: {str(exc)}\nStack Trace:\n{''.join(traceback.format_tb(exc.__traceback__))}"
+        
+        # Get caller information
+        caller_info = Logger._get_caller_info()
+        
+        # Get current exception info if not provided
+        if exc is None:
+            exc_type, exc_value, exc_tb = sys.exc_info()
+            if exc_value:
+                exc = exc_value
+            else:
+                logger_instance.error("log_exception called but no exception provided and no current exception")
+                return
+        
+        # Format enhanced traceback with source context
+        enhanced_traceback = Logger._format_traceback_with_context(exc)
+        
+        # Build detailed error message
+        error_parts = []
+        
         if context:
-            exc_details = f"Context: {context}\n{exc_details}"
-        logger_instance.error(f"An exception occurred: {exc_details}", extra={'exc_info': ''})
+            error_parts.append(f"Context: {context}")
+        
+        if caller_info:
+            error_parts.append(f"Called from: {caller_info['filename']}:{caller_info['line']} in {caller_info['function']}()")
+        
+        error_parts.extend([
+            f"Exception Type: {type(exc).__name__}",
+            f"Exception Message: {str(exc)}",
+            f"Detailed Traceback with Source Context:",
+            enhanced_traceback
+        ])
+        
+        # Join all parts with newlines
+        exc_details = "\n".join(error_parts)
+        
+        # Log the detailed error
+        logger_instance.error(f"An exception occurred:\n{exc_details}")
+        
+        # Also log a brief version for console/standard log
+        brief_message = f"{type(exc).__name__}: {str(exc)}"
+        if caller_info:
+            brief_message += f" (at {caller_info['filename']}:{caller_info['line']})"
+        
+        logger_instance.info(f"Exception: {brief_message}")
+
+    @staticmethod
+    def log_error_with_line(message: str, include_stack: bool = True):
+        """Log an error message with automatic line number detection."""
+        logger_instance = Logger.get_logger()
+        caller_info = Logger._get_caller_info()
+        
+        if caller_info:
+            enhanced_message = f"{message} (at {caller_info['filename']}:{caller_info['line']} in {caller_info['function']}())"
+        else:
+            enhanced_message = message
+        
+        if include_stack:
+            # Get current stack trace
+            stack_trace = ''.join(traceback.format_stack()[:-1])  # Exclude current frame
+            enhanced_message += f"\nStack trace:\n{stack_trace}"
+        
+        logger_instance.error(enhanced_message)
+
+    @staticmethod
+    def log_warning_with_line(message: str):
+        """Log a warning message with automatic line number detection."""
+        logger_instance = Logger.get_logger()
+        caller_info = Logger._get_caller_info()
+        
+        if caller_info:
+            enhanced_message = f"{message} (at {caller_info['filename']}:{caller_info['line']} in {caller_info['function']}())"
+        else:
+            enhanced_message = message
+        
+        logger_instance.warning(enhanced_message)

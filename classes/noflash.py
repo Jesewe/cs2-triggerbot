@@ -24,10 +24,16 @@ class CS2NoFlash:
         self.is_running = False
         self.stop_event = threading.Event()
         self.local_player_address: Optional[int] = None
+        self.load_configuration()
+
+    def load_configuration(self):
+        """Load and apply configuration settings."""
+        self.flash_suppression_strength = self.config.get("NoFlash", {}).get("FlashSuppressionStrength", 0.0)
 
     def update_config(self, config):
         """Update the configuration settings."""
         self.config = config
+        self.load_configuration()
         logger.debug("NoFlash configuration updated.")
 
     def initialize_local_player(self) -> bool:
@@ -43,11 +49,11 @@ class CS2NoFlash:
             return False
 
     def disable_flash(self) -> None:
-        """Set the flash duration to 0.0."""
+        """Set the flash duration based on suppression strength."""
         try:
             player_position = self.memory_manager.read_longlong(self.local_player_address)
             if player_position:
-                self.memory_manager.write_float(player_position + self.memory_manager.m_flFlashDuration, 0.0)
+                self.memory_manager.write_float(player_position + self.memory_manager.m_flFlashDuration, self.flash_suppression_strength)
         except Exception as e:
             logger.error(f"Error disabling flash: {e}")
 

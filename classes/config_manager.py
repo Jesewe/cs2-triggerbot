@@ -53,7 +53,14 @@ class ConfigManager:
             "teammate_color_hex": "#00FFFF",   # Color for teammates in the overlay
             "enable_minimap": False,             # Enable or disable the minimap overlay
             "minimap_size": 200                  # Size of the minimap in pixels
-        }
+        },
+        "Bunnyhop": {
+            "JumpKey": "space",                  # Key to activate Bunnyhop
+            "JumpDelay": 0.01                    # Delay between jumps in seconds
+        },
+        "NoFlash": {
+            "FlashSuppressionStrength": 0.0      # Strength of flash suppression (0.0 to 1.0)
+        },
     }
 
     # Cache to store the loaded configuration

@@ -127,10 +127,39 @@ def populate_faq(main_window, frame):
         text_color=("#1f2937", "#E0E0E0")
     ).pack(pady=(20, 5))
     
-    # Footer guidance
+    # Footer guidance text
     ctk.CTkLabel(
         footer_frame,
-        text="Check the documentation or visit github issues for additional support and tips.",
+        text="If you couldn't find the answer you're looking for, here are some additional resources:",
         font=("Gambetta", 14),
         text_color=("#6b7280", "#9ca3af")
-    ).pack(pady=(0, 20))
+    ).pack(pady=(0, 15))
+    
+    # Links container
+    links_container = ctk.CTkFrame(footer_frame, fg_color="transparent")
+    links_container.pack(pady=(0, 10))
+    
+    # GitHub Issues link
+    def open_github_issues():
+        import webbrowser
+        webbrowser.open("https://github.com/Jesewe/VioletWing/issues")
+    
+    github_issues_btn = ctk.CTkButton(
+        links_container,
+        text="🐛 Report Issues",
+        command=open_github_issues,
+        font=("Chivo", 13, "bold"),
+        fg_color=("#ef4444", "#dc2626"),
+        hover_color=("#dc2626", "#b91c1c"),
+        width=140,
+        height=32
+    )
+    github_issues_btn.pack(side="left", padx=(0, 10))
+
+    # Additional footer text
+    ctk.CTkLabel(
+        footer_frame,
+        text="Remember: This tool is for educational purposes only. Always respect game terms of service.",
+        font=("Gambetta", 12),
+        text_color=("#9ca3af", "#6b7280")
+    ).pack(pady=(15, 20))

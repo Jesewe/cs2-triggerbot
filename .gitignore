@@ -4,5 +4,4 @@
 /dist/
 /build/
 *.spec
-*.bat
 /__pycache__/

@@ -15,7 +15,6 @@ MAIN_LOOP_SLEEP = 0.05
 # Constants for bunnyhop
 FORCE_JUMP_ACTIVE = 65537
 FORCE_JUMP_INACTIVE = 256
-KEY_SPACE = 0x20
 
 class CS2Bunnyhop:
     """Manages the Bunnyhop functionality for Counter-Strike 2."""
@@ -29,10 +28,13 @@ class CS2Bunnyhop:
         self.is_running = False
         self.stop_event = threading.Event()
         self.force_jump_address: Optional[int] = None
+        self.load_configuration()
 
     def load_configuration(self):
         """Load and apply configuration settings."""
         self.bunnyhop_enabled = self.config.get("General", {}).get("Bunnyhop", False)
+        self.jump_key = self.config.get("Bunnyhop", {}).get("JumpKey", "space").lower()
+        self.jump_delay = self.config.get("Bunnyhop", {}).get("JumpDelay", 0.01)
 
     def update_config(self, config):
         """Update the configuration settings."""
@@ -76,6 +78,7 @@ class CS2Bunnyhop:
         is_game_active = Utility.is_game_active
         sleep = time.sleep
         is_jumping = False
+        last_jump_time = 0
 
         while not self.stop_event.is_set():
             try:
@@ -83,8 +86,13 @@ class CS2Bunnyhop:
                     sleep(MAIN_LOOP_SLEEP)
                     continue
 
-                if ctypes.windll.user32.GetAsyncKeyState(KEY_SPACE) & 0x8000:
+                current_time = time.time()
+                key_state = ctypes.windll.user32.GetAsyncKeyState(Utility.get_vk_code(self.jump_key)) & 0x8000
+
+                if key_state and (current_time - last_jump_time) >= self.jump_delay:
                     is_jumping = self.perform_jump(is_jumping)
+                    if is_jumping:
+                        last_jump_time = current_time
 
                 sleep(MAIN_LOOP_SLEEP)
             except KeyboardInterrupt:
