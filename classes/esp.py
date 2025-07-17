@@ -358,8 +358,6 @@ class CS2Overlay:
                     self.local_team = self.memory_manager.read_int(local_pawn_ptr + self.memory_manager.m_iTeamNum)
 
                 entities = list(self.iterate_entities())
-                if not entities:
-                    logger.debug("No entities found to render")
 
                 if overlay.overlay_loop():
                     overlay.begin_drawing()
