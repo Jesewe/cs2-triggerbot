@@ -295,14 +295,16 @@ def fetch_last_update(main_window):
             formatted_timestamp = last_update_dt.strftime("%m/%d/%Y %H:%M")
             
             # Update UI with formatted timestamp
-            main_window.root.after(0, lambda: main_window.update_value_label.configure(
-                text=formatted_timestamp, text_color="#22c55e"
-            ))
+            if main_window.root.winfo_exists():
+                main_window.root.after(0, lambda: main_window.update_value_label.configure(
+                    text=formatted_timestamp, text_color="#22c55e"
+                ))
         except Exception as e:
             # Display error if fetch fails
-            main_window.root.after(0, lambda: main_window.update_value_label.configure(
-                text="Error", text_color="#ef4444"
-            ))
+            if main_window.root.winfo_exists():
+                main_window.root.after(0, lambda: main_window.update_value_label.configure(
+                    text="Error", text_color="#ef4444"
+                ))
             logger.error("Failed to fetch last update: %s", e)
     
     # Run fetch in a separate thread

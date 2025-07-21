@@ -797,6 +797,8 @@ del "%~f0" 2>nul
         overlay_settings = self.overlay.config["Overlay"]
         if hasattr(self, 'enable_box_var'):
             overlay_settings["enable_box"] = self.enable_box_var.get()
+        if hasattr(self, 'enable_skeleton_var'):
+            overlay_settings["enable_skeleton"] = self.enable_skeleton_var.get()
         if hasattr(self, 'box_line_thickness_slider'):
             overlay_settings["box_line_thickness"] = self.box_line_thickness_slider.get()
         if hasattr(self, 'box_color_hex_combo'):
@@ -956,6 +958,8 @@ del "%~f0" 2>nul
         overlay_settings = self.overlay.config["Overlay"]
         if hasattr(self, 'enable_box_var'):
             self.enable_box_var.set(overlay_settings["enable_box"])
+        if hasattr(self, 'enable_skeleton_var'):
+            self.enable_skeleton_var.set(overlay_settings.get("enable_skeleton", True))
         if hasattr(self, 'box_line_thickness_slider'):
             self.box_line_thickness_slider.set(overlay_settings["box_line_thickness"])
             if hasattr(self, 'box_line_thickness_value_label'):

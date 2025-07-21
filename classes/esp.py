@@ -2,6 +2,7 @@ import threading
 import time
 import pyMeow as overlay
 import keyboard
+import struct
 from typing import Iterator, Optional, Dict
 
 from pynput.keyboard import Listener as KeyboardListener
@@ -89,6 +90,27 @@ class Entity:
             logger.error(f"Failed to get bone position for bone {bone}: {e}")
             return {"x": 0.0, "y": 0.0, "z": 0.0}
 
+    def all_bone_pos(self) -> Optional[Dict[int, Dict[str, float]]]:
+        """Get all bone positions."""
+        try:
+            game_scene = self.memory_manager.read_longlong(self.pawn_ptr + self.memory_manager.m_pGameSceneNode)
+            bone_array_ptr = self.memory_manager.read_longlong(game_scene + self.memory_manager.m_pBoneArray)
+            if not bone_array_ptr:
+                return None
+            
+            num_bones_to_read = 30 
+            data = self.memory_manager.pm.read_bytes(bone_array_ptr, num_bones_to_read * 32)
+            
+            bone_positions = {}
+            for i in range(num_bones_to_read):
+                offset = i * 32
+                x, y, z = struct.unpack_from('fff', data, offset)
+                bone_positions[i] = {"x": x, "y": y, "z": z}
+            return bone_positions
+        except Exception as e:
+            logger.error(f"Failed to get all bone positions: {e}")
+            return None
+
     @staticmethod
     def validate_screen_position(pos: Dict[str, float]) -> bool:
         """Validate if a screen position is within bounds."""
@@ -102,11 +124,15 @@ class Entity:
             pos2d = overlay.world_to_screen(view_matrix, self.pos, 1)
             head2d = overlay.world_to_screen(view_matrix, self.bone_pos(6), 1)
             if not self.validate_screen_position(pos2d) or not self.validate_screen_position(head2d):
+                self.pos2d = None
+                self.head_pos2d = None
                 return False
             self.pos2d = pos2d
             self.head_pos2d = head2d
             return True
         except Exception:
+            self.pos2d = None
+            self.head_pos2d = None
             return False
 
 class CS2Overlay:
@@ -128,6 +154,7 @@ class CS2Overlay:
         """Load and apply configuration settings."""
         settings = self.config['Overlay']
         self.enable_box = settings['enable_box']
+        self.enable_skeleton = settings.get('enable_skeleton', True)
         self.draw_snaplines = settings['draw_snaplines']
         self.snaplines_color_hex = settings['snaplines_color_hex']
         self.box_line_thickness = settings['box_line_thickness']
@@ -194,10 +221,50 @@ class CS2Overlay:
 
             yield Entity(controller_ptr, pawn_ptr, self.memory_manager)
 
+    def draw_skeleton(self, entity: Entity, view_matrix: list, color: tuple) -> None:
+        """Draw the skeleton of an entity."""
+        try:
+            all_bones_pos_3d = entity.all_bone_pos()
+            if not all_bones_pos_3d:
+                return
+
+            skeleton_bones = {
+                6: [5, 7], 5: [4], 7: [8], 8: [9], 9: [10], 4: [3], 3: [2], 
+                2: [1], 1: [11, 12], 11: [13], 13: [15], 12: [14], 14: [16]
+            }
+
+            bone_positions_2d = {}
+            
+            all_bone_ids = set(skeleton_bones.keys())
+            for bones in skeleton_bones.values():
+                all_bone_ids.update(bones)
+
+            for bone_id in all_bone_ids:
+                if bone_id in all_bones_pos_3d:
+                    pos_3d = all_bones_pos_3d[bone_id]
+                    pos_2d = overlay.world_to_screen(view_matrix, pos_3d, 1)
+                    if entity.validate_screen_position(pos_2d):
+                        bone_positions_2d[bone_id] = pos_2d
+
+            for start_bone, end_bones in skeleton_bones.items():
+                if start_bone in bone_positions_2d:
+                    for end_bone in end_bones:
+                        if end_bone in bone_positions_2d:
+                            overlay.draw_line(
+                                bone_positions_2d[start_bone]["x"],
+                                bone_positions_2d[start_bone]["y"],
+                                bone_positions_2d[end_bone]["x"],
+                                bone_positions_2d[end_bone]["y"],
+                                color,
+                                1.5
+                            )
+        except Exception as e:
+            logger.error(f"Error drawing skeleton: {e}")
+
     def draw_entity(self, entity: Entity, view_matrix: list, is_teammate: bool = False) -> None:
         """Render the ESP overlay for a given entity."""
         try:
-            if not entity.world_to_screen(view_matrix):
+            if not entity.world_to_screen(view_matrix) or not entity.pos2d or not entity.head_pos2d:
                 return
             if entity.health <= 0 or entity.dormant:
                 return
@@ -210,6 +277,9 @@ class CS2Overlay:
 
             outline_color = overlay.get_color(self.teammate_color_hex if is_teammate else self.box_color_hex)
             text_color = overlay.get_color(self.text_color_hex)
+
+            if self.enable_skeleton:
+                self.draw_skeleton(entity, view_matrix, outline_color)
 
             if self.draw_snaplines:
                 screen_width = overlay.get_screen_width()
