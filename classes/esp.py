@@ -17,8 +17,19 @@ ENTITY_COUNT = 64
 ENTITY_ENTRY_SIZE = 120
 
 SKELETON_BONES = {
-    6: [5], 5: [4], 4: [3, 8, 11], 3: [2], 2: [14, 17],
-    8: [9], 9: [10], 11: [12], 12: [13], 14: [15], 15: [16], 17: [18], 18: [19],
+    6: [5],
+    5: [4],
+    4: [3, 8, 11],
+    3: [0],
+    8: [9],
+    9: [10],
+    11: [12],
+    12: [13],
+    0: [22, 25],
+    22: [23],
+    23: [24],
+    25: [26],
+    26: [27],
 }
 ALL_BONE_IDS = set(SKELETON_BONES.keys())
 for _bones in SKELETON_BONES.values():
@@ -102,7 +113,7 @@ class Entity:
             if not bone_array_ptr:
                 return None
             
-            num_bones_to_read = MAX_BONE_ID + 1
+            num_bones_to_read = 30
             data = self.memory_manager.pm.read_bytes(bone_array_ptr, num_bones_to_read * 32)
             
             bone_positions = {}
@@ -216,8 +227,12 @@ class CS2Overlay:
             for bone_id in ALL_BONE_IDS:
                 if bone_id in all_bones_pos_3d:
                     pos_3d = all_bones_pos_3d[bone_id]
-                    pos_2d = overlay.world_to_screen(view_matrix, pos_3d, 1)
-                    if entity.validate_screen_position(pos_2d):
+                    try:
+                        pos_2d = overlay.world_to_screen(view_matrix, pos_3d, 1)
+                    except Exception:
+                        pos_2d = None
+                    
+                    if pos_2d and entity.validate_screen_position(pos_2d):
                         bone_positions_2d[bone_id] = pos_2d
 
             for start_bone, end_bones in SKELETON_BONES.items():
@@ -249,10 +264,13 @@ class CS2Overlay:
             if not head_pos_3d:
                 head_pos_3d = entity.bone_pos(6)
 
-            pos2d = overlay.world_to_screen(view_matrix, entity.pos, 1)
-            head_pos2d = overlay.world_to_screen(view_matrix, head_pos_3d, 1)
+            try:
+                pos2d = overlay.world_to_screen(view_matrix, entity.pos, 1)
+                head_pos2d = overlay.world_to_screen(view_matrix, head_pos_3d, 1)
+            except Exception:
+                pos2d, head_pos2d = None, None
 
-            if not entity.validate_screen_position(pos2d) or not entity.validate_screen_position(head_pos2d):
+            if not isinstance(pos2d, dict) or not isinstance(head_pos2d, dict) or not entity.validate_screen_position(pos2d) or not entity.validate_screen_position(head_pos2d):
                 return
 
             entity.pos2d = pos2d
