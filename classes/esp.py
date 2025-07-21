@@ -11,14 +11,19 @@ from classes.memory_manager import MemoryManager
 from classes.logger import Logger
 from classes.utility import Utility
 
-# Initialize the logger for consistent logging
 logger = Logger.get_logger()
-# Define the main loop sleep time for reduced CPU usage
 MAIN_LOOP_SLEEP = 0.05
-# Number of entities to iterate over
 ENTITY_COUNT = 64
-# Size of each entity entry in memory
 ENTITY_ENTRY_SIZE = 120
+
+SKELETON_BONES = {
+    6: [5], 5: [4], 4: [3, 8, 11], 3: [2], 2: [14, 17],
+    8: [9], 9: [10], 11: [12], 12: [13], 14: [15], 15: [16], 17: [18], 18: [19],
+}
+ALL_BONE_IDS = set(SKELETON_BONES.keys())
+for _bones in SKELETON_BONES.values():
+    ALL_BONE_IDS.update(_bones)
+MAX_BONE_ID = max(ALL_BONE_IDS) if ALL_BONE_IDS else 0
 
 class Entity:
     """Represents a game entity with cached data for efficient access."""
@@ -91,14 +96,13 @@ class Entity:
             return {"x": 0.0, "y": 0.0, "z": 0.0}
 
     def all_bone_pos(self) -> Optional[Dict[int, Dict[str, float]]]:
-        """Get all bone positions."""
         try:
             game_scene = self.memory_manager.read_longlong(self.pawn_ptr + self.memory_manager.m_pGameSceneNode)
             bone_array_ptr = self.memory_manager.read_longlong(game_scene + self.memory_manager.m_pBoneArray)
             if not bone_array_ptr:
                 return None
             
-            num_bones_to_read = 30 
+            num_bones_to_read = MAX_BONE_ID + 1
             data = self.memory_manager.pm.read_bytes(bone_array_ptr, num_bones_to_read * 32)
             
             bone_positions = {}
@@ -113,27 +117,9 @@ class Entity:
 
     @staticmethod
     def validate_screen_position(pos: Dict[str, float]) -> bool:
-        """Validate if a screen position is within bounds."""
         screen_width = overlay.get_screen_width()
         screen_height = overlay.get_screen_height()
         return 0 <= pos["x"] <= screen_width and 0 <= pos["y"] <= screen_height
-
-    def world_to_screen(self, view_matrix: list) -> bool:
-        """Convert world coordinates to screen coordinates."""
-        try:
-            pos2d = overlay.world_to_screen(view_matrix, self.pos, 1)
-            head2d = overlay.world_to_screen(view_matrix, self.bone_pos(6), 1)
-            if not self.validate_screen_position(pos2d) or not self.validate_screen_position(head2d):
-                self.pos2d = None
-                self.head_pos2d = None
-                return False
-            self.pos2d = pos2d
-            self.head_pos2d = head2d
-            return True
-        except Exception:
-            self.pos2d = None
-            self.head_pos2d = None
-            return False
 
 class CS2Overlay:
     """Manages the ESP overlay for Counter-Strike 2."""
@@ -221,32 +207,20 @@ class CS2Overlay:
 
             yield Entity(controller_ptr, pawn_ptr, self.memory_manager)
 
-    def draw_skeleton(self, entity: Entity, view_matrix: list, color: tuple) -> None:
-        """Draw the skeleton of an entity."""
+    def draw_skeleton(self, entity: Entity, view_matrix: list, color: tuple, all_bones_pos_3d: Dict[int, Dict[str, float]]) -> None:
         try:
-            all_bones_pos_3d = entity.all_bone_pos()
             if not all_bones_pos_3d:
                 return
 
-            skeleton_bones = {
-                6: [5, 7], 5: [4], 7: [8], 8: [9], 9: [10], 4: [3], 3: [2], 
-                2: [1], 1: [11, 12], 11: [13], 13: [15], 12: [14], 14: [16]
-            }
-
             bone_positions_2d = {}
-            
-            all_bone_ids = set(skeleton_bones.keys())
-            for bones in skeleton_bones.values():
-                all_bone_ids.update(bones)
-
-            for bone_id in all_bone_ids:
+            for bone_id in ALL_BONE_IDS:
                 if bone_id in all_bones_pos_3d:
                     pos_3d = all_bones_pos_3d[bone_id]
                     pos_2d = overlay.world_to_screen(view_matrix, pos_3d, 1)
                     if entity.validate_screen_position(pos_2d):
                         bone_positions_2d[bone_id] = pos_2d
 
-            for start_bone, end_bones in skeleton_bones.items():
+            for start_bone, end_bones in SKELETON_BONES.items():
                 if start_bone in bone_positions_2d:
                     for end_bone in end_bones:
                         if end_bone in bone_positions_2d:
@@ -262,12 +236,27 @@ class CS2Overlay:
             logger.error(f"Error drawing skeleton: {e}")
 
     def draw_entity(self, entity: Entity, view_matrix: list, is_teammate: bool = False) -> None:
-        """Render the ESP overlay for a given entity."""
         try:
-            if not entity.world_to_screen(view_matrix) or not entity.pos2d or not entity.head_pos2d:
-                return
             if entity.health <= 0 or entity.dormant:
                 return
+
+            all_bones_pos_3d = entity.all_bone_pos() if self.enable_skeleton else None
+            
+            head_pos_3d = None
+            if all_bones_pos_3d:
+                head_pos_3d = all_bones_pos_3d.get(6)
+
+            if not head_pos_3d:
+                head_pos_3d = entity.bone_pos(6)
+
+            pos2d = overlay.world_to_screen(view_matrix, entity.pos, 1)
+            head_pos2d = overlay.world_to_screen(view_matrix, head_pos_3d, 1)
+
+            if not entity.validate_screen_position(pos2d) or not entity.validate_screen_position(head_pos2d):
+                return
+
+            entity.pos2d = pos2d
+            entity.head_pos2d = head_pos2d
 
             head_y = entity.head_pos2d["y"]
             pos_y = entity.pos2d["y"]
@@ -278,8 +267,8 @@ class CS2Overlay:
             outline_color = overlay.get_color(self.teammate_color_hex if is_teammate else self.box_color_hex)
             text_color = overlay.get_color(self.text_color_hex)
 
-            if self.enable_skeleton:
-                self.draw_skeleton(entity, view_matrix, outline_color)
+            if self.enable_skeleton and all_bones_pos_3d:
+                self.draw_skeleton(entity, view_matrix, outline_color, all_bones_pos_3d)
 
             if self.draw_snaplines:
                 screen_width = overlay.get_screen_width()
