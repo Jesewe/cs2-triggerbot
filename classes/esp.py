@@ -11,9 +11,13 @@ from classes.memory_manager import MemoryManager
 from classes.logger import Logger
 from classes.utility import Utility
 
+# Initialize the logger for consistent logging
 logger = Logger.get_logger()
+# Define the main loop sleep time for reduced CPU usage
 MAIN_LOOP_SLEEP = 0.05
+# Number of entities to iterate over
 ENTITY_COUNT = 64
+# Size of each entity entry in memory
 ENTITY_ENTRY_SIZE = 120
 
 SKELETON_BONES = {
@@ -46,6 +50,8 @@ class Entity:
         self.head_pos2d: Optional[Dict[str, float]] = None
         self._cached_data = None
         self._last_update = 0
+        self._cached_bones = None
+        self._last_bone_update = 0
 
     def _update_cache(self) -> None:
         """Update cached data with a time interval."""
@@ -98,6 +104,8 @@ class Entity:
 
     def bone_pos(self, bone: int) -> Dict[str, float]:
         """Get the 3D position of a specific bone."""
+        if self._cached_bones and bone in self._cached_bones:
+            return self._cached_bones[bone]
         try:
             game_scene = self.memory_manager.read_longlong(self.pawn_ptr + self.memory_manager.m_pGameSceneNode)
             bone_array_ptr = self.memory_manager.read_longlong(game_scene + self.memory_manager.m_pBoneArray)
@@ -107,20 +115,26 @@ class Entity:
             return {"x": 0.0, "y": 0.0, "z": 0.0}
 
     def all_bone_pos(self) -> Optional[Dict[int, Dict[str, float]]]:
+        """Get all bone positions with caching."""
+        current_time = time.time()
+        if self._cached_bones and current_time - self._last_bone_update < 0.2:  # Cache for 0.2 seconds
+            return self._cached_bones
         try:
             game_scene = self.memory_manager.read_longlong(self.pawn_ptr + self.memory_manager.m_pGameSceneNode)
             bone_array_ptr = self.memory_manager.read_longlong(game_scene + self.memory_manager.m_pBoneArray)
             if not bone_array_ptr:
                 return None
             
-            num_bones_to_read = 30
+            num_bones_to_read = MAX_BONE_ID + 1
             data = self.memory_manager.pm.read_bytes(bone_array_ptr, num_bones_to_read * 32)
             
             bone_positions = {}
-            for i in range(num_bones_to_read):
+            for i in ALL_BONE_IDS:  # Only read relevant bones
                 offset = i * 32
                 x, y, z = struct.unpack_from('fff', data, offset)
                 bone_positions[i] = {"x": x, "y": y, "z": z}
+            self._cached_bones = bone_positions
+            self._last_bone_update = current_time
             return bone_positions
         except Exception as e:
             logger.error(f"Failed to get all bone positions: {e}")
@@ -128,6 +142,7 @@ class Entity:
 
     @staticmethod
     def validate_screen_position(pos: Dict[str, float]) -> bool:
+        """Validate if a screen position is within bounds."""
         screen_width = overlay.get_screen_width()
         screen_height = overlay.get_screen_height()
         return 0 <= pos["x"] <= screen_width and 0 <= pos["y"] <= screen_height
@@ -212,13 +227,18 @@ class CS2Overlay:
                 pawn_ptr = self.memory_manager.read_longlong(list_entry_ptr + ENTITY_ENTRY_SIZE * (controller_pawn_ptr & 0x1FF))
                 if not pawn_ptr:
                     continue
+
+                # Early validation of dormant state
+                if bool(self.memory_manager.read_int(pawn_ptr + self.memory_manager.m_bDormant)):
+                    continue
+
+                yield Entity(controller_ptr, pawn_ptr, self.memory_manager)
             except Exception as e:
                 logger.error(f"Error iterating entity {i}: {e}")
                 continue
 
-            yield Entity(controller_ptr, pawn_ptr, self.memory_manager)
-
     def draw_skeleton(self, entity: Entity, view_matrix: list, color: tuple, all_bones_pos_3d: Dict[int, Dict[str, float]]) -> None:
+        """Draw the skeleton of an entity."""
         try:
             if not all_bones_pos_3d:
                 return
@@ -251,17 +271,18 @@ class CS2Overlay:
             logger.error(f"Error drawing skeleton: {e}")
 
     def draw_entity(self, entity: Entity, view_matrix: list, is_teammate: bool = False) -> None:
+        """Render the ESP overlay for a given entity."""
         try:
             if entity.health <= 0 or entity.dormant:
                 return
 
+            # Only fetch bone positions if skeleton is enabled
             all_bones_pos_3d = entity.all_bone_pos() if self.enable_skeleton else None
             
             head_pos_3d = None
-            if all_bones_pos_3d:
-                head_pos_3d = all_bones_pos_3d.get(6)
-
-            if not head_pos_3d:
+            if all_bones_pos_3d and 6 in all_bones_pos_3d:
+                head_pos_3d = all_bones_pos_3d[6]
+            else:
                 head_pos_3d = entity.bone_pos(6)
 
             try:
@@ -379,16 +400,7 @@ class CS2Overlay:
         map_size = {"x": map_max["x"] - map_min["x"], "y": map_max["y"] - map_min["y"]}
 
         minimap_size = self.minimap_size
-        screen_width = overlay.get_screen_width()
-        screen_height = overlay.get_screen_height()
-
-        positions = {
-            "top_left": (10, 10),
-            "top_right": (screen_width - minimap_size - 10, 10),
-            "bottom_left": (10, screen_height - minimap_size - 10),
-            "bottom_right": (screen_width - minimap_size - 10, screen_height - minimap_size - 10)
-        }
-        minimap_x, minimap_y = positions[self.minimap_position]
+        minimap_x, minimap_y = self.minimap_positions[self.minimap_position]
 
         overlay.draw_rectangle(minimap_x, minimap_y, minimap_size, minimap_size, Colors.grey)
         overlay.draw_rectangle_lines(minimap_x, minimap_y, minimap_size, minimap_size, Colors.black, 2)
@@ -441,12 +453,9 @@ class CS2Overlay:
                     overlay.draw_fps(0, 0)
                     self.draw_minimap(entities, view_matrix)
                     for entity in entities:
-                        is_teammate = False
-                        if self.local_team is not None and entity.team == self.local_team:
-                            if not self.draw_teammates:
-                                continue
-                            is_teammate = True
-                        self.draw_entity(entity, view_matrix, is_teammate)
+                        if self.local_team is not None and entity.team == self.local_team and not self.draw_teammates:
+                            continue
+                        self.draw_entity(entity, view_matrix, entity.team == self.local_team)
                     overlay.end_drawing()
 
                 elapsed_time = time.time() - start_time
