@@ -41,6 +41,7 @@ class ConfigManager:
         "Overlay": {
             "target_fps": 60,                    # Target FPS for the overlay rendering
             "enable_box": True,                  # Enable or disable the bounding box overlay
+            "enable_skeleton": True,             # Enable or disable the skeleton ESP overlay
             "draw_snaplines": True,              # Enable or disable snaplines in the overlay
             "snaplines_color_hex": "#FFFFFF",  # Color of the snaplines in hexadecimal format
             "box_line_thickness": 1.0,           # Thickness of the bounding box lines
