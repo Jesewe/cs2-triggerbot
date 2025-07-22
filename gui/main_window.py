@@ -243,19 +243,20 @@ class MainWindow:
         # Check for updates if running as an executable
         if getattr(sys, 'frozen', False):
             logger.info("Running from executable. Checking for updates...")
-            download_url = Utility.check_for_updates(ConfigManager.VERSION)
+            download_url, is_prerelease = Utility.check_for_updates(ConfigManager.VERSION)
             if download_url:
                 self.download_url = download_url
+                self.is_prerelease = is_prerelease
                 # Update button shown when a new version is available
                 update_btn = ctk.CTkButton(
                     social_frame,
-                    text="Update Available",
+                    text="Pre-release Available!" if is_prerelease else "Update Available!",
                     command=self.handle_update,
-                    width=80,
+                    width=120,
                     height=32,
                     corner_radius=16,
-                    fg_color="#ef4444",
-                    hover_color="#dc2626",
+                    fg_color="#ef4444" if not is_prerelease else "#f59e0b",
+                    hover_color="#dc2626" if not is_prerelease else "#d97706",
                     font=("Chivo", 14)
                 )
                 update_btn.pack(side="left", padx=(8, 0))
@@ -270,7 +271,8 @@ class MainWindow:
             return
 
         # Prompt user to confirm update
-        response = messagebox.askyesno("Update Available", "A new version is available. Are you ready to update?")
+        update_type = "pre-release" if getattr(self, 'is_prerelease', False) else "stable release"
+        response = messagebox.askyesno("Update Available", f"A new {update_type} is available. Are you ready to update?")
         if response:
             messagebox.showinfo("Updating", "Downloading update in background. You will be notified when the update is complete.")
             # Start update in a separate thread

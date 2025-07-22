@@ -72,29 +72,63 @@ class Utility:
 
     @staticmethod
     def check_for_updates(current_version):
-        """Checks GitHub for the latest version and returns the download URL of 'VioletWing.exe' if an update is available."""
+        """Checks GitHub for the latest stable and pre-release versions and returns the download URL of 'VioletWing.exe' if an update is available."""
         try:
-            response = requests.get("https://api.github.com/repos/Jesewe/VioletWing/releases/latest")
+            # Fetch all releases to check both stable and pre-releases
+            response = requests.get("https://api.github.com/repos/Jesewe/VioletWing/releases")
             response.raise_for_status()
-            data = orjson.loads(response.content)
-            latest_version = data.get("tag_name")
-            if version.parse(latest_version) > version.parse(current_version):
-                for asset in data.get("assets", []):
+            releases = orjson.loads(response.content)
+
+            latest_stable = None
+            latest_prerelease = None
+            stable_download_url = None
+            prerelease_download_url = None
+
+            for release in releases:
+                release_version = release.get("tag_name")
+                if not release_version:
+                    continue
+                try:
+                    parsed_version = version.parse(release_version)
+                except version.InvalidVersion:
+                    logger.warning(f"Invalid version format: {release_version}")
+                    continue
+
+                # Check if release is a pre-release
+                is_prerelease = release.get("prerelease", False)
+                for asset in release.get("assets", []):
                     if asset.get("name") == "VioletWing.exe":
                         download_url = asset.get("browser_download_url")
                         if download_url:
-                            logger.info(f"New version available: {latest_version}.")
-                            return download_url
-                logger.warning("No 'VioletWing.exe' found in the latest release assets.")
-                return None
-            logger.info("No new updates available.")
-            return None
+                            if is_prerelease:
+                                if not latest_prerelease or parsed_version > version.parse(latest_prerelease):
+                                    latest_prerelease = release_version
+                                    prerelease_download_url = download_url
+                            else:
+                                if not latest_stable or parsed_version > version.parse(latest_stable):
+                                    latest_stable = release_version
+                                    stable_download_url = download_url
+
+            current = version.parse(current_version)
+
+            # Prioritize stable release if it's newer than current version
+            if latest_stable and version.parse(latest_stable) > current:
+                logger.info(f"New stable version available: {latest_stable}")
+                return stable_download_url, False  # False indicates stable release
+            # If no newer stable release, check pre-release
+            elif latest_prerelease and version.parse(latest_prerelease) > current:
+                logger.info(f"New pre-release version available: {latest_prerelease}")
+                return prerelease_download_url, True  # True indicates pre-release
+            else:
+                logger.info("No new updates available.")
+                return None, False
+
         except requests.exceptions.RequestException as e:
             logger.error(f"Update check failed: {e}")
-            return None
+            return None, False
         except Exception as e:
             logger.error(f"An unexpected error occurred during update check: {e}")
-            return None
+            return None, False
 
     @staticmethod
     def resource_path(relative_path):
