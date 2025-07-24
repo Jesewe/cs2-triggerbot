@@ -25,10 +25,10 @@ class ConfigManager:
     # Default configuration settings with General, Trigger, and Overlay categories
     DEFAULT_CONFIG = {
         "General": {
-            "Trigger": True,
-            "Overlay": True,
-            "Bunnyhop": True,
-            "Noflash": True
+            "Trigger": False,
+            "Overlay": False,
+            "Bunnyhop": False,
+            "Noflash": False
         },
         "Trigger": {
             "TriggerKey": "x",
@@ -44,9 +44,9 @@ class ConfigManager:
             }
         },
         "Overlay": {
-            "target_fps": 120,
+            "target_fps": 60,
             "enable_box": True,
-            "enable_skeleton": True,
+            "enable_skeleton": False,
             "draw_snaplines": True,
             "snaplines_color_hex": "#FFFFFF",
             "box_line_thickness": 1.0,

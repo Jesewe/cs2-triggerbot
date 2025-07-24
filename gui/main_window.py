@@ -670,7 +670,7 @@ del "%~f0" 2>nul
             old_config = ConfigManager.load_config().copy()
             self.update_config_from_ui()
             new_config = self.triggerbot.config
-            ConfigManager.save_config(new_config, log_info=True)
+            ConfigManager.save_config(new_config, log_info=False)
 
             # Define features and their threads
             features = {
