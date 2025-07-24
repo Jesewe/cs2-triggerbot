@@ -156,42 +156,57 @@ class Utility:
     def extract_offsets(offsets: dict, client_data: dict, buttons_data: dict) -> dict | None:
         """Load memory offsets for game functionality."""
         try:
-            client = offsets["client.dll"]
-            dwEntityList = client["dwEntityList"]
-            dwLocalPlayerPawn = client["dwLocalPlayerPawn"]
-            dwLocalPlayerController = client["dwLocalPlayerController"]
-            dwViewMatrix = client["dwViewMatrix"]
-            dwForceJump = buttons_data["client.dll"]["jump"]
+            client = offsets.get("client.dll", {})
+            buttons = buttons_data.get("client.dll", {})
+            classes = client_data.get("client.dll", {}).get("classes", {})
 
-            classes = client_data["client.dll"]["classes"]
-            m_iHealth = classes["C_BaseEntity"]["fields"]["m_iHealth"]
-            m_iTeamNum = classes["C_BaseEntity"]["fields"]["m_iTeamNum"]
-            m_iIDEntIndex = classes["C_CSPlayerPawnBase"]["fields"]["m_iIDEntIndex"]
-            m_iszPlayerName = classes["CBasePlayerController"]["fields"]["m_iszPlayerName"]
-            m_vOldOrigin = classes["C_BasePlayerPawn"]["fields"]["m_vOldOrigin"]
-            m_pGameSceneNode = classes["C_BaseEntity"]["fields"]["m_pGameSceneNode"]
-            m_bDormant = classes["CGameSceneNode"]["fields"]["m_bDormant"]
-            m_hPlayerPawn = classes["CCSPlayerController"]["fields"]["m_hPlayerPawn"]
-            m_flFlashDuration = classes["C_CSPlayerPawnBase"]["fields"]["m_flFlashDuration"]
-            m_pBoneArray = 496  # Default value
+            def get_field(class_name, field_name):
+                """Recursively search for a field in a class and its parents."""
+                class_info = classes.get(class_name)
+                if not class_info:
+                    raise KeyError(f"Class '{class_name}' not found")
 
-            return {
-                "dwEntityList": dwEntityList,
-                "dwLocalPlayerPawn": dwLocalPlayerPawn,
-                "dwLocalPlayerController": dwLocalPlayerController,
-                "dwViewMatrix": dwViewMatrix,
-                "dwForceJump": dwForceJump,
-                "m_iHealth": m_iHealth,
-                "m_iTeamNum": m_iTeamNum,
-                "m_iIDEntIndex": m_iIDEntIndex,
-                "m_iszPlayerName": m_iszPlayerName,
-                "m_vOldOrigin": m_vOldOrigin,
-                "m_pGameSceneNode": m_pGameSceneNode,
-                "m_bDormant": m_bDormant,
-                "m_hPlayerPawn": m_hPlayerPawn,
-                "m_flFlashDuration": m_flFlashDuration,
-                "m_pBoneArray": m_pBoneArray
+                field = class_info.get("fields", {}).get(field_name)
+                if field is not None:
+                    return field
+                
+                parent_class_name = class_info.get("parent")
+                if parent_class_name:
+                    return get_field(parent_class_name, field_name)
+                    
+                raise KeyError(f"'{field_name}' not found in '{class_name}' or its parents")
+
+            extracted_offsets = {
+                "dwEntityList": client.get("dwEntityList"),
+                "dwLocalPlayerPawn": client.get("dwLocalPlayerPawn"),
+                "dwLocalPlayerController": client.get("dwLocalPlayerController"),
+                "dwViewMatrix": client.get("dwViewMatrix"),
+                "dwForceJump": buttons.get("jump"),
+                "m_iHealth": get_field("C_BaseEntity", "m_iHealth"),
+                "m_iTeamNum": get_field("C_BaseEntity", "m_iTeamNum"),
+                "m_pGameSceneNode": get_field("C_BaseEntity", "m_pGameSceneNode"),
+                "m_vOldOrigin": get_field("C_BasePlayerPawn", "m_vOldOrigin"),
+                "m_pWeaponServices": get_field("C_BasePlayerPawn", "m_pWeaponServices"),
+                "m_iIDEntIndex": get_field("C_CSPlayerPawnBase", "m_iIDEntIndex"),
+                "m_flFlashDuration": get_field("C_CSPlayerPawnBase", "m_flFlashDuration"),
+                "m_pClippingWeapon": get_field("C_CSPlayerPawnBase", "m_pClippingWeapon"),
+                "m_hPlayerPawn": get_field("CCSPlayerController", "m_hPlayerPawn"),
+                "m_iszPlayerName": get_field("CBasePlayerController", "m_iszPlayerName"),
+                "m_hActiveWeapon": get_field("CPlayer_WeaponServices", "m_hActiveWeapon"),
+                "m_bDormant": get_field("CGameSceneNode", "m_bDormant"),
+                "m_AttributeManager": get_field("C_EconEntity", "m_AttributeManager"),
+                "m_Item": get_field("C_AttributeContainer", "m_Item"),
+                "m_iItemDefinitionIndex": get_field("C_EconItemView", "m_iItemDefinitionIndex"),
+                "m_pBoneArray": 496
             }
+
+            missing_keys = [k for k, v in extracted_offsets.items() if v is None]
+            if missing_keys:
+                logger.error(f"Offset initialization error: Missing top-level keys {missing_keys}")
+                return None
+
+            return extracted_offsets
+
         except KeyError as e:
             logger.error(f"Offset initialization error: Missing key {e}")
             return None

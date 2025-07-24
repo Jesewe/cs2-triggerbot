@@ -34,6 +34,12 @@ class MemoryManager:
         self.m_flFlashDuration = None
         self.m_pBoneArray = None
         self.dwForceJump = None
+        self.m_pClippingWeapon = None
+        self.m_AttributeManager = None
+        self.m_iItemDefinitionIndex = None
+        self.m_Item = None
+        self.m_pWeaponServices = None
+        self.m_hActiveWeapon = None
 
     def initialize(self) -> bool:
         """
@@ -102,6 +108,12 @@ class MemoryManager:
             self.m_hPlayerPawn = extracted["m_hPlayerPawn"]
             self.m_flFlashDuration = extracted["m_flFlashDuration"]
             self.m_pBoneArray = extracted["m_pBoneArray"]
+            self.m_pClippingWeapon = extracted["m_pClippingWeapon"]
+            self.m_AttributeManager = extracted["m_AttributeManager"]
+            self.m_iItemDefinitionIndex = extracted["m_iItemDefinitionIndex"]
+            self.m_Item = extracted["m_Item"]
+            self.m_pWeaponServices = extracted["m_pWeaponServices"]
+            self.m_hActiveWeapon = extracted["m_hActiveWeapon"]
         else:
             logger.error("Failed to initialize offsets from extracted data.")
 
@@ -120,30 +132,68 @@ class MemoryManager:
     def get_fire_logic_data(self) -> dict | None:
         """Retrieve data necessary for firing logic."""
         try:
-            # Read the local player and entity ID
             player = self.read_longlong(self.client_base + self.dwLocalPlayerPawn)
             entity_id = self.read_int(player + self.m_iIDEntIndex)
 
             if entity_id > 0:
-                # Retrieve the entity, team, and health
                 entity = self.get_entity(entity_id)
                 if entity:
                     entity_team = self.read_int(entity + self.m_iTeamNum)
                     player_team = self.read_int(player + self.m_iTeamNum)
                     entity_health = self.read_int(entity + self.m_iHealth)
+                    weapon_type = self.get_weapon_type()
                     return {
                         "entity_team": entity_team,
                         "player_team": player_team,
-                        "entity_health": entity_health
+                        "entity_health": entity_health,
+                        "weapon_type": weapon_type
                     }
             return None
         except Exception as e:
-            # Log any exceptions that may occur during the process
             if "Could not read memory at" in str(e):
                 logger.error("Game was updated, new offsets are required. Please wait for the offsets update.")
             else:
                 logger.error(f"Error in fire logic: {e}")
             return None
+
+    def get_weapon_type(self) -> str:
+        """Get the type of the currently equipped weapon."""
+        try:
+            player = self.read_longlong(self.client_base + self.dwLocalPlayerPawn)
+            if not player: return "Rifles"
+
+            weapon_services_ptr = self.read_longlong(player + self.m_pWeaponServices)
+            if not weapon_services_ptr: return "Rifles"
+
+            weapon_handle = self.read_longlong(weapon_services_ptr + self.m_hActiveWeapon)
+            if not weapon_handle: return "Rifles"
+
+            weapon_id = weapon_handle & 0xFFFF
+            list_entry = self.read_longlong(self.ent_list + 8 * ((weapon_id & 0x7FFF) >> 9) + 16)
+            if not list_entry: return "Rifles"
+
+            weapon_entity_ptr = self.read_longlong(list_entry + 120 * (weapon_id & 0x1FF))
+            if not weapon_entity_ptr: return "Rifles"
+
+            attribute_manager_ptr = self.read_longlong(weapon_entity_ptr + self.m_AttributeManager)
+            if not attribute_manager_ptr: return "Rifles"
+
+            item_ptr = self.read_longlong(attribute_manager_ptr + self.m_Item)
+            if not item_ptr: return "Rifles"
+
+            item_id = self.read_int(item_ptr + self.m_iItemDefinitionIndex)
+
+            weapon_map = {
+                1: "Pistols", 2: "Pistols", 3: "Pistols", 4: "Pistols", 30: "Pistols", 32: "Pistols", 36: "Pistols", 61: "Pistols", 63: "Pistols", 64: "Pistols",
+                7: "Rifles", 8: "Rifles", 10: "Rifles", 13: "Rifles", 16: "Rifles", 39: "Rifles", 60: "Rifles",
+                9: "Snipers", 11: "Snipers", 38: "Snipers", 40: "Snipers",
+                17: "SMGs", 19: "SMGs", 23: "SMGs", 24: "SMGs", 26: "SMGs", 33: "SMGs", 34: "SMGs",
+                14: "Heavy", 25: "Heavy", 27: "Heavy", 28: "Heavy", 35: "Heavy"
+            }
+            return weapon_map.get(item_id, "Rifles")
+        except Exception as e:
+            # logger.error(f"Error getting weapon type: {e}")
+            return "Rifles"
         
     def write_float(self, address: int, value: float) -> None:
         """Write a float to memory."""

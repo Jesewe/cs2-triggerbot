@@ -38,6 +38,50 @@ def populate_general_settings(main_window, frame):
 
     # Create section for general feature settings
     create_features_section(main_window, settings)
+    create_reset_section(main_window, settings)
+
+def create_reset_section(main_window, parent):
+    """Create section for resetting all settings to default."""
+    section = ctk.CTkFrame(
+        parent,
+        corner_radius=20,
+        fg_color=("#ffffff", "#1a1b23"),
+        border_width=2,
+        border_color=("#e2e8f0", "#2d3748")
+    )
+    section.pack(fill="x", pady=(0, 30))
+
+    header = ctk.CTkFrame(section, fg_color="transparent")
+    header.pack(fill="x", padx=40, pady=(40, 30))
+
+    ctk.CTkLabel(
+        header,
+        text="🔄  Reset to Default",
+        font=("Chivo", 24, "bold"),
+        text_color=("#1f2937", "#ffffff"),
+        anchor="w"
+    ).pack(side="left")
+
+    ctk.CTkLabel(
+        header,
+        text="Restore all settings to their default values",
+        font=("Gambetta", 14),
+        text_color=("#64748b", "#94a3b8"),
+        anchor="e"
+    ).pack(side="right")
+
+    reset_button = ctk.CTkButton(
+        section,
+        text="Reset All Settings",
+        font=("Chivo", 16, "bold"),
+        corner_radius=12,
+        fg_color=("#D5006D", "#E91E63"),
+        hover_color=("#B8004A", "#C2185B"),
+        text_color="#ffffff",
+        height=50,
+        command=main_window.reset_to_default_settings
+    )
+    reset_button.pack(fill="x", padx=40, pady=(0, 40))
 
 def create_features_section(main_window, parent):
     """Create section for configuring main application features."""

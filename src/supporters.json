@@ -1,13 +1,15 @@
 {
-    "boosty": {
+    "general": {
       "supporter": [
         "lexus88",
-        "KandJX"
-      ],
-      "early_access": [
+        "KandJX", 
         "MagaTZZ",
         "SedoySadist",
         "Chris Dallas"
+      ],
+      "developers": [
+        "Jesewe",
+        "DerJanniku"
       ]
     }
 }

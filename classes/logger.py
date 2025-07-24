@@ -4,6 +4,16 @@ import traceback
 import sys
 import inspect
 
+class SuppressErrorFilter(logging.Filter):
+    def __init__(self, pattern):
+        super().__init__()
+        self.pattern = pattern
+
+    def filter(self, record):
+        if self.pattern in record.getMessage():
+            return False
+        return True
+
 class Logger:
     """
     A class to handle logging for the application.
@@ -64,6 +74,8 @@ class Logger:
         stream_handler = logging.StreamHandler()
         stream_handler.setLevel(logging.INFO)
         stream_handler.setFormatter(standard_formatter)
+        suppress_filter = SuppressErrorFilter("Error drawing entity: 'NoneType' object is not subscriptable")
+        stream_handler.addFilter(suppress_filter)
         root_logger.addHandler(stream_handler)
 
         # Detailed formatter with enhanced error context

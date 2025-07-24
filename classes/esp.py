@@ -48,96 +48,81 @@ class Entity:
         self.memory_manager = memory_manager
         self.pos2d: Optional[Dict[str, float]] = None
         self.head_pos2d: Optional[Dict[str, float]] = None
-        self._cached_data = None
-        self._last_update = 0
-        self._cached_bones = None
-        self._last_bone_update = 0
+        
+        # Cached data
+        self.name: str = ""
+        self.health: int = 0
+        self.team: int = -1
+        self.pos: Dict[str, float] = {"x": 0.0, "y": 0.0, "z": 0.0}
+        self.dormant: bool = True
+        self.all_bones_pos_3d: Optional[Dict[int, Dict[str, float]]] = None
 
-    def _update_cache(self) -> None:
-        """Update cached data with a time interval."""
-        current_time = time.time()
-        if current_time - self._last_update >= 0.1:
-            try:
-                self._cached_data = {
-                    "name": self.memory_manager.read_string(self.controller_ptr + self.memory_manager.m_iszPlayerName),
-                    "health": self.memory_manager.read_int(self.pawn_ptr + self.memory_manager.m_iHealth),
-                    "team": self.memory_manager.read_int(self.pawn_ptr + self.memory_manager.m_iTeamNum),
-                    "pos": self.memory_manager.read_vec3(self.pawn_ptr + self.memory_manager.m_vOldOrigin),
-                    "dormant": bool(self.memory_manager.read_int(self.pawn_ptr + self.memory_manager.m_bDormant))
-                }
-                self._last_update = current_time
-            except Exception as e:
-                logger.error(f"Failed to update cache for entity: {e}")
-                self._cached_data = None
+    def update(self, use_transliteration: bool, skeleton_enabled: bool) -> bool:
+        """Update all entity data at once to minimize memory reads."""
+        try:
+            self.health = self.memory_manager.read_int(self.pawn_ptr + self.memory_manager.m_iHealth)
+            if self.health <= 0:
+                return False
 
-    @property
-    def name(self) -> str:
-        """Get the entity's name, optionally transliterated."""
-        self._update_cache()
-        if self._cached_data and self._cached_data.get("name"):
-            return Utility.transliterate(self._cached_data["name"]) if self.memory_manager.config["Overlay"]["use_transliteration"] else self._cached_data["name"]
-        return ""
+            self.dormant = bool(self.memory_manager.read_int(self.pawn_ptr + self.memory_manager.m_bDormant))
+            if self.dormant:
+                return False
 
-    @property
-    def health(self) -> int:
-        """Get the entity's health."""
-        self._update_cache()
-        return self._cached_data["health"] if self._cached_data else 0
+            self.team = self.memory_manager.read_int(self.pawn_ptr + self.memory_manager.m_iTeamNum)
+            self.pos = self.memory_manager.read_vec3(self.pawn_ptr + self.memory_manager.m_vOldOrigin)
+            
+            raw_name = self.memory_manager.read_string(self.controller_ptr + self.memory_manager.m_iszPlayerName)
+            self.name = Utility.transliterate(raw_name) if use_transliteration else raw_name
 
-    @property
-    def team(self) -> int:
-        """Get the entity's team number."""
-        self._update_cache()
-        return self._cached_data["team"] if self._cached_data else -1
+            if skeleton_enabled:
+                self.all_bones_pos_3d = self.all_bone_pos()
+            else:
+                self.all_bones_pos_3d = None
 
-    @property
-    def pos(self) -> Dict[str, float]:
-        """Get the entity's 3D position."""
-        self._update_cache()
-        return self._cached_data["pos"] if self._cached_data else {"x": 0.0, "y": 0.0, "z": 0.0}
-
-    @property
-    def dormant(self) -> bool:
-        """Check if the entity is dormant."""
-        self._update_cache()
-        return self._cached_data["dormant"] if self._cached_data else True
+            return True
+        except Exception as e:
+            # logger.error(f"Failed to update entity data: {e}")
+            return False
 
     def bone_pos(self, bone: int) -> Dict[str, float]:
-        """Get the 3D position of a specific bone."""
-        if self._cached_bones and bone in self._cached_bones:
-            return self._cached_bones[bone]
+        """Get the 3D position of a specific bone, using cached data if available."""
+        if self.all_bones_pos_3d and bone in self.all_bones_pos_3d:
+            return self.all_bones_pos_3d[bone]
+        
+        # Fallback to direct read if not in cache
         try:
             game_scene = self.memory_manager.read_longlong(self.pawn_ptr + self.memory_manager.m_pGameSceneNode)
             bone_array_ptr = self.memory_manager.read_longlong(game_scene + self.memory_manager.m_pBoneArray)
             return self.memory_manager.read_vec3(bone_array_ptr + bone * 32)
         except Exception as e:
-            logger.error(f"Failed to get bone position for bone {bone}: {e}")
+            # logger.error(f"Failed to get bone position for bone {bone}: {e}")
             return {"x": 0.0, "y": 0.0, "z": 0.0}
 
     def all_bone_pos(self) -> Optional[Dict[int, Dict[str, float]]]:
-        """Get all bone positions with caching."""
-        current_time = time.time()
-        if self._cached_bones and current_time - self._last_bone_update < 0.2:  # Cache for 0.2 seconds
-            return self._cached_bones
+        """Get all bone positions by reading the bone matrix."""
         try:
             game_scene = self.memory_manager.read_longlong(self.pawn_ptr + self.memory_manager.m_pGameSceneNode)
             bone_array_ptr = self.memory_manager.read_longlong(game_scene + self.memory_manager.m_pBoneArray)
             if not bone_array_ptr:
                 return None
-            
+
             num_bones_to_read = MAX_BONE_ID + 1
             data = self.memory_manager.pm.read_bytes(bone_array_ptr, num_bones_to_read * 32)
-            
+            if not data:
+                return None
+
             bone_positions = {}
-            for i in ALL_BONE_IDS:  # Only read relevant bones
+            for i in ALL_BONE_IDS:
                 offset = i * 32
-                x, y, z = struct.unpack_from('fff', data, offset)
-                bone_positions[i] = {"x": x, "y": y, "z": z}
-            self._cached_bones = bone_positions
-            self._last_bone_update = current_time
+                try:
+                    x, y, z = struct.unpack_from('fff', data, offset)
+                    bone_positions[i] = {"x": x, "y": y, "z": z}
+                except struct.error:
+                    # This can happen if the data is smaller than expected
+                    continue
             return bone_positions
         except Exception as e:
-            logger.error(f"Failed to get all bone positions: {e}")
+            # logger.error(f"Failed to get all bone positions: {e}")
             return None
 
     @staticmethod
@@ -195,46 +180,37 @@ class CS2Overlay:
         self.load_configuration()
         logger.debug("Overlay configuration updated.")
 
-    def iterate_entities(self) -> Iterator[Entity]:
-        """Iterate over game entities and yield Entity objects."""
+    def iterate_entities(self, local_controller_ptr: int) -> Iterator[Entity]:
+        """Iterate over game entities and yield valid Entity objects."""
         try:
             ent_list_ptr = self.memory_manager.read_longlong(self.memory_manager.client_dll_base + self.memory_manager.dwEntityList)
-            local_controller_ptr = self.memory_manager.read_longlong(self.memory_manager.client_dll_base + self.memory_manager.dwLocalPlayerController)
         except Exception as e:
-            logger.error(f"Error reading entity list or local controller pointer: {e}")
-            return iter([])
+            # logger.error(f"Error reading entity list pointer: {e}")
+            return
 
         for i in range(1, ENTITY_COUNT + 1):
             try:
                 list_index = (i & 0x7FFF) >> 9
                 entity_index = i & 0x1FF
                 entry_ptr = self.memory_manager.read_longlong(ent_list_ptr + (8 * list_index) + 16)
-                if not entry_ptr:
-                    continue
+                if not entry_ptr: continue
 
                 controller_ptr = self.memory_manager.read_longlong(entry_ptr + ENTITY_ENTRY_SIZE * entity_index)
-                if not controller_ptr or controller_ptr == local_controller_ptr:
-                    continue
+                if not controller_ptr or controller_ptr == local_controller_ptr: continue
 
                 controller_pawn_ptr = self.memory_manager.read_longlong(controller_ptr + self.memory_manager.m_hPlayerPawn)
-                if not controller_pawn_ptr:
-                    continue
+                if not controller_pawn_ptr: continue
 
                 list_entry_ptr = self.memory_manager.read_longlong(ent_list_ptr + 8 * ((controller_pawn_ptr & 0x7FFF) >> 9) + 16)
-                if not list_entry_ptr:
-                    continue
+                if not list_entry_ptr: continue
 
                 pawn_ptr = self.memory_manager.read_longlong(list_entry_ptr + ENTITY_ENTRY_SIZE * (controller_pawn_ptr & 0x1FF))
-                if not pawn_ptr:
-                    continue
+                if not pawn_ptr: continue
 
-                # Early validation of dormant state
-                if bool(self.memory_manager.read_int(pawn_ptr + self.memory_manager.m_bDormant)):
-                    continue
-
-                yield Entity(controller_ptr, pawn_ptr, self.memory_manager)
-            except Exception as e:
-                logger.error(f"Error iterating entity {i}: {e}")
+                entity = Entity(controller_ptr, pawn_ptr, self.memory_manager)
+                if entity.update(self.use_transliteration, self.enable_skeleton):
+                    yield entity
+            except Exception:
                 continue
 
     def draw_skeleton(self, entity: Entity, view_matrix: list, color: tuple, all_bones_pos_3d: Dict[int, Dict[str, float]]) -> None:
@@ -273,25 +249,15 @@ class CS2Overlay:
     def draw_entity(self, entity: Entity, view_matrix: list, is_teammate: bool = False) -> None:
         """Render the ESP overlay for a given entity."""
         try:
-            if entity.health <= 0 or entity.dormant:
-                return
-
-            # Only fetch bone positions if skeleton is enabled
-            all_bones_pos_3d = entity.all_bone_pos() if self.enable_skeleton else None
-            
-            head_pos_3d = None
-            if all_bones_pos_3d and 6 in all_bones_pos_3d:
-                head_pos_3d = all_bones_pos_3d[6]
-            else:
-                head_pos_3d = entity.bone_pos(6)
+            head_pos_3d = entity.bone_pos(6)
 
             try:
                 pos2d = overlay.world_to_screen(view_matrix, entity.pos, 1)
                 head_pos2d = overlay.world_to_screen(view_matrix, head_pos_3d, 1)
             except Exception:
-                pos2d, head_pos2d = None, None
+                return
 
-            if not isinstance(pos2d, dict) or not isinstance(head_pos2d, dict) or not entity.validate_screen_position(pos2d) or not entity.validate_screen_position(head_pos2d):
+            if not entity.validate_screen_position(pos2d) or not entity.validate_screen_position(head_pos2d):
                 return
 
             entity.pos2d = pos2d
@@ -306,8 +272,8 @@ class CS2Overlay:
             outline_color = overlay.get_color(self.teammate_color_hex if is_teammate else self.box_color_hex)
             text_color = overlay.get_color(self.text_color_hex)
 
-            if self.enable_skeleton and all_bones_pos_3d:
-                self.draw_skeleton(entity, view_matrix, outline_color, all_bones_pos_3d)
+            if self.enable_skeleton and entity.all_bones_pos_3d:
+                self.draw_skeleton(entity, view_matrix, outline_color, entity.all_bones_pos_3d)
 
             if self.draw_snaplines:
                 screen_width = overlay.get_screen_width()
@@ -420,7 +386,8 @@ class CS2Overlay:
         self.stop_event.clear()
 
         try:
-            overlay.overlay_init("Counter-Strike 2", fps=self.target_fps)
+            # Initialize with unlimited FPS and let our loop handle the delay
+            overlay.overlay_init("Counter-Strike 2", fps=0)
         except Exception as e:
             logger.error(f"Overlay initialization error: {e}")
             self.is_running = False
@@ -431,36 +398,46 @@ class CS2Overlay:
         sleep = time.sleep
 
         while not self.stop_event.is_set():
+            start_time = time.time()
+            
             try:
-                # Check if game window is active
                 if not is_game_active():
                     sleep(MAIN_LOOP_SLEEP)
                     continue
 
-                start_time = time.time()
                 view_matrix = self.memory_manager.read_floats(self.memory_manager.client_dll_base + self.memory_manager.dwViewMatrix, 16)
-
+                
                 local_controller_ptr = self.memory_manager.read_longlong(self.memory_manager.client_dll_base + self.memory_manager.dwLocalPlayerController)
                 if local_controller_ptr:
-                    local_pawn_handle = self.memory_manager.read_longlong(local_controller_ptr + self.memory_manager.m_hPlayerPawn)
                     local_pawn_ptr = self.memory_manager.read_longlong(self.memory_manager.client_dll_base + self.memory_manager.dwLocalPlayerPawn)
-                    self.local_team = self.memory_manager.read_int(local_pawn_ptr + self.memory_manager.m_iTeamNum)
+                    if local_pawn_ptr:
+                        self.local_team = self.memory_manager.read_int(local_pawn_ptr + self.memory_manager.m_iTeamNum)
+                    else:
+                        self.local_team = None
+                else:
+                    self.local_team = None
 
-                entities = list(self.iterate_entities())
+                entities = list(self.iterate_entities(local_controller_ptr))
 
                 if overlay.overlay_loop():
                     overlay.begin_drawing()
                     overlay.draw_fps(0, 0)
+                    
                     self.draw_minimap(entities, view_matrix)
+                    
                     for entity in entities:
-                        if self.local_team is not None and entity.team == self.local_team and not self.draw_teammates:
+                        is_teammate = self.local_team is not None and entity.team == self.local_team
+                        if is_teammate and not self.draw_teammates:
                             continue
-                        self.draw_entity(entity, view_matrix, entity.team == self.local_team)
+                        self.draw_entity(entity, view_matrix, is_teammate)
+                        
                     overlay.end_drawing()
 
                 elapsed_time = time.time() - start_time
-                if elapsed_time < frame_time:
-                    sleep(frame_time - elapsed_time)
+                sleep_time = frame_time - elapsed_time
+                if sleep_time > 0:
+                    sleep(sleep_time)
+
             except KeyboardInterrupt:
                 logger.debug("Overlay stopped by user.")
                 self.stop()

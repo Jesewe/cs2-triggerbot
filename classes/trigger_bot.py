@@ -42,12 +42,15 @@ class CS2TriggerBot:
         settings = self.config['Trigger']
         self.trigger_key = settings['TriggerKey']
         self.toggle_mode = settings['ToggleMode']
-        self.shot_delay_min = settings['ShotDelayMin']
-        self.shot_delay_max = settings['ShotDelayMax']
-        self.post_shot_delay = settings['PostShotDelay']
         self.attack_on_teammates = settings['AttackOnTeammates']
         
-        # Determine if the trigger key is a mouse button
+        active_weapon = settings.get("active_weapon_type", "Rifles")
+        weapon_settings = settings["WeaponSettings"].get(active_weapon, settings["WeaponSettings"]["Rifles"])
+        
+        self.shot_delay_min = weapon_settings['ShotDelayMin']
+        self.shot_delay_max = weapon_settings['ShotDelayMax']
+        self.post_shot_delay = weapon_settings['PostShotDelay']
+        
         self.mouse_button_map = {
             "mouse3": Button.middle,
             "mouse4": Button.x1,
@@ -131,26 +134,26 @@ class CS2TriggerBot:
                     sleep(MAIN_LOOP_SLEEP)
                     continue
 
-                if self.toggle_mode:
-                    if self.toggle_state:
-                        data = self.memory_manager.get_fire_logic_data()
-                        if data and self.should_trigger(data["entity_team"], data["player_team"], data["entity_health"]):
-                            sleep(random.uniform(self.shot_delay_min, self.shot_delay_max))
-                            mouse.click(Button.left)
-                            sleep(self.post_shot_delay)
-                else:
-                    if self.is_mouse_trigger and self.trigger_active:
-                        data = self.memory_manager.get_fire_logic_data()
-                        if data and self.should_trigger(data["entity_team"], data["player_team"], data["entity_health"]):
-                            sleep(random.uniform(self.shot_delay_min, self.shot_delay_max))
-                            mouse.click(Button.left)
-                            sleep(self.post_shot_delay)
-                    elif not self.is_mouse_trigger and keyboard.is_pressed(self.trigger_key):
-                        data = self.memory_manager.get_fire_logic_data()
-                        if data and self.should_trigger(data["entity_team"], data["player_team"], data["entity_health"]):
-                            sleep(random.uniform(self.shot_delay_min, self.shot_delay_max))
-                            mouse.click(Button.left)
-                            sleep(self.post_shot_delay)
+                if self.toggle_mode and not self.toggle_state:
+                    sleep(MAIN_LOOP_SLEEP)
+                    continue
+
+                if not self.toggle_mode and not self.trigger_active and not (not self.is_mouse_trigger and keyboard.is_pressed(self.trigger_key)):
+                    sleep(MAIN_LOOP_SLEEP)
+                    continue
+
+                data = self.memory_manager.get_fire_logic_data()
+                if data and self.should_trigger(data["entity_team"], data["player_team"], data["entity_health"]):
+                    weapon_type = data.get("weapon_type", "Rifles")
+                    weapon_settings = self.config['Trigger']['WeaponSettings'].get(weapon_type, self.config['Trigger']['WeaponSettings']['Rifles'])
+                    
+                    shot_delay_min = weapon_settings['ShotDelayMin']
+                    shot_delay_max = weapon_settings['ShotDelayMax']
+                    post_shot_delay = weapon_settings['PostShotDelay']
+
+                    sleep(random.uniform(shot_delay_min, shot_delay_max))
+                    mouse.click(Button.left)
+                    sleep(post_shot_delay)
 
                 sleep(MAIN_LOOP_SLEEP)
             except KeyboardInterrupt:
