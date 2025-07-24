@@ -1,4 +1,4 @@
-import os, orjson
+import os, orjson, copy
 from pathlib import Path
 from pyMeow import get_color, fade_color
 
@@ -25,42 +25,47 @@ class ConfigManager:
     # Default configuration settings with General, Trigger, and Overlay categories
     DEFAULT_CONFIG = {
         "General": {
-            "Trigger": False,                    # Enable or disable the trigger feature
-            "Overlay": False,                    # Enable or disable the overlay feature
-            "Bunnyhop": False,                   # Enable or disable the bunnyhop feature
-            "Noflash": False                     # Enable or disable the noflash feature
+            "Trigger": True,
+            "Overlay": True,
+            "Bunnyhop": True,
+            "Noflash": True
         },
         "Trigger": {
-            "TriggerKey": "x",                   # Key to activate the trigger
-            "ToggleMode": False,                 # Enable toggle mode for the trigger
-            "ShotDelayMin": 0.01,                # Minimum delay between shots
-            "ShotDelayMax": 0.03,                # Maximum delay between shots
-            "AttackOnTeammates": False,          # Allow attacking teammates
-            "PostShotDelay": 0.1                 # Delay after shooting before the next action
+            "TriggerKey": "x",
+            "ToggleMode": False,
+            "AttackOnTeammates": False,
+            "active_weapon_type": "Rifles",
+            "WeaponSettings": {
+                "Pistols": {"ShotDelayMin": 0.02, "ShotDelayMax": 0.04, "PostShotDelay": 0.02},
+                "Rifles": {"ShotDelayMin": 0.01, "ShotDelayMax": 0.03, "PostShotDelay": 0.02},
+                "Snipers": {"ShotDelayMin": 0.05, "ShotDelayMax": 0.1, "PostShotDelay": 0.5},
+                "SMGs": {"ShotDelayMin": 0.01, "ShotDelayMax": 0.02, "PostShotDelay": 0.05},
+                "Heavy": {"ShotDelayMin": 0.03, "ShotDelayMax": 0.05, "PostShotDelay": 0.2}
+            }
         },
         "Overlay": {
-            "target_fps": 60,                    # Target FPS for the overlay rendering
-            "enable_box": True,                  # Enable or disable the bounding box overlay
-            "enable_skeleton": True,             # Enable or disable the skeleton ESP overlay
-            "draw_snaplines": True,              # Enable or disable snaplines in the overlay
-            "snaplines_color_hex": "#FFFFFF",  # Color of the snaplines in hexadecimal format
-            "box_line_thickness": 1.0,           # Thickness of the bounding box lines
-            "box_color_hex": "#FFA500",        # Color of the bounding box in hexadecimal format
-            "text_color_hex": "#FFFFFF",       # Color of the text in the overlay
-            "draw_health_numbers": True,         # Enable or disable health numbers in the overlay
-            "use_transliteration": False,        # Use transliteration for names in the overlay
-            "draw_nicknames": True,              # Enable or disable drawing nicknames in the overlay
-            "draw_teammates": True,              # Enable or disable drawing teammates in the overlay
-            "teammate_color_hex": "#00FFFF",   # Color for teammates in the overlay
-            "enable_minimap": False,             # Enable or disable the minimap overlay
-            "minimap_size": 200                  # Size of the minimap in pixels
+            "target_fps": 120,
+            "enable_box": True,
+            "enable_skeleton": True,
+            "draw_snaplines": True,
+            "snaplines_color_hex": "#FFFFFF",
+            "box_line_thickness": 1.0,
+            "box_color_hex": "#FFA500",
+            "text_color_hex": "#FFFFFF",
+            "draw_health_numbers": True,
+            "use_transliteration": False,
+            "draw_nicknames": True,
+            "draw_teammates": False,
+            "teammate_color_hex": "#00FFFF",
+            "enable_minimap": True,
+            "minimap_size": 200
         },
         "Bunnyhop": {
-            "JumpKey": "space",                  # Key to activate Bunnyhop
-            "JumpDelay": 0.01                    # Delay between jumps in seconds
+            "JumpKey": "space",
+            "JumpDelay": 0.01
         },
         "NoFlash": {
-            "FlashSuppressionStrength": 0.0      # Strength of flash suppression (0.0 to 1.0)
+            "FlashSuppressionStrength": 1.0
         },
     }
 
@@ -74,17 +79,18 @@ class ConfigManager:
         - Creates the configuration directory and file with default settings if they do not exist.
         - Caches the configuration to avoid redundant file reads.
         """
-        # Return cached configuration if available.
+        # Return a deep copy of the cached configuration if available.
         if cls._config_cache is not None:
-            return cls._config_cache
+            return copy.deepcopy(cls._config_cache)
 
         # Ensure the configuration directory exists.
         os.makedirs(cls.CONFIG_DIRECTORY, exist_ok=True)
 
         if not Path(cls.CONFIG_FILE).exists():
             logger.info("config.json not found at %s, creating a default configuration.", cls.CONFIG_FILE)
-            cls.save_config(cls.DEFAULT_CONFIG, log_info=False)
-            cls._config_cache = cls.DEFAULT_CONFIG
+            default_copy = copy.deepcopy(cls.DEFAULT_CONFIG)
+            cls.save_config(default_copy, log_info=False)
+            cls._config_cache = default_copy
         else:
             try:
                 # Read and parse the configuration file using orjson.
@@ -93,13 +99,15 @@ class ConfigManager:
                 logger.info("Loaded configuration.")
             except (orjson.JSONDecodeError, IOError) as e:
                 logger.exception("Failed to load configuration: %s", e)
-                cls.save_config(cls.DEFAULT_CONFIG, log_info=False)
-                cls._config_cache = cls.DEFAULT_CONFIG.copy()
+                default_copy = copy.deepcopy(cls.DEFAULT_CONFIG)
+                cls.save_config(default_copy, log_info=False)
+                cls._config_cache = default_copy
 
             # Update the configuration if any keys are missing.
             if cls._update_config(cls.DEFAULT_CONFIG, cls._config_cache):
                 cls.save_config(cls._config_cache, log_info=False)
-        return cls._config_cache
+        
+        return copy.deepcopy(cls._config_cache)
 
     @classmethod
     def _update_config(cls, default: dict, current: dict) -> bool:
@@ -123,7 +131,7 @@ class ConfigManager:
         Saves the configuration to the configuration file.
         Updates the cache with the new configuration.
         """
-        cls._config_cache = config
+        cls._config_cache = copy.deepcopy(config)
         try:
             # Ensure the configuration directory exists.
             Path(cls.CONFIG_DIRECTORY).mkdir(parents=True, exist_ok=True)

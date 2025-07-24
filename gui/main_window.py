@@ -648,41 +648,56 @@ del "%~f0" 2>nul
         else:
             logger.debug("No features were running to stop.")
 
+    def update_weapon_settings_display(self):
+        """Update UI fields based on the selected weapon type."""
+        weapon_type = self.active_weapon_type.get()
+        settings = self.triggerbot.config['Trigger']['WeaponSettings'].get(weapon_type, {})
+        
+        if hasattr(self, 'min_delay_entry'):
+            self.min_delay_entry.delete(0, "end")
+            self.min_delay_entry.insert(0, str(settings.get('ShotDelayMin', 0.01)))
+        if hasattr(self, 'max_delay_entry'):
+            self.max_delay_entry.delete(0, "end")
+            self.max_delay_entry.insert(0, str(settings.get('ShotDelayMax', 0.03)))
+        if hasattr(self, 'post_shot_delay_entry'):
+            self.post_shot_delay_entry.delete(0, "end")
+            self.post_shot_delay_entry.insert(0, str(settings.get('PostShotDelay', 0.1)))
+
     def save_settings(self, show_message=False):
         """Save the configuration settings and apply to relevant features in real-time."""
         try:
             self.validate_inputs()
-            old_config = ConfigManager.load_config()
+            old_config = ConfigManager.load_config().copy()
             self.update_config_from_ui()
-            new_config = ConfigManager.load_config()
-            ConfigManager.save_config(new_config, log_info=False)
+            new_config = self.triggerbot.config
+            ConfigManager.save_config(new_config, log_info=True)
 
             # Define features and their threads
             features = {
-                "Trigger": (self.triggerbot, "trigger_thread"),
-                "Overlay": (self.overlay, "overlay_thread"),
-                "Bunnyhop": (self.bunnyhop, "bunnyhop_thread"),
-                "Noflash": (self.noflash, "noflash_thread")
+                "Trigger": (self.triggerbot, "TriggerBot"),
+                "Overlay": (self.overlay, "Overlay"),
+                "Bunnyhop": (self.bunnyhop, "Bunnyhop"),
+                "Noflash": (self.noflash, "NoFlash")
             }
 
             any_feature_running = False
 
             # Handle enabling/disabling and config updates
-            for feature_name, (feature, thread_name) in features.items():
-                old_enabled = old_config["General"].get(feature_name, False)
-                new_enabled = new_config["General"].get(feature_name, False)
-                is_running = getattr(feature, 'is_running', False)
+            for feature_key, (feature_obj, feature_name) in features.items():
+                old_enabled = old_config["General"].get(feature_key, False)
+                new_enabled = new_config["General"].get(feature_key, False)
+                is_running = getattr(feature_obj, 'is_running', False)
 
                 # Handle state changes
                 if old_enabled != new_enabled:
                     if new_enabled and not is_running:
-                        self._start_feature(feature, feature_name, thread_name, new_config)
+                        self._start_feature(feature_name, feature_obj, new_config)
                     elif not new_enabled and is_running:
-                        self._stop_feature(feature, feature_name, thread_name)
+                        self._stop_feature(feature_name, feature_obj)
                 
                 # Update config for running features
                 if is_running:
-                    feature.update_config(new_config)
+                    feature_obj.update_config(new_config)
                     logger.debug(f"Configuration updated for {feature_name}.")
                     any_feature_running = True
 
@@ -793,6 +808,17 @@ del "%~f0" 2>nul
                 trigger_settings["PostShotDelay"] = float(self.post_shot_delay_entry.get())
             except ValueError:
                 pass
+        
+        if hasattr(self, 'active_weapon_type'):
+            weapon_type = self.active_weapon_type.get()
+            trigger_settings['active_weapon_type'] = weapon_type
+            weapon_settings = trigger_settings['WeaponSettings'].get(weapon_type, {})
+            
+            if hasattr(self, 'min_delay_entry'): weapon_settings['ShotDelayMin'] = float(self.min_delay_entry.get())
+            if hasattr(self, 'max_delay_entry'): weapon_settings['ShotDelayMax'] = float(self.max_delay_entry.get())
+            if hasattr(self, 'post_shot_delay_entry'): weapon_settings['PostShotDelay'] = float(self.post_shot_delay_entry.get())
+            
+            trigger_settings['WeaponSettings'][weapon_type] = weapon_settings
 
         # Update Overlay settings
         overlay_settings = self.overlay.config["Overlay"]
@@ -923,6 +949,35 @@ del "%~f0" 2>nul
             if not (0.0 <= strength <= 1.0):
                 raise ValueError("Flash suppression strength must be between 0.0 and 1.0.")
 
+    def reset_to_default_settings(self):
+        """Reset all settings to their default values."""
+        if not messagebox.askyesno("Reset Settings", "Are you sure you want to reset all settings to their default values? This will stop all active features."):
+            return
+
+        try:
+            # Stop all running features to ensure a clean state
+            self.stop_client()
+
+            # Get a fresh copy of the default configuration
+            new_config = ConfigManager.DEFAULT_CONFIG.copy()
+            
+            # Update the config for all feature instances
+            self.triggerbot.config = new_config
+            self.overlay.config = new_config
+            self.bunnyhop.config = new_config
+            self.noflash.config = new_config
+            
+            # Update the UI to reflect the new default settings
+            self.update_ui_from_config()
+
+            # Save the new default configuration to the file
+            ConfigManager.save_config(new_config)
+            
+            messagebox.showinfo("Settings Reset", "All settings have been reset to their default values. You can now start the client again.")
+        except Exception as e:
+            logger.error(f"Failed to reset settings: {e}")
+            messagebox.showerror("Error", f"Failed to reset settings: {str(e)}")
+
     def update_ui_from_config(self):
         """Update the UI elements from the configuration."""
         # Update General settings UI
@@ -945,15 +1000,10 @@ del "%~f0" 2>nul
             self.toggle_mode_var.set(trigger_settings["ToggleMode"])
         if hasattr(self, 'attack_teammates_var'):
             self.attack_teammates_var.set(trigger_settings["AttackOnTeammates"])
-        if hasattr(self, 'min_delay_entry'):
-            self.min_delay_entry.delete(0, "end")
-            self.min_delay_entry.insert(0, str(trigger_settings["ShotDelayMin"]))
-        if hasattr(self, 'max_delay_entry'):
-            self.max_delay_entry.delete(0, "end")
-            self.max_delay_entry.insert(0, str(trigger_settings["ShotDelayMax"]))
-        if hasattr(self, 'post_shot_delay_entry'):
-            self.post_shot_delay_entry.delete(0, "end")
-            self.post_shot_delay_entry.insert(0, str(trigger_settings["PostShotDelay"]))
+
+        if hasattr(self, 'active_weapon_type'):
+            self.active_weapon_type.set(trigger_settings.get('active_weapon_type', 'Rifles'))
+            self.update_weapon_settings_display()
 
         # Update Overlay settings UI
         overlay_settings = self.overlay.config["Overlay"]
@@ -1048,7 +1098,7 @@ del "%~f0" 2>nul
                                     self.root.after(0, lambda logs=new_logs: self.update_log_display(logs))
                 except Exception as e:
                     logger.error(f"Error in log update thread: {e}")
-                time.sleep(0.1) # UTF-8: Reduced waiting time for greater responsiveness
+                time.sleep(0.1)
 
         # Start log update thread
         self.log_timer = threading.Thread(target=update_logs, daemon=True)
